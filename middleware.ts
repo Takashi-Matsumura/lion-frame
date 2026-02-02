@@ -8,11 +8,32 @@ export default auth((req) => {
   const { pathname } = req.nextUrl;
   const session = req.auth;
 
+  // Build ID mismatch helper
+  const hasBuildIdMismatch = (s: typeof session): boolean => {
+    if (!s) return false;
+    const currentBuildId = process.env.NEXT_BUILD_ID;
+    const tokenBuildId = (s as unknown as Record<string, unknown>)
+      .buildId as string | undefined;
+    return !!(
+      currentBuildId &&
+      currentBuildId !== "dev" &&
+      tokenBuildId &&
+      tokenBuildId !== currentBuildId
+    );
+  };
+
   // Public routes
   const publicRoutes = ["/", "/login"];
   if (publicRoutes.includes(pathname)) {
     // Redirect authenticated users away from login page
     if (pathname === "/login" && session) {
+      // If build ID doesn't match, clear session cookies and stay on /login
+      if (hasBuildIdMismatch(session)) {
+        const response = NextResponse.next();
+        response.cookies.delete("authjs.session-token");
+        response.cookies.delete("__Secure-authjs.session-token");
+        return response;
+      }
       // Check if 2FA is required
       if (session.user.twoFactorEnabled) {
         const verified = req.cookies.get("2fa_verified");
@@ -45,6 +66,14 @@ export default auth((req) => {
       return NextResponse.redirect(new URL("/dashboard", req.url));
     }
     return NextResponse.next();
+  }
+
+  // Build ID validation: invalidate sessions from previous deployments
+  if (session && hasBuildIdMismatch(session)) {
+    const response = NextResponse.redirect(new URL("/login", req.url));
+    response.cookies.delete("authjs.session-token");
+    response.cookies.delete("__Secure-authjs.session-token");
+    return response;
   }
 
   // Protected routes - require authentication
