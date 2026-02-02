@@ -139,6 +139,10 @@ export const authConfig = {
       return true;
     },
     async jwt({ token, user, trigger }) {
+      // サインイン時にビルドIDを記録
+      if (user) {
+        token.buildId = process.env.NEXT_BUILD_ID || "dev";
+      }
       // 初回ログイン時またはセッション更新時にDBからユーザ情報を取得
       if (user || trigger === "update" || !token.role) {
         const dbUser = await prisma.user.findUnique({
@@ -181,6 +185,8 @@ export const authConfig = {
         session.user.mustChangePassword =
           (token.mustChangePassword as boolean) || false;
       }
+      // Expose buildId for middleware validation
+      (session as unknown as Record<string, unknown>).buildId = token.buildId;
       return session;
     },
   },
