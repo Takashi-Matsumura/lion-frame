@@ -1,0 +1,1 @@
+export { generalAffairsModule } from "./module";
