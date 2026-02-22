@@ -5,12 +5,21 @@ import GitHub from "next-auth/providers/github";
 import Google from "next-auth/providers/google";
 import { prisma } from "@/lib/prisma";
 
+// Warn if AUTH_SECRET is weak or missing
+const authSecret = process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET;
+if (process.env.NODE_ENV === "production" && (!authSecret || authSecret.length < 32)) {
+  console.error(
+    "[SECURITY] AUTH_SECRET is missing or too short (< 32 chars). " +
+    "Generate a strong secret with: openssl rand -base64 32",
+  );
+}
+
 // Lightweight auth config for middleware (Edge Runtime compatible)
 // Does not include LDAP/OpenLDAP providers to avoid Node.js module dependencies
 export const authConfig = {
   // Type assertion needed due to version mismatch between @auth/prisma-adapter and next-auth
   adapter: PrismaAdapter(prisma) as NextAuthConfig["adapter"],
-  secret: process.env.NEXTAUTH_SECRET,
+  secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET,
   providers: [
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID,
@@ -28,8 +37,10 @@ export const authConfig = {
       clientSecret: process.env.GITHUB_CLIENT_SECRET,
     }),
   ],
+  useSecureCookies: process.env.NODE_ENV === "production",
   session: {
     strategy: "jwt",
+    maxAge: 8 * 60 * 60, // 8時間
   },
   callbacks: {
     async signIn({ user, account }) {
@@ -115,7 +126,6 @@ export const authConfig = {
                 userId: existingUser.id,
                 details: JSON.stringify({
                   provider: account.provider,
-                  email: user.email,
                 }),
               },
             })

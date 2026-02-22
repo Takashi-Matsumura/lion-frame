@@ -266,6 +266,12 @@ export interface AppMenu {
    * デフォルト: true（許可）
    */
   allowAccessKey?: boolean;
+
+  /**
+   * モバイル端末でこのメニューを表示するか
+   * デフォルト: true（表示）
+   */
+  mobileEnabled?: boolean;
 }
 
 /**
@@ -278,6 +284,7 @@ export interface MenuGroup {
   nameJa: string;
   color?: string;
   order: number;
+  icon?: ReactNode;
 }
 
 /**

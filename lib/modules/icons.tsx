@@ -123,6 +123,7 @@ export type IconName = keyof typeof iconPaths;
  */
 export const textIcons: Record<string, string> = {
   generalAffairs: "総", // 総務庶務
+  "general-affairs": "総", // 総務庶務（モジュールID用）
   hrManagement: "人", // 人事労務
   finance: "財", // 財務会計
 } as const;

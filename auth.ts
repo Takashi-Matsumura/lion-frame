@@ -6,6 +6,10 @@ import type { OpenLdapService } from "@/lib/ldap/openldap-service";
 import { prisma } from "@/lib/prisma";
 import { AuditService } from "@/lib/services/audit-service";
 import { NotificationService } from "@/lib/services/notification-service";
+import {
+  checkRateLimit,
+  getClientIp,
+} from "@/lib/services/rate-limiter";
 
 /**
  * Lazy Migration: レガシーLDAPからOpenLDAPへの移行を試行
@@ -200,7 +204,6 @@ async function tryLegacyLdapMigration(
         username,
         provider: "openldap",
         migratedFrom: "legacy",
-        email: user.email,
       },
     }).catch(() => {});
 
@@ -231,9 +234,20 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         username: { label: "Username", type: "text" },
         password: { label: "Password", type: "password" },
       },
-      async authorize(credentials) {
+      async authorize(credentials, request) {
         if (!credentials?.username || !credentials?.password) {
           return null;
+        }
+
+        // Rate limit: 10 attempts per 15 minutes per IP
+        const ip = getClientIp(request);
+        const rateLimit = checkRateLimit(
+          `login:${ip}`,
+          10,
+          15 * 60 * 1000,
+        );
+        if (!rateLimit.allowed) {
+          throw new Error("Too many login attempts. Please try again later.");
         }
 
         try {
@@ -396,7 +410,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             details: {
               username: credentials.username,
               provider: "openldap",
-              email: mapping.user.email,
             },
           }).catch(() => {});
 
