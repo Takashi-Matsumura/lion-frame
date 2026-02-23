@@ -82,3 +82,7 @@ backups/
 # Employee profile images (personal data - manually deploy to production)
 public/images/employees/
 chroma_data/
+
+# Claude Code (MCP config may contain credentials)
+.mcp.json
+.claude/memory/
