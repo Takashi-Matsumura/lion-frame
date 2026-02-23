@@ -1,7 +1,7 @@
 "use client";
 
 import type { Session } from "next-auth";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   SidebarInset,
   SidebarProvider,
@@ -31,6 +31,7 @@ function ResizeHandle() {
   const { width, setWidth, isModalOpen } = useSidebarStore();
   const { open, isMobile } = useSidebar();
   const isResizingRef = useRef(false);
+  const [isResizing, setIsResizing] = useState(false);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -40,6 +41,7 @@ function ResizeHandle() {
 
     const handleMouseUp = () => {
       isResizingRef.current = false;
+      setIsResizing(false);
       document.body.style.cursor = "";
       document.body.style.userSelect = "";
     };
@@ -56,6 +58,7 @@ function ResizeHandle() {
   const handleMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
     isResizingRef.current = true;
+    setIsResizing(true);
     document.body.style.cursor = "col-resize";
     document.body.style.userSelect = "none";
   };
@@ -65,11 +68,17 @@ function ResizeHandle() {
 
   return (
     <div
-      className="fixed top-0 w-1 h-full cursor-col-resize hover:bg-primary transition-colors bg-border z-10"
-      style={{ left: `${width - 4}px` }}
+      className="group/resize fixed top-0 w-3 h-full cursor-col-resize z-10"
+      style={{ left: `${width - 6}px` }}
       title="Drag to resize"
       onMouseDown={handleMouseDown}
-    />
+    >
+      <div
+        className={`w-0.5 h-full mx-auto bg-primary transition-opacity duration-200 ${
+          isResizing ? "opacity-100" : "opacity-0 group-hover/resize:opacity-100"
+        }`}
+      />
+    </div>
   );
 }
 
