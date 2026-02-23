@@ -17,7 +17,7 @@ description: Jest 30によるAPI契約テスト、アクセス制御テスト、
 ## テスト構成
 
 ```
-__tests__/
+apps/web/__tests__/
 ├── api/                    # APIルートテスト
 │   └── ai/
 │       ├── services/
@@ -32,8 +32,8 @@ __tests__/
         └── ai/
             └── ai-service.test.ts
 
-jest.config.ts              # Jest設定
-jest.setup.ts               # グローバルモック
+apps/web/jest.config.ts     # Jest設定
+apps/web/jest.setup.ts      # グローバルモック
 ```
 
 ## モック戦略
@@ -118,7 +118,7 @@ mockFetch.mockResolvedValue({
 #### Step 1: Red（テストを先に書く）
 
 ```typescript
-// __tests__/api/mymodule/route.test.ts
+// apps/web/__tests__/api/mymodule/route.test.ts
 import { GET, POST } from "@/app/api/mymodule/route";
 
 describe("GET /api/mymodule", () => {
@@ -152,7 +152,7 @@ describe("GET /api/mymodule", () => {
 #### Step 2: Green（最小限の実装）
 
 ```typescript
-// app/api/mymodule/route.ts
+// apps/web/app/api/mymodule/route.ts
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
@@ -297,7 +297,7 @@ npm run test -- --testPathPatterns="api/ai"
 npm run test -- --watch
 
 # 単一ファイル
-npm run test -- __tests__/lib/modules/access-control.test.ts
+pnpm --filter @lion-frame/web test -- __tests__/lib/modules/access-control.test.ts
 ```
 
 ## テスト追加の判断基準
@@ -314,7 +314,7 @@ npm run test -- __tests__/lib/modules/access-control.test.ts
 
 テスト作成時:
 
-- [ ] テストファイルは `__tests__/` 配下に配置
+- [ ] テストファイルは `apps/web/__tests__/` 配下に配置
 - [ ] 正常系・異常系（認証エラー、権限エラー、バリデーションエラー）を網羅
 - [ ] モックが適切に設定されているか
 - [ ] テストが独立している（他のテストに依存しない）

@@ -32,16 +32,19 @@ docker compose up -d
 docker compose up -d postgres
 
 # 環境変数を設定
-cp .env.example .env
+cp apps/web/.env.example apps/web/.env
 # AUTH_SECRETを生成して .env に記入
 openssl rand -base64 48
 
+# 依存関係インストール
+pnpm install
+
 # データベースを初期化
-npx prisma db push
-npm run db:seed
+pnpm --filter @lion-frame/web exec prisma db push
+pnpm --filter @lion-frame/web run db:seed
 
 # 開発サーバ起動
-npm run dev
+pnpm dev
 ```
 
 ### 環境変数（.env）

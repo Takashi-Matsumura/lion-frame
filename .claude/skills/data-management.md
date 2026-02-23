@@ -9,7 +9,7 @@
 ### BaseImporter フレームワーク
 
 ```
-lib/importers/
+apps/web/lib/importers/
 ├── base-importer.ts       # 基底クラス
 ├── organization/          # 組織データインポート
 │   ├── importer.ts        # OrganizationImporter
@@ -98,7 +98,7 @@ model ChangeLog {
 ### データインポート画面（スナップショット機能含む）
 
 ```
-app/(menus)/(admin)/data-import/
+apps/web/app/(menus)/(admin)/data-import/
 └── page.tsx                    # ファイルアップロード、スナップショット、データ削除
 ```
 

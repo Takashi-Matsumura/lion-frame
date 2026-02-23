@@ -8,12 +8,12 @@ description: モジュール・メニュー構造、コア/アドオン分離、
 ## 2層構造: モジュール定義とメニュー配置
 
 ```
-lib/modules/              ← ビジネスモジュール定義層
-  ├── registry.tsx        ← 全モジュール登録 + menuGroups定義
-  ├── access-control.ts   ← アクセス制御ロジック
-  └── {module}/module.tsx ← 各モジュール定義
+apps/web/lib/modules/              ← ビジネスモジュール定義層
+  ├── registry.tsx                 ← 全モジュール登録 + menuGroups定義
+  ├── access-control.ts            ← アクセス制御ロジック
+  └── {module}/module.tsx          ← 各モジュール定義
 
-app/(menus)/              ← メニューページ実装層
+apps/web/app/(menus)/              ← メニューページ実装層
   ├── user/               ← menuGroup: user（全社員向け）
   ├── manager/            ← menuGroup: manager（管理職向け）
   ├── admin/              ← menuGroup: admin（システム管理者）
@@ -26,7 +26,7 @@ app/(menus)/              ← メニューページ実装層
 ### Step 1: モジュール定義にメニューを追加
 
 ```typescript
-// lib/modules/hr-evaluation/module.tsx
+// apps/web/lib/modules/hr-evaluation/module.tsx
 export const hrEvaluationModule: AppModule = {
   id: "hrEvaluation",
   name: "HR Evaluation",
@@ -51,11 +51,11 @@ export const hrEvaluationModule: AppModule = {
 ### Step 2: ページコンポーネントを作成
 
 ```bash
-mkdir -p app/(menus)/manager/performance-review
+mkdir -p apps/web/app/(menus)/manager/performance-review
 ```
 
 ```typescript
-// app/(menus)/manager/performance-review/page.tsx
+// apps/web/app/(menus)/manager/performance-review/page.tsx
 export default async function PerformanceReviewPage() {
   // ページの実装
 }
@@ -85,7 +85,7 @@ export default async function PerformanceReviewPage() {
 ### サービス定義例
 
 ```typescript
-// lib/core-modules/organization/module.tsx
+// apps/web/lib/core-modules/organization/module.tsx
 export const organizationModule: AppModule = {
   id: "organization",
   name: "Organization",
@@ -131,10 +131,10 @@ export const organizationModule: AppModule = {
    - `services` 配列に `AppService` オブジェクトを追加
 
 2. **APIエンドポイントを実装**
-   - `app/api/{service-path}/route.ts` を作成
+   - `apps/web/app/api/{service-path}/route.ts` を作成
 
 3. **サービスロジックを実装**
-   - `lib/services/{service-name}.ts` にビジネスロジックを実装
+   - `apps/web/lib/services/{service-name}.ts` にビジネスロジックを実装
 
 ### メニュー vs サービス 使い分け
 
@@ -152,7 +152,7 @@ export const organizationModule: AppModule = {
 ### コンテナ依存定義例
 
 ```typescript
-// lib/addon-modules/openldap/module.tsx
+// apps/web/lib/addon-modules/openldap/module.tsx
 export const openldapModule: AppModule = {
   id: "openldap",
   name: "OpenLDAP",
@@ -208,7 +208,7 @@ interface ContainerDependency {
 ## コア/アドオンモジュール分離
 
 ```
-lib/
+apps/web/lib/
 ├── core-modules/        # コアモジュール（常に有効）
 │   ├── organization/    # 組織管理
 │   ├── system/          # システム設定
@@ -235,7 +235,7 @@ NEXT_PUBLIC_ENABLE_BI=false
 フレームヘッダーには**メニュー名（ページタイトル）**を表示する。説明文は表示しない。
 
 ```typescript
-// lib/i18n/page-titles.ts にページタイトルを追加
+// apps/web/lib/i18n/page-titles.ts にページタイトルを追加
 export const pageTitles = {
   en: {
     "/backoffice/ticket-sales": "Internal Ticket Sales",
@@ -263,7 +263,7 @@ export const pageDescriptions = {
 メニュー内のタブ切り替えは**フレームヘッダー内**にサブタブとして表示する。コンテンツ領域にタブを置かない。
 
 ```typescript
-// components/Header.tsx に追加
+// apps/web/components/Header.tsx に追加
 
 // 1. ページ判定を追加
 const isTicketSales = pathname === "/backoffice/ticket-sales";

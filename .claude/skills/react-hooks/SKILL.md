@@ -73,7 +73,7 @@ const fetchData = useCallback(async () => {
 ### 基本パターン
 
 ```typescript
-// app/mypage/actions.ts
+// apps/web/app/mypage/actions.ts
 "use server";
 
 import { auth } from "@/auth";
@@ -183,7 +183,7 @@ export function TodoList({ todos }: { todos: Todo[] }) {
 ### ストア定義
 
 ```typescript
-// lib/stores/my-store.ts
+// apps/web/lib/stores/my-store.ts
 import { create } from "zustand";
 
 interface MyStore {
@@ -267,7 +267,7 @@ async function AsyncDataComponent() {
 ### loading.tsx（ルートレベル）
 
 ```typescript
-// app/(menus)/(user)/mypage/loading.tsx
+// apps/web/app/(menus)/(user)/mypage/loading.tsx
 export default function Loading() {
   return (
     <div className="max-w-7xl mx-auto animate-pulse">

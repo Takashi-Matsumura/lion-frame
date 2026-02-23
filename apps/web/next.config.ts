@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import path from "node:path";
 import type { NextConfig } from "next";
 
 // Read build ID generated during Docker build (used for session invalidation on redeploy)
@@ -41,6 +42,7 @@ const nextConfig: NextConfig = {
     ];
   },
 
+  outputFileTracingRoot: path.join(__dirname, "../../"),
   experimental: {
     serverActions: {
       bodySizeLimit: "2mb",

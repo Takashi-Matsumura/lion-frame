@@ -11,14 +11,17 @@
 !.yarn/versions
 
 # testing
-/coverage
+**/coverage
 
 # next.js
-/.next/
-/out/
+**/.next/
+**/out/
 
 # production
-/build
+**/build
+
+# turbo
+.turbo/
 
 # misc
 .DS_Store
@@ -44,14 +47,14 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-/app/generated/prisma
+**/app/generated/prisma
 
 # Database
 *.db
 *.db-journal
 *.db.backup*
-prisma/dev.db
-prisma/dev.db-journal
+**/prisma/dev.db
+**/prisma/dev.db-journal
 data/
 build-output.log
 
@@ -74,7 +77,7 @@ prisma/check-*.ts
 docker-volumes/
 
 # Uploaded files (user profile images - not in git)
-/uploads/
+**/uploads/
 
 # Database backups (contains sensitive data)
 backups/
@@ -86,3 +89,6 @@ chroma_data/
 # Claude Code (MCP config may contain credentials)
 .mcp.json
 .claude/memory/
+
+# Lock files (pnpm managed)
+package-lock.json

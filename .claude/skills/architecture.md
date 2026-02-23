@@ -17,7 +17,7 @@
 ## ディレクトリ構造
 
 ```
-lib/
+apps/web/lib/
 ├── modules/           # モジュール管理（registry.tsx）
 ├── core-modules/      # コアモジュール（常に有効）
 │   ├── system/
@@ -34,9 +34,9 @@ lib/
 
 | 種類 | 配置場所 | 特徴 |
 |------|---------|------|
-| **コア** | `lib/core-modules/` | 常に有効、取り外し不可 |
-| **アドオン** | `lib/addon-modules/` | 環境変数で有効/無効切替 |
-| **フレームワーク** | `lib/frameworks/` | 共有コード、モジュール登録されない |
+| **コア** | `apps/web/lib/core-modules/` | 常に有効、取り外し不可 |
+| **アドオン** | `apps/web/lib/addon-modules/` | 環境変数で有効/無効切替 |
+| **フレームワーク** | `apps/web/lib/frameworks/` | 共有コード、モジュール登録されない |
 
 ## 依存関係の原則（重要）
 
@@ -58,8 +58,8 @@ lib/
 
 | 場面 | ❌ 悪い | ✅ 良い |
 |------|--------|--------|
-| 同じUIを使いたい | モジュール間依存 | `lib/frameworks/` に共有コンポーネント |
-| 同じロジックを使いたい | モジュール間依存 | `lib/frameworks/` に共有Hooks |
+| 同じUIを使いたい | モジュール間依存 | `apps/web/lib/frameworks/` に共有コンポーネント |
+| 同じロジックを使いたい | モジュール間依存 | `apps/web/lib/frameworks/` に共有Hooks |
 | 他モジュールのデータを使いたい | アドオン→アドオン | コア（organization）経由 |
 
 ## 新規メニュー追加手順
@@ -67,7 +67,7 @@ lib/
 ### 1. モジュール定義を編集
 
 ```typescript
-// lib/addon-modules/{module}/module.tsx
+// apps/web/lib/addon-modules/{module}/module.tsx
 export const myModule: AppModule = {
   id: "myModule",
   dependencies: ["organization"],  // ← 依存を明示
@@ -90,7 +90,7 @@ export const myModule: AppModule = {
 ### 2. ページを作成
 
 ```typescript
-// app/(menus)/(manager)/new-menu/page.tsx
+// apps/web/app/(menus)/(manager)/new-menu/page.tsx
 export default function NewMenuPage() {
   return <div>新しいメニューのページ</div>;
 }
@@ -99,7 +99,7 @@ export default function NewMenuPage() {
 ### 3. 翻訳を追加（必要に応じて）
 
 ```typescript
-// lib/i18n/page-titles.ts
+// apps/web/lib/i18n/page-titles.ts
 "/manager/new-menu": "New Menu",  // 英語
 "/manager/new-menu": "新しいメニュー",  // 日本語
 ```

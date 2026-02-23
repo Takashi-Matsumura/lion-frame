@@ -16,7 +16,7 @@ description: NotificationServiceの使い方、通知タイプ・優先度、API
 ## ファイル構成
 
 ```
-lib/
+apps/web/lib/
 ├── services/
 │   └── notification-service.ts   # 通知発行サービス
 ├── stores/
@@ -24,13 +24,13 @@ lib/
 └── i18n/
     └── notifications.ts          # 翻訳
 
-app/api/notifications/
+apps/web/app/api/notifications/
 ├── route.ts                      # GET/POST
 ├── [id]/route.ts                 # PATCH/DELETE
 ├── read-all/route.ts             # 一括既読
 └── unread-count/route.ts         # 未読数
 
-components/notifications/
+apps/web/components/notifications/
 ├── NotificationBell.tsx          # ベルアイコン
 ├── NotificationDropdown.tsx      # ドロップダウン
 ├── NotificationItem.tsx          # 個別アイテム

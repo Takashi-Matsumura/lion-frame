@@ -80,9 +80,9 @@ return NextResponse.json(safeUser);
 // ❌ 不一致
 { path: "/admin/dashboard", menuGroup: "user" }
 
-// チェック: コアモジュール（lib/core-modules/）を直接編集していないか
-// チェック: アドオンモジュールはlib/addon-modules/に配置されているか
-// チェック: 共通UIコンポーネント（components/ui/）を使用しているか
+// チェック: コアモジュール（apps/web/lib/core-modules/）を直接編集していないか
+// チェック: アドオンモジュールはapps/web/lib/addon-modules/に配置されているか
+// チェック: 共通UIコンポーネント（apps/web/components/ui/）を使用しているか
 ```
 
 ### Server/Client Component分離
@@ -192,11 +192,11 @@ git diff --stat main...HEAD
 
 ### 2. 優先順チェック
 
-1. **APIルート** (`app/api/`) → セキュリティ最優先
-2. **Prismaスキーマ** (`prisma/schema.prisma`) → データモデル変更の影響
-3. **モジュール定義** (`lib/modules/`, `lib/addon-modules/`) → アーキテクチャ整合性
-4. **ページコンポーネント** (`app/(menus)/`) → UI/UX、多言語対応
-5. **共通コンポーネント** (`components/`) → 既存との一貫性
+1. **APIルート** (`apps/web/app/api/`) → セキュリティ最優先
+2. **Prismaスキーマ** (`apps/web/prisma/schema.prisma`) → データモデル変更の影響
+3. **モジュール定義** (`apps/web/lib/modules/`, `apps/web/lib/addon-modules/`) → アーキテクチャ整合性
+4. **ページコンポーネント** (`apps/web/app/(menus)/`) → UI/UX、多言語対応
+5. **共通コンポーネント** (`apps/web/components/`) → 既存との一貫性
 
 ### 3. レビューコメントの書き方
 
