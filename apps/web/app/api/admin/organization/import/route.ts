@@ -1,14 +1,16 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { HistoryRecorder } from "@/lib/history";
+import { parseXlsxBuffer } from "@/lib/importers/organization/xlsx-parser";
 import { processEmployeeDataWithDeduplication } from "@/lib/importers/organization/parser";
-import type { CSVEmployeeRow } from "@/lib/importers/organization/types";
 import { prisma } from "@/lib/prisma";
+
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
 /**
  * POST /api/admin/organization/import
  *
- * インポート実行
+ * XLSXファイルをアップロードしてインポート実行
  */
 export async function POST(request: Request) {
   try {
@@ -18,19 +20,30 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const body = await request.json();
-    const { data, organizationId, options } = body as {
-      data: CSVEmployeeRow[];
-      organizationId: string;
-      options?: {
-        markMissingAsRetired?: boolean;
-        skipDuplicateCheck?: boolean;
-      };
-    };
+    // FormDataからファイルとオプションを取得
+    const formData = await request.formData();
+    const file = formData.get("file") as File | null;
+    const organizationId = formData.get("organizationId") as string | null;
+    const markMissingAsRetired =
+      formData.get("markMissingAsRetired") === "true";
 
-    if (!data || !Array.isArray(data)) {
+    if (!file || !(file instanceof File)) {
       return NextResponse.json(
-        { error: "Invalid data format" },
+        { error: "ファイルがアップロードされていません" },
+        { status: 400 },
+      );
+    }
+
+    if (!file.name.endsWith(".xlsx")) {
+      return NextResponse.json(
+        { error: "XLSXファイルのみ対応しています" },
+        { status: 400 },
+      );
+    }
+
+    if (file.size > MAX_FILE_SIZE) {
+      return NextResponse.json(
+        { error: "ファイルサイズが大きすぎます（最大: 10MB）" },
         { status: 400 },
       );
     }
@@ -38,6 +51,22 @@ export async function POST(request: Request) {
     if (!organizationId) {
       return NextResponse.json(
         { error: "Organization ID is required" },
+        { status: 400 },
+      );
+    }
+
+    // ファイルのマジックバイト検証（XLSX = PKZIPヘッダー）
+    const arrayBuffer = await file.arrayBuffer();
+    const bytes = new Uint8Array(arrayBuffer);
+    if (
+      bytes.length < 4 ||
+      bytes[0] !== 0x50 ||
+      bytes[1] !== 0x4b ||
+      bytes[2] !== 0x03 ||
+      bytes[3] !== 0x04
+    ) {
+      return NextResponse.json(
+        { error: "不正なXLSXファイルです" },
         { status: 400 },
       );
     }
@@ -54,9 +83,12 @@ export async function POST(request: Request) {
       );
     }
 
-    // CSVデータを処理（役員・顧問の重複除去を含む）
+    // XLSXをサーバーサイドでパース
+    const { rows } = await parseXlsxBuffer(Buffer.from(arrayBuffer));
+
+    // データを処理（重複除去を含む）
     const { employees: processedData, excludedDuplicates } =
-      processEmployeeDataWithDeduplication(data);
+      processEmployeeDataWithDeduplication(rows);
 
     // バッチIDを生成
     const batchId = HistoryRecorder.generateBatchId();
@@ -111,18 +143,8 @@ export async function POST(request: Request) {
                 dbDept = await tx.department.create({
                   data: {
                     name: processed.department,
-                    code: processed.departmentCode, // 本部コード（1-2桁目）
                     organizationId,
                   },
-                });
-              } else if (
-                processed.departmentCode &&
-                dbDept.code !== processed.departmentCode
-              ) {
-                // 既存部門のコードを更新
-                dbDept = await tx.department.update({
-                  where: { id: dbDept.id },
-                  data: { code: processed.departmentCode },
                 });
               }
               department = {
@@ -155,18 +177,8 @@ export async function POST(request: Request) {
                   dbSect = await tx.section.create({
                     data: {
                       name: processed.section,
-                      code: processed.sectionCode, // 部コード（3-4桁目）
                       departmentId: department.id,
                     },
-                  });
-                } else if (
-                  processed.sectionCode &&
-                  dbSect.code !== processed.sectionCode
-                ) {
-                  // 既存セクションのコードを更新
-                  dbSect = await tx.section.update({
-                    where: { id: dbSect.id },
-                    data: { code: processed.sectionCode },
                   });
                 }
                 section = {
@@ -200,18 +212,8 @@ export async function POST(request: Request) {
                   dbCourse = await tx.course.create({
                     data: {
                       name: processed.course,
-                      code: processed.courseCode, // 課コード（5-7桁目）
                       sectionId: section.id,
                     },
-                  });
-                } else if (
-                  processed.courseCode &&
-                  dbCourse.code !== processed.courseCode
-                ) {
-                  // 既存コースのコードを更新
-                  dbCourse = await tx.course.update({
-                    where: { id: dbCourse.id },
-                    data: { code: processed.courseCode },
                   });
                 }
                 course = {
@@ -244,9 +246,6 @@ export async function POST(request: Request) {
                   },
                 });
                 if (emailConflict) {
-                  console.log(
-                    `Email conflict on update: ${emailToUse} already used by ${emailConflict.employeeId}, keeping original for ${processed.employeeId}`,
-                  );
                   emailToUse = existing.email; // 元のメールを維持
                 }
               }
@@ -274,7 +273,6 @@ export async function POST(request: Request) {
                   departmentId: department.id,
                   sectionId: section?.id || null,
                   courseId: course?.id || null,
-                  departmentCode: processed.affiliationCode, // 7桁の所属コード
                   qualificationGrade: processed.qualificationGrade,
                   qualificationGradeCode: processed.qualificationGradeCode,
                   employmentType: processed.employmentType,
@@ -300,7 +298,6 @@ export async function POST(request: Request) {
                   qualificationGradeCode: processed.qualificationGradeCode,
                   employmentType: processed.employmentType,
                   employmentTypeCode: processed.employmentTypeCode,
-                  departmentCode: processed.affiliationCode, // 7桁の所属コード
                   joinDate: processed.joinDate,
                   birthDate: processed.birthDate,
                   isActive: true,
@@ -326,16 +323,12 @@ export async function POST(request: Request) {
               }
             } else {
               // 新規社員を作成
-              // メール重複チェック（同じメールアドレスの社員が既に存在する場合はnullに）
               let emailToUse: string | null = processed.email || null;
               if (emailToUse) {
                 const emailExists = await tx.employee.findFirst({
                   where: { email: emailToUse },
                 });
                 if (emailExists) {
-                  console.log(
-                    `Email conflict: ${emailToUse} already exists for ${emailExists.employeeId}, setting null for ${processed.employeeId}`,
-                  );
                   emailToUse = null;
                 }
               }
@@ -353,7 +346,6 @@ export async function POST(request: Request) {
                   departmentId: department.id,
                   sectionId: section?.id || null,
                   courseId: course?.id || null,
-                  departmentCode: processed.affiliationCode, // 7桁の所属コード
                   qualificationGrade: processed.qualificationGrade,
                   qualificationGradeCode: processed.qualificationGradeCode,
                   employmentType: processed.employmentType,
@@ -379,7 +371,6 @@ export async function POST(request: Request) {
                   qualificationGradeCode: processed.qualificationGradeCode,
                   employmentType: processed.employmentType,
                   employmentTypeCode: processed.employmentTypeCode,
-                  departmentCode: processed.affiliationCode, // 7桁の所属コード
                   joinDate: processed.joinDate,
                   birthDate: processed.birthDate,
                   isActive: true,
@@ -410,7 +401,7 @@ export async function POST(request: Request) {
         }
 
         // 退職処理（オプション）
-        if (options?.markMissingAsRetired) {
+        if (markMissingAsRetired) {
           const existingEmployees = await tx.employee.findMany({
             where: {
               organizationId,
@@ -421,7 +412,6 @@ export async function POST(request: Request) {
 
           for (const existing of existingEmployees) {
             if (!importedIds.has(existing.employeeId)) {
-              // 前の履歴のvalidToを更新
               await tx.employeeHistory.updateMany({
                 where: {
                   employeeId: existing.id,
@@ -437,7 +427,6 @@ export async function POST(request: Request) {
                 data: { isActive: false },
               });
 
-              // 退職履歴スナップショットを作成
               await tx.employeeHistory.create({
                 data: {
                   employeeId: existing.id,
@@ -452,7 +441,6 @@ export async function POST(request: Request) {
                   qualificationGradeCode: existing.qualificationGradeCode,
                   employmentType: existing.employmentType,
                   employmentTypeCode: existing.employmentTypeCode,
-                  departmentCode: existing.department?.code,
                   joinDate: existing.joinDate,
                   birthDate: existing.birthDate,
                   isActive: false,
@@ -475,7 +463,7 @@ export async function POST(request: Request) {
         }
       },
       {
-        timeout: 300000, // 5分（601名のインポートに対応）
+        timeout: 300000, // 5分
       },
     );
 
@@ -496,9 +484,8 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     console.error("Error importing data:", error);
-    return NextResponse.json(
-      { error: "Failed to import data" },
-      { status: 500 },
-    );
+    const message =
+      error instanceof Error ? error.message : "Failed to import data";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

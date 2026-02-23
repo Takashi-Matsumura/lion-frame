@@ -4,7 +4,7 @@
  * 組織構成（本部・部・課）と社員データを管理するモジュール
  */
 
-import { FaHistory, FaIdBadge, FaSitemap, FaUpload, FaUsers } from "react-icons/fa";
+import { FaHistory, FaIdBadge, FaSitemap, FaUpload } from "react-icons/fa";
 import { getMenuIcon, getModuleIcon } from "@/lib/modules/icons";
 import type { AppModule, AppTab } from "@/types/module";
 
@@ -24,33 +24,22 @@ const dataManagementTabs: AppTab[] = [
     descriptionJa: "CSV/Excelから組織データをインポート",
   },
   {
-    id: "employees",
-    name: "Employees",
-    nameJa: "社員一覧",
-    icon: <FaUsers className="w-5 h-5" />,
-    order: 2,
-    enabled: true,
-    allowAccessKey: true,
-    description: "View and manage employee list",
-    descriptionJa: "社員一覧の表示と管理",
-  },
-  {
     id: "organize",
     name: "Organize",
     nameJa: "組織整備",
     icon: <FaSitemap className="w-5 h-5" />,
-    order: 3,
+    order: 2,
     enabled: true,
     allowAccessKey: true,
-    description: "Configure organization structure and managers",
-    descriptionJa: "組織構造と責任者の設定",
+    description: "Configure organization structure, view employees, and assign managers",
+    descriptionJa: "組織構造の確認・社員表示・責任者の設定",
   },
   {
     id: "history",
     name: "History",
     nameJa: "履歴",
     icon: <FaHistory className="w-5 h-5" />,
-    order: 4,
+    order: 3,
     enabled: true,
     allowAccessKey: true,
     description: "View organization change history",
@@ -61,7 +50,7 @@ const dataManagementTabs: AppTab[] = [
     name: "Position Master",
     nameJa: "役職マスタ",
     icon: <FaIdBadge className="w-5 h-5" />,
-    order: 5,
+    order: 4,
     enabled: true,
     allowAccessKey: true,
     description: "Manage position master data",

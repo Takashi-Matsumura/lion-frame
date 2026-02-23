@@ -1,23 +1,23 @@
 /**
- * 組織図インポート用の型定義
+ * 組織データインポート用の型定義
  */
 
 /**
- * CSVの社員データ行（生データ）
+ * インポート行（標準カラム名）
+ * XLSXテンプレートのカラム名に対応
  */
-export interface CSVEmployeeRow {
-  所属コード?: string;
+export interface ImportRow {
   社員番号?: string;
   氏名?: string;
-  "氏名(フリガナ)"?: string;
-  "社用e-Mail１"?: string;
-  所属?: string;
-  セクション?: string;
-  コース?: string;
+  氏名カナ?: string;
+  メールアドレス?: string;
+  電話番号?: string;
+  本部?: string;
+  部?: string;
+  課?: string;
   役職?: string;
   役職コード?: string;
-  電話番号?: string;
-  入社年月日?: string;
+  入社日?: string;
   生年月日?: string;
   資格等級?: string;
   資格等級コード?: string;
@@ -34,12 +34,8 @@ export interface ProcessedEmployee {
   nameKana?: string;
   email: string;
   department: string;
-  departmentCode?: string; // 本部コード（所属コードの1-2桁目）
   section?: string;
-  sectionCode?: string; // 部コード（所属コードの3-4桁目）
   course?: string;
-  courseCode?: string; // 課コード（所属コードの5-7桁目）
-  affiliationCode?: string; // 所属コード（元の7桁コード）
   position: string;
   positionCode?: string;
   phone?: string;

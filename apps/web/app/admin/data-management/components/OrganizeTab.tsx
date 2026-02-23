@@ -11,6 +11,8 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -64,11 +66,17 @@ interface OrganizationData {
   departments: Department[];
 }
 
-interface Employee {
+interface EmployeeData {
   id: string;
   employeeId: string;
   name: string;
+  nameKana: string | null;
   position: string;
+  email: string | null;
+  isActive: boolean;
+  department: { id: string; name: string } | null;
+  section: { id: string; name: string } | null;
+  course: { id: string; name: string } | null;
 }
 
 interface OrganizeTabProps {
@@ -88,12 +96,37 @@ interface SelectedUnit {
 
 type OrganizationStatus = "DRAFT" | "SCHEDULED" | "PUBLISHED" | "ARCHIVED";
 
+interface AutoAssignResult {
+  type: "department" | "section" | "course";
+  unitId: string;
+  unitName: string;
+  managerId: string;
+  managerName: string;
+  managerPosition: string;
+  positionLevel: string;
+}
+
+interface AutoAssignSkipped {
+  type: string;
+  unitId: string;
+  unitName: string;
+  reason: "already_assigned" | "no_candidates";
+}
+
 interface PublishSettings {
   id: string;
   name: string;
   status: OrganizationStatus;
   publishAt: string | null;
   publishedAt: string | null;
+}
+
+// Manager candidate (from manager-candidates API)
+interface ManagerCandidate {
+  id: string;
+  employeeId: string;
+  name: string;
+  position: string;
 }
 
 export function OrganizeTab({ organizationId, language, t }: OrganizeTabProps) {
@@ -104,11 +137,17 @@ export function OrganizeTab({ organizationId, language, t }: OrganizeTabProps) {
   const [expandedDepts, setExpandedDepts] = useState<Set<string>>(new Set());
   const [expandedSects, setExpandedSects] = useState<Set<string>>(new Set());
 
+  // All employees (fetched once)
+  const [allEmployees, setAllEmployees] = useState<EmployeeData[]>([]);
+  const [loadingEmployees, setLoadingEmployees] = useState(false);
+
   // Manager assignment dialog
   const [selectedUnit, setSelectedUnit] = useState<SelectedUnit | null>(null);
-  const [employees, setEmployees] = useState<Employee[]>([]);
-  const [employeeSearch, setEmployeeSearch] = useState("");
-  const [loadingEmployees, setLoadingEmployees] = useState(false);
+  const [managerCandidates, setManagerCandidates] = useState<
+    ManagerCandidate[]
+  >([]);
+  const [managerSearch, setManagerSearch] = useState("");
+  const [loadingCandidates, setLoadingCandidates] = useState(false);
   const [updating, setUpdating] = useState(false);
 
   // Publish settings
@@ -131,12 +170,28 @@ export function OrganizeTab({ organizationId, language, t }: OrganizeTabProps) {
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [cancellingImport, setCancellingImport] = useState(false);
 
+  // Clear data
+  const [showClearDataDialog, setShowClearDataDialog] = useState(false);
+  const [clearingData, setClearingData] = useState(false);
+  const [clearDataConfirmText, setClearDataConfirmText] = useState("");
+
+  // Auto-assign managers
+  const [showAutoAssignDialog, setShowAutoAssignDialog] = useState(false);
+  const [autoAssigning, setAutoAssigning] = useState(false);
+  const [autoAssignResults, setAutoAssignResults] = useState<{
+    assignments: AutoAssignResult[];
+    skipped: AutoAssignSkipped[];
+  } | null>(null);
+  const [autoAssignError, setAutoAssignError] = useState<string | null>(null);
+
   // Fetch organization data
   const fetchOrgData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await fetch("/api/organization");
+      const response = await fetch(
+        `/api/organization?organizationId=${organizationId}`,
+      );
       if (!response.ok) throw new Error("Failed to fetch organization data");
       const data: OrganizationData = await response.json();
       setOrgData(data);
@@ -146,7 +201,29 @@ export function OrganizeTab({ organizationId, language, t }: OrganizeTabProps) {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [organizationId]);
+
+  // Fetch all employees for the organization (single call)
+  const fetchAllEmployees = useCallback(async () => {
+    try {
+      setLoadingEmployees(true);
+      const params = new URLSearchParams({
+        organizationId,
+        pageSize: "200",
+        page: "1",
+      });
+      const response = await fetch(
+        `/api/admin/organization/employees?${params}`,
+      );
+      if (!response.ok) throw new Error("Failed to fetch employees");
+      const data = await response.json();
+      setAllEmployees(data.employees || []);
+    } catch (err) {
+      console.error("Error fetching employees:", err);
+    } finally {
+      setLoadingEmployees(false);
+    }
+  }, [organizationId]);
 
   // Fetch publish settings
   const fetchPublishSettings = useCallback(async () => {
@@ -179,9 +256,29 @@ export function OrganizeTab({ organizationId, language, t }: OrganizeTabProps) {
 
   useEffect(() => {
     fetchOrgData();
+    fetchAllEmployees();
     fetchPublishSettings();
     fetchCancelStatus();
-  }, [fetchOrgData, fetchPublishSettings, fetchCancelStatus]);
+  }, [fetchOrgData, fetchAllEmployees, fetchPublishSettings, fetchCancelStatus]);
+
+  // Group employees by their most specific unit
+  const employeesByUnit = useMemo(() => {
+    const map: Record<string, EmployeeData[]> = {};
+    for (const emp of allEmployees) {
+      // Assign to the most specific unit
+      if (emp.course?.id) {
+        const key = `course:${emp.course.id}`;
+        (map[key] ||= []).push(emp);
+      } else if (emp.section?.id) {
+        const key = `section:${emp.section.id}`;
+        (map[key] ||= []).push(emp);
+      } else if (emp.department?.id) {
+        const key = `department:${emp.department.id}`;
+        (map[key] ||= []).push(emp);
+      }
+    }
+    return map;
+  }, [allEmployees]);
 
   // Handle publish action
   const handlePublishAction = async () => {
@@ -264,6 +361,7 @@ export function OrganizeTab({ organizationId, language, t }: OrganizeTabProps) {
       // Refresh all data
       await Promise.all([
         fetchOrgData(),
+        fetchAllEmployees(),
         fetchPublishSettings(),
         fetchCancelStatus(),
       ]);
@@ -272,6 +370,76 @@ export function OrganizeTab({ organizationId, language, t }: OrganizeTabProps) {
       console.error("Error cancelling import:", err);
     } finally {
       setCancellingImport(false);
+    }
+  };
+
+  // Handle clear data
+  const handleClearData = async () => {
+    try {
+      setClearingData(true);
+      const response = await fetch(
+        `/api/admin/organization/clear-data?organizationId=${organizationId}`,
+        { method: "DELETE" },
+      );
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to clear data");
+      }
+
+      setShowClearDataDialog(false);
+      await Promise.all([
+        fetchOrgData(),
+        fetchAllEmployees(),
+        fetchPublishSettings(),
+        fetchCancelStatus(),
+      ]);
+    } catch (err) {
+      console.error("Error clearing data:", err);
+    } finally {
+      setClearingData(false);
+    }
+  };
+
+  // Handle auto-assign managers
+  const handleAutoAssign = async () => {
+    try {
+      setAutoAssigning(true);
+      setAutoAssignError(null);
+      const response = await fetch(
+        "/api/admin/organization/auto-assign-managers",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ organizationId }),
+        },
+      );
+
+      if (!response.ok) {
+        const data = await response.json();
+        if (data.error === "no_position_master") {
+          setAutoAssignError("no_position_master");
+          return;
+        }
+        throw new Error(data.error || "Failed to auto-assign");
+      }
+
+      const data = await response.json();
+      setAutoAssignResults(data);
+    } catch (err) {
+      console.error("Error auto-assigning managers:", err);
+      setAutoAssignError("error");
+    } finally {
+      setAutoAssigning(false);
+    }
+  };
+
+  const handleCloseAutoAssign = () => {
+    setShowAutoAssignDialog(false);
+    setAutoAssignResults(null);
+    setAutoAssignError(null);
+    if (autoAssignResults && autoAssignResults.assignments.length > 0) {
+      fetchOrgData();
     }
   };
 
@@ -321,10 +489,10 @@ export function OrganizeTab({ organizationId, language, t }: OrganizeTabProps) {
   };
 
   // Fetch manager candidates for manager selection
-  const fetchEmployees = useCallback(
+  const fetchManagerCandidates = useCallback(
     async (unitType: UnitType, unitId: string) => {
       try {
-        setLoadingEmployees(true);
+        setLoadingCandidates(true);
         const params = new URLSearchParams();
         params.set("type", unitType);
         params.set("id", unitId);
@@ -334,12 +502,12 @@ export function OrganizeTab({ organizationId, language, t }: OrganizeTabProps) {
         );
         if (!response.ok) throw new Error("Failed to fetch manager candidates");
         const data = await response.json();
-        setEmployees(data.candidates || []);
+        setManagerCandidates(data.candidates || []);
       } catch (err) {
         console.error("Error fetching manager candidates:", err);
-        setEmployees([]);
+        setManagerCandidates([]);
       } finally {
-        setLoadingEmployees(false);
+        setLoadingCandidates(false);
       }
     },
     [],
@@ -353,8 +521,8 @@ export function OrganizeTab({ organizationId, language, t }: OrganizeTabProps) {
     currentManager: Manager | null,
   ) => {
     setSelectedUnit({ type, id, name, currentManager });
-    setEmployeeSearch("");
-    fetchEmployees(type, id);
+    setManagerSearch("");
+    fetchManagerCandidates(type, id);
   };
 
   // Handle manager assignment
@@ -427,25 +595,29 @@ export function OrganizeTab({ organizationId, language, t }: OrganizeTabProps) {
     setExpandedSects(new Set());
   };
 
-  // Filter employees by search
-  const filteredEmployees = employees.filter(
+  // Filter manager candidates by search
+  const filteredCandidates = managerCandidates.filter(
     (emp) =>
-      emp.name.toLowerCase().includes(employeeSearch.toLowerCase()) ||
-      emp.employeeId.toLowerCase().includes(employeeSearch.toLowerCase()) ||
-      emp.position.toLowerCase().includes(employeeSearch.toLowerCase()),
+      emp.name.toLowerCase().includes(managerSearch.toLowerCase()) ||
+      emp.employeeId.toLowerCase().includes(managerSearch.toLowerCase()) ||
+      emp.position.toLowerCase().includes(managerSearch.toLowerCase()),
   );
 
   // Sort departments with "役員・顧問" last
   const sortedDepartments = useMemo(() => {
     if (!orgData?.departments) return [];
     return [...orgData.departments].sort((a, b) => {
-      // "役員・顧問" を最後に
       if (a.name === EXECUTIVES_DEPARTMENT_NAME) return 1;
       if (b.name === EXECUTIVES_DEPARTMENT_NAME) return -1;
-      // それ以外はコード順（元の順序を維持）
       return 0;
     });
   }, [orgData?.departments]);
+
+  // Get employee names for a unit (inline)
+  const getUnitEmployeeNames = (type: UnitType, unitId: string) => {
+    const unitKey = `${type}:${unitId}`;
+    return employeesByUnit[unitKey] || [];
+  };
 
   if (loading) {
     return (
@@ -473,6 +645,8 @@ export function OrganizeTab({ organizationId, language, t }: OrganizeTabProps) {
       </div>
     );
   }
+
+  const hasData = (orgData?.departments?.length ?? 0) > 0;
 
   return (
     <div>
@@ -510,7 +684,7 @@ export function OrganizeTab({ organizationId, language, t }: OrganizeTabProps) {
               )}
 
             {/* Action Buttons */}
-            {publishSettings.status === "DRAFT" && (
+            {publishSettings.status === "DRAFT" && hasData && (
               <>
                 {cancelStatus?.canCancel && (
                   <Button
@@ -521,6 +695,13 @@ export function OrganizeTab({ organizationId, language, t }: OrganizeTabProps) {
                     {t.cancelImport}
                   </Button>
                 )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowClearDataDialog(true)}
+                >
+                  {t.clearData}
+                </Button>
                 <Button size="sm" onClick={() => setShowPublishDialog(true)}>
                   {t.setPublishDate}
                 </Button>
@@ -540,8 +721,29 @@ export function OrganizeTab({ organizationId, language, t }: OrganizeTabProps) {
         )}
       </div>
 
-      {/* Controls */}
-      <div className="flex gap-2 mb-4">
+      {/* Empty state when no data imported */}
+      {!hasData && (
+        <div className="text-center py-16 text-muted-foreground">
+          <svg
+            className="w-12 h-12 mx-auto mb-4 opacity-50"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={1.5}
+              d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+            />
+          </svg>
+          <p>{t.noImportData}</p>
+          <p className="text-xs mt-1">{t.noImportDataHint}</p>
+        </div>
+      )}
+
+      {/* Controls — only show when data exists */}
+      {hasData && <div className="flex items-center gap-2 mb-4">
         <Button
           variant="ghost"
           size="sm"
@@ -558,11 +760,29 @@ export function OrganizeTab({ organizationId, language, t }: OrganizeTabProps) {
         >
           {t.collapseAll}
         </Button>
-      </div>
+        {publishSettings?.status === "DRAFT" && (
+          <>
+            <div className="flex-1" />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowAutoAssignDialog(true)}
+            >
+              {t.autoAssignManagers}
+            </Button>
+          </>
+        )}
+      </div>}
 
       {/* Organization Tree */}
-      <ScrollArea className="h-[calc(100vh-340px)]">
+      {hasData && <ScrollArea className="h-[calc(100vh-30rem)]">
         <div className="space-y-2 pr-4">
+          {loadingEmployees && (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+              <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-primary" />
+              {t.loading}
+            </div>
+          )}
           {/* Departments */}
           {sortedDepartments.map((dept) => {
             const isDeptExpanded = expandedDepts.has(dept.id);
@@ -577,7 +797,7 @@ export function OrganizeTab({ organizationId, language, t }: OrganizeTabProps) {
                   <CollapsibleTrigger asChild>
                     <button
                       type="button"
-                      className="p-1 hover:bg-muted rounded"
+                      className="p-1 hover:bg-muted rounded shrink-0"
                     >
                       <svg
                         className={cn(
@@ -598,60 +818,58 @@ export function OrganizeTab({ organizationId, language, t }: OrganizeTabProps) {
                     </button>
                   </CollapsibleTrigger>
 
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium">{dept.name}</span>
-                      <Badge variant="secondary" className="text-xs">
-                        {dept.employeeCount}
-                      </Badge>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        handleUnitClick(
-                          "department",
-                          dept.id,
-                          dept.name,
-                          dept.manager,
-                        )
-                      }
-                      className="text-xs mt-1 flex items-center gap-1 text-muted-foreground hover:text-primary transition-colors"
+                  <span className="font-medium shrink-0">{dept.name}</span>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleUnitClick(
+                        "department",
+                        dept.id,
+                        dept.name,
+                        dept.manager,
+                      )
+                    }
+                    className="text-xs shrink-0 flex items-center gap-1 text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    <svg
+                      className="w-3 h-3"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
                     >
-                      <svg
-                        className="w-3 h-3"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                        />
-                      </svg>
-                      {dept.manager ? (
-                        <span>
-                          {dept.manager.name} ({dept.manager.position})
-                        </span>
-                      ) : (
-                        <span className="text-orange-500">{t.noManager}</span>
-                      )}
-                      <svg
-                        className="w-3 h-3 ml-1"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-                        />
-                      </svg>
-                    </button>
-                  </div>
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                      />
+                    </svg>
+                    {dept.manager ? (
+                      <span>
+                        {dept.manager.name} ({dept.manager.position})
+                      </span>
+                    ) : (
+                      <span className="text-orange-500">{t.noManager}</span>
+                    )}
+                    <svg
+                      className="w-3 h-3"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                      />
+                    </svg>
+                  </button>
+
+                  <Badge variant="secondary" className="text-xs ml-auto shrink-0">
+                    {dept.employeeCount}
+                  </Badge>
                 </div>
 
                 <CollapsibleContent className="ml-6 mt-1 space-y-1">
@@ -669,7 +887,7 @@ export function OrganizeTab({ organizationId, language, t }: OrganizeTabProps) {
                             <CollapsibleTrigger asChild>
                               <button
                                 type="button"
-                                className="p-1 hover:bg-muted rounded"
+                                className="p-1 hover:bg-muted rounded shrink-0"
                               >
                                 <svg
                                   className={cn(
@@ -690,63 +908,76 @@ export function OrganizeTab({ organizationId, language, t }: OrganizeTabProps) {
                               </button>
                             </CollapsibleTrigger>
                           ) : (
-                            <div className="w-5" />
+                            <div className="w-5 shrink-0" />
                           )}
 
-                          <div className="flex-1">
-                            <div className="flex items-center justify-between">
-                              <span className="text-sm">{sect.name}</span>
-                              <Badge variant="secondary" className="text-xs">
-                                {sect.employeeCount}
-                              </Badge>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() =>
-                                handleUnitClick(
-                                  "section",
-                                  sect.id,
-                                  sect.name,
-                                  sect.manager,
-                                )
-                              }
-                              className="text-xs mt-0.5 flex items-center gap-1 text-muted-foreground hover:text-primary transition-colors"
+                          <span className="text-sm shrink-0">{sect.name}</span>
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleUnitClick(
+                                "section",
+                                sect.id,
+                                sect.name,
+                                sect.manager,
+                              )
+                            }
+                            className="text-xs shrink-0 flex items-center gap-1 text-muted-foreground hover:text-primary transition-colors"
+                          >
+                            <svg
+                              className="w-2.5 h-2.5"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
                             >
-                              <svg
-                                className="w-2.5 h-2.5"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                                />
-                              </svg>
-                              {sect.manager ? (
-                                <span>{sect.manager.name}</span>
-                              ) : (
-                                <span className="text-orange-500">
-                                  {t.noManager}
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                              />
+                            </svg>
+                            {sect.manager ? (
+                              <span>
+                                {sect.manager.name} ({sect.manager.position})
+                              </span>
+                            ) : (
+                              <span className="text-orange-500">
+                                {t.noManager}
+                              </span>
+                            )}
+                            <svg
+                              className="w-2.5 h-2.5"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                              />
+                            </svg>
+                          </button>
+
+                          {(() => {
+                            const emps = getUnitEmployeeNames("section", sect.id);
+                            if (emps.length === 0) return null;
+                            return (
+                              <>
+                                <div className="w-px h-4 bg-border shrink-0" />
+                                <span className="text-xs text-muted-foreground truncate">
+                                  {emps.map((e) => e.name).join("、")}
                                 </span>
-                              )}
-                              <svg
-                                className="w-2.5 h-2.5 ml-1"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-                                />
-                              </svg>
-                            </button>
-                          </div>
+                              </>
+                            );
+                          })()}
+
+                          <Badge variant="secondary" className="text-xs ml-auto shrink-0">
+                            {sect.employeeCount}
+                          </Badge>
                         </div>
 
                         <CollapsibleContent className="ml-6 mt-1 space-y-1 border-l border-muted pl-2">
@@ -755,64 +986,79 @@ export function OrganizeTab({ organizationId, language, t }: OrganizeTabProps) {
                               key={course.id}
                               className="flex items-center gap-2 p-1.5 rounded-md hover:bg-muted"
                             >
-                              <div className="w-5" />
-                              <div className="flex-1">
-                                <div className="flex items-center justify-between">
-                                  <span className="text-sm">{course.name}</span>
-                                  <Badge
-                                    variant="secondary"
-                                    className="text-xs"
-                                  >
-                                    {course.employeeCount}
-                                  </Badge>
-                                </div>
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    handleUnitClick(
-                                      "course",
-                                      course.id,
-                                      course.name,
-                                      course.manager,
-                                    )
-                                  }
-                                  className="text-xs mt-0.5 flex items-center gap-1 text-muted-foreground hover:text-primary transition-colors"
+                              <div className="w-5 shrink-0" />
+                              <span className="text-sm shrink-0">
+                                {course.name}
+                              </span>
+
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleUnitClick(
+                                    "course",
+                                    course.id,
+                                    course.name,
+                                    course.manager,
+                                  )
+                                }
+                                className="text-xs shrink-0 flex items-center gap-1 text-muted-foreground hover:text-primary transition-colors"
+                              >
+                                <svg
+                                  className="w-2.5 h-2.5"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
                                 >
-                                  <svg
-                                    className="w-2.5 h-2.5"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                  >
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth={2}
-                                      d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                                    />
-                                  </svg>
-                                  {course.manager ? (
-                                    <span>{course.manager.name}</span>
-                                  ) : (
-                                    <span className="text-orange-500">
-                                      {t.noManager}
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                                  />
+                                </svg>
+                                {course.manager ? (
+                                  <span>
+                                    {course.manager.name} ({course.manager.position})
+                                  </span>
+                                ) : (
+                                  <span className="text-orange-500">
+                                    {t.noManager}
+                                  </span>
+                                )}
+                                <svg
+                                  className="w-2.5 h-2.5"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                                  />
+                                </svg>
+                              </button>
+
+                              {(() => {
+                                const emps = getUnitEmployeeNames("course", course.id);
+                                if (emps.length === 0) return null;
+                                return (
+                                  <>
+                                    <div className="w-px h-4 bg-border shrink-0" />
+                                    <span className="text-xs text-muted-foreground truncate">
+                                      {emps.map((e) => e.name).join("、")}
                                     </span>
-                                  )}
-                                  <svg
-                                    className="w-2.5 h-2.5 ml-1"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                  >
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth={2}
-                                      d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-                                    />
-                                  </svg>
-                                </button>
-                              </div>
+                                  </>
+                                );
+                              })()}
+
+                              <Badge
+                                variant="secondary"
+                                className="text-xs ml-auto shrink-0"
+                              >
+                                {course.employeeCount}
+                              </Badge>
                             </div>
                           ))}
                         </CollapsibleContent>
@@ -824,7 +1070,7 @@ export function OrganizeTab({ organizationId, language, t }: OrganizeTabProps) {
             );
           })}
         </div>
-      </ScrollArea>
+      </ScrollArea>}
 
       {/* Manager Assignment Dialog */}
       <Dialog open={!!selectedUnit} onOpenChange={() => setSelectedUnit(null)}>
@@ -850,23 +1096,23 @@ export function OrganizeTab({ organizationId, language, t }: OrganizeTabProps) {
             {/* Search */}
             <Input
               placeholder={t.searchPlaceholder}
-              value={employeeSearch}
-              onChange={(e) => setEmployeeSearch(e.target.value)}
+              value={managerSearch}
+              onChange={(e) => setManagerSearch(e.target.value)}
             />
 
             {/* Employee List */}
             <ScrollArea className="h-[300px] border rounded-md">
-              {loadingEmployees ? (
+              {loadingCandidates ? (
                 <div className="flex items-center justify-center py-8">
                   <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />
                 </div>
-              ) : filteredEmployees.length === 0 ? (
+              ) : filteredCandidates.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground text-sm">
                   {t.noEmployees}
                 </div>
               ) : (
                 <div className="p-2 space-y-1">
-                  {filteredEmployees.map((emp) => (
+                  {filteredCandidates.map((emp) => (
                     <button
                       key={emp.id}
                       type="button"
@@ -1050,6 +1296,177 @@ export function OrganizeTab({ organizationId, language, t }: OrganizeTabProps) {
               </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Clear Data Dialog */}
+      <Dialog
+        open={showClearDataDialog}
+        onOpenChange={(open) => {
+          setShowClearDataDialog(open);
+          if (!open) setClearDataConfirmText("");
+        }}
+      >
+        <DialogContent className="sm:max-w-[450px]">
+          <DialogHeader>
+            <DialogTitle>{t.clearDataTitle}</DialogTitle>
+            <DialogDescription>{t.clearDataDescription}</DialogDescription>
+          </DialogHeader>
+
+          <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-md">
+            <p className="text-sm text-destructive">{t.clearDataConfirm}</p>
+          </div>
+
+          <div className="space-y-2">
+            <p className="text-sm text-muted-foreground">
+              {t.clearDataTypeDelete}
+            </p>
+            <Input
+              value={clearDataConfirmText}
+              onChange={(e) => setClearDataConfirmText(e.target.value)}
+              placeholder="DELETE"
+              autoComplete="off"
+            />
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowClearDataDialog(false)}
+              disabled={clearingData}
+            >
+              {t.cancel}
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleClearData}
+              disabled={clearingData || clearDataConfirmText !== "DELETE"}
+            >
+              {clearingData ? t.clearingData : t.clearData}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Auto-assign Managers Dialog */}
+      <Dialog
+        open={showAutoAssignDialog}
+        onOpenChange={(open) => {
+          if (!open) handleCloseAutoAssign();
+        }}
+      >
+        <DialogContent className="sm:max-w-[500px] max-h-[80vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle>{t.autoAssignConfirmTitle}</DialogTitle>
+            {!autoAssignResults && !autoAssignError && (
+              <DialogDescription>
+                {t.autoAssignConfirmMessage}
+              </DialogDescription>
+            )}
+          </DialogHeader>
+
+          {/* Error: No Position Master */}
+          {autoAssignError === "no_position_master" && (
+            <div className="p-3 bg-orange-50 border border-orange-200 rounded-md dark:bg-orange-950 dark:border-orange-800">
+              <p className="text-sm text-orange-700 dark:text-orange-300">
+                {t.autoAssignNoPositionMaster}
+              </p>
+            </div>
+          )}
+
+          {/* Error: General */}
+          {autoAssignError === "error" && (
+            <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-md">
+              <p className="text-sm text-destructive">
+                {t.importError}
+              </p>
+            </div>
+          )}
+
+          {/* Results */}
+          {autoAssignResults && (
+            <div className="min-h-0 flex-1 space-y-2">
+              <p className="text-sm font-medium">{t.autoAssignResult}</p>
+              <ScrollArea className="max-h-[50vh] border rounded-md">
+                <div className="p-3 space-y-1.5">
+                  {autoAssignResults.assignments.map((a) => (
+                    <div
+                      key={`${a.type}:${a.unitId}`}
+                      className="flex items-start gap-2 text-sm"
+                    >
+                      <span className="text-green-600 dark:text-green-400 shrink-0">
+                        &#10003;
+                      </span>
+                      <span>
+                        {a.unitName} &rarr; {a.managerName}
+                        {a.managerPosition && (
+                          <span className="text-muted-foreground">
+                            ({a.managerPosition})
+                          </span>
+                        )}
+                      </span>
+                    </div>
+                  ))}
+                  {autoAssignResults.skipped
+                    .filter((s) => s.reason === "already_assigned")
+                    .map((s) => (
+                      <div
+                        key={`${s.type}:${s.unitId}`}
+                        className="flex items-start gap-2 text-sm text-muted-foreground"
+                      >
+                        <span className="shrink-0">&mdash;</span>
+                        <span>
+                          {s.unitName}({t.autoAssignSkippedExisting})
+                        </span>
+                      </div>
+                    ))}
+                  {autoAssignResults.skipped
+                    .filter((s) => s.reason === "no_candidates")
+                    .map((s) => (
+                      <div
+                        key={`${s.type}:${s.unitId}`}
+                        className="flex items-start gap-2 text-sm text-muted-foreground"
+                      >
+                        <span className="text-orange-500 shrink-0">
+                          &#9651;
+                        </span>
+                        <span>
+                          {s.unitName}({t.autoAssignSkippedNoCandidates})
+                        </span>
+                      </div>
+                    ))}
+                </div>
+              </ScrollArea>
+            </div>
+          )}
+
+          {/* Loading */}
+          {autoAssigning && (
+            <div className="flex items-center justify-center py-6">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />
+            </div>
+          )}
+
+          <DialogFooter>
+            {!autoAssignResults && !autoAssignError && !autoAssigning && (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowAutoAssignDialog(false)}
+                >
+                  {t.cancel}
+                </Button>
+                <Button onClick={handleAutoAssign}>
+                  {t.autoAssignExecute}
+                </Button>
+              </>
+            )}
+            {(autoAssignResults || autoAssignError) && (
+              <Button variant="outline" onClick={handleCloseAutoAssign}>
+                {t.close}
+              </Button>
+            )}
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

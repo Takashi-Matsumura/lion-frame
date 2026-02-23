@@ -9,10 +9,11 @@ export const dataManagementTranslations = {
 
     // Import Tab
     importTitle: "Import Organization Data",
-    importDescription: "Upload CSV or Excel file to import employee data",
+    importDescription: "Upload Excel file (.xlsx) to import employee data",
     selectFile: "Select File",
     dropFileHere: "Drop file here or click to select",
-    supportedFormats: "Supported formats: CSV, XLSX",
+    supportedFormats: "Supported format: XLSX (.xlsx)",
+    downloadTemplate: "Download Template",
     maxFileSize: "Max file size: 10MB",
     preview: "Preview",
     importData: "Import Data",
@@ -97,6 +98,8 @@ export const dataManagementTranslations = {
     organizeTitle: "Organization Setup",
     organizeDescription:
       "Assign managers to departments, sections, and courses",
+    noImportData: "No import data",
+    noImportDataHint: "Import employee data from the Import tab first.",
     manager: "Manager",
     noManager: "No manager assigned",
     assignManager: "Assign Manager",
@@ -107,6 +110,9 @@ export const dataManagementTranslations = {
     managerRemoved: "Manager removed successfully",
     expandAll: "Expand All",
     collapseAll: "Collapse All",
+    showEmployees: "Show Employees",
+    hideEmployees: "Hide Employees",
+    othersCount: "others",
 
     // Publish Settings
     publishSettings: "Publish Settings",
@@ -133,6 +139,30 @@ export const dataManagementTranslations = {
     unpublished: "Not published",
     noPublishDate: "No publish date set",
 
+    // Auto-assign Managers
+    autoAssignManagers: "Auto-assign Managers",
+    autoAssignConfirmTitle: "Auto-assign Managers",
+    autoAssignConfirmMessage:
+      "Auto-assign managers based on Position Master settings. Units with existing managers will be skipped.",
+    autoAssignExecute: "Execute",
+    autoAssignResult: "Assignment Results",
+    autoAssignAssigned: "Assigned",
+    autoAssignSkippedExisting: "Already assigned",
+    autoAssignSkippedNoCandidates: "No candidates",
+    autoAssignNoPositionMaster:
+      "Please configure Position Master first. Set the management flag and level for each position.",
+
+    // Clear Data
+    clearData: "Clear Data",
+    clearDataTitle: "Clear Import Data",
+    clearDataDescription:
+      "Delete all imported data (employees, departments, sections, courses) from this organization. The organization record will be kept.",
+    clearDataConfirm:
+      "Are you sure? This will permanently delete all imported data. This action cannot be undone.",
+    clearDataTypeDelete: 'To confirm, type "DELETE" below.',
+    clearDataSuccess: "Data cleared successfully",
+    clearingData: "Clearing data...",
+
     // Import Cancel
     cancelImport: "Cancel Import",
     cancelImportTitle: "Cancel Import",
@@ -158,10 +188,11 @@ export const dataManagementTranslations = {
     // Import Tab
     importTitle: "組織データインポート",
     importDescription:
-      "CSVまたはExcelファイルをアップロードして社員データをインポート",
+      "Excelファイル（.xlsx）をアップロードして社員データをインポート",
     selectFile: "ファイルを選択",
     dropFileHere: "ここにファイルをドロップまたはクリックして選択",
-    supportedFormats: "対応形式: CSV, XLSX",
+    supportedFormats: "対応形式: XLSX（.xlsx）",
+    downloadTemplate: "テンプレートをダウンロード",
     maxFileSize: "最大ファイルサイズ: 10MB",
     preview: "プレビュー",
     importData: "インポート実行",
@@ -245,6 +276,8 @@ export const dataManagementTranslations = {
     // Organize Tab
     organizeTitle: "組織整備",
     organizeDescription: "本部・部・課に責任者を割り当てます",
+    noImportData: "インポートデータがありません",
+    noImportDataHint: "先にインポートタブから社員データをインポートしてください。",
     manager: "責任者",
     noManager: "責任者未設定",
     assignManager: "責任者を設定",
@@ -255,6 +288,9 @@ export const dataManagementTranslations = {
     managerRemoved: "責任者を解除しました",
     expandAll: "すべて展開",
     collapseAll: "すべて折りたたむ",
+    showEmployees: "社員を表示",
+    hideEmployees: "社員を非表示",
+    othersCount: "名",
 
     // Publish Settings
     publishSettings: "公開設定",
@@ -277,6 +313,30 @@ export const dataManagementTranslations = {
     scheduleSuccess: "公開を予約しました",
     unpublished: "未公開",
     noPublishDate: "公開日未設定",
+
+    // Auto-assign Managers
+    autoAssignManagers: "責任者を自動割当",
+    autoAssignConfirmTitle: "責任者の自動割当",
+    autoAssignConfirmMessage:
+      "役職マスタの設定に基づいて、未設定の部署に責任者を自動割当します。既に設定済みの部署はスキップされます。",
+    autoAssignExecute: "実行",
+    autoAssignResult: "割当結果",
+    autoAssignAssigned: "割当済み",
+    autoAssignSkippedExisting: "設定済み",
+    autoAssignSkippedNoCandidates: "候補なし",
+    autoAssignNoPositionMaster:
+      "先に役職マスタを設定してください。各役職に管理職フラグとレベルを設定してください。",
+
+    // Clear Data
+    clearData: "データ削除",
+    clearDataTitle: "インポートデータの削除",
+    clearDataDescription:
+      "この組織のインポートデータ（社員・本部・部・課）をすべて削除します。組織レコードは残ります。",
+    clearDataConfirm:
+      "すべてのインポートデータが完全に削除されます。この操作は元に戻せません。",
+    clearDataTypeDelete: '確認のため、下に「DELETE」と入力してください。',
+    clearDataSuccess: "データを削除しました",
+    clearingData: "削除中...",
 
     // Import Cancel
     cancelImport: "インポート取消",

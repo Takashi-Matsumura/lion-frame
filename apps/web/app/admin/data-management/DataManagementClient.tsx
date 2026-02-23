@@ -1,10 +1,9 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { FaPlus, FaUsers } from "react-icons/fa";
 import { Card, CardContent } from "@/components/ui/card";
-import { EmployeesTab } from "./components/EmployeesTab";
 import { HistoryTab } from "./components/HistoryTab";
 import { ImportTab } from "./components/ImportTab";
 import { OrganizeTab } from "./components/OrganizeTab";
@@ -30,8 +29,16 @@ export function DataManagementClient({
 }: DataManagementClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const tab = searchParams.get("tab") || "import";
+  const rawTab = searchParams.get("tab") || "import";
+  const tab = rawTab === "employees" ? "organize" : rawTab;
   const t = dataManagementTranslations[language];
+
+  // Redirect ?tab=employees to ?tab=organize
+  useEffect(() => {
+    if (rawTab === "employees") {
+      router.replace("?tab=organize");
+    }
+  }, [rawTab, router]);
 
   const [selectedOrgId, setSelectedOrgId] = useState<string>(
     organizations[0]?.id || "",
@@ -148,13 +155,6 @@ export function DataManagementClient({
             <>
               {tab === "import" && (
                 <ImportTab
-                  organizationId={selectedOrgId}
-                  language={language}
-                  t={t}
-                />
-              )}
-              {tab === "employees" && (
-                <EmployeesTab
                   organizationId={selectedOrgId}
                   language={language}
                   t={t}

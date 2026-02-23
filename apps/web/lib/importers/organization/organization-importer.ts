@@ -10,7 +10,7 @@ import { prisma } from "@/lib/prisma";
 import { BaseImporter, type ImportResult } from "../base-importer";
 import { processEmployeeData } from "./parser";
 import type {
-  CSVEmployeeRow,
+  ImportRow,
   FieldChange,
   PreviewResult,
   ProcessedEmployee,
@@ -20,21 +20,20 @@ import type {
  * 組織図インポータークラス
  */
 export class OrganizationImporter extends BaseImporter<
-  CSVEmployeeRow,
+  ImportRow,
   ProcessedEmployee
 > {
   constructor() {
     super({
-      fileTypes: ["csv", "xlsx"],
       maxFileSize: 10 * 1024 * 1024, // 10MB
-      requiredColumns: ["氏名", "社員番号", "所属"],
+      requiredColumns: ["氏名", "社員番号"],
     });
   }
 
   /**
    * データを処理（組織図専用）
    */
-  processData(rows: CSVEmployeeRow[]): ProcessedEmployee[] {
+  processData(rows: ImportRow[]): ProcessedEmployee[] {
     return processEmployeeData(rows);
   }
 
@@ -364,21 +363,11 @@ export class OrganizationImporter extends BaseImporter<
         const sectionMap = new Map<string, string>();
         const courseMap = new Map<string, string>();
 
-        // 注: ProcessedEmployee には以下のコードが含まれる（parser.ts で解析済み）
-        // - departmentCode: 本部コード（1-2桁目）
-        // - sectionCode: 部コード（3-4桁目）
-        // - courseCode: 課コード（5-7桁目）
-        // - affiliationCode: 元の7桁コード
-
         // 部門を作成
         const uniqueDepartments = [
           ...new Set(employees.map((e) => e.department).filter((d) => d)),
         ];
         for (const deptName of uniqueDepartments) {
-          const deptEmployee = employees.find((e) => e.department === deptName);
-          // departmentCodeは本部コード（1-2桁目）が既に設定されている
-          const deptCode = deptEmployee?.departmentCode;
-
           let dept = await tx.department.findFirst({
             where: { name: deptName, organizationId: org.id },
           });
@@ -387,18 +376,10 @@ export class OrganizationImporter extends BaseImporter<
             dept = await tx.department.create({
               data: {
                 name: deptName,
-                code: deptCode,
                 organizationId: org.id,
               },
             });
-            console.log(`Created department: ${deptName} (code: ${deptCode})`);
-          } else if (deptCode && dept.code !== deptCode) {
-            // 既存の部門のコードを更新
-            await tx.department.update({
-              where: { id: dept.id },
-              data: { code: deptCode },
-            });
-            console.log(`Updated department code: ${deptName} -> ${deptCode}`);
+            console.log(`Created department: ${deptName}`);
           }
 
           departmentMap.set(deptName, dept.id);
@@ -410,11 +391,10 @@ export class OrganizationImporter extends BaseImporter<
           .map((e) => ({
             department: e.department,
             section: e.section!,
-            sectionCode: e.sectionCode, // 部コード（3-4桁目）
           }));
 
         const processedSections = new Set<string>();
-        for (const { department, section, sectionCode } of uniqueSections) {
+        for (const { department, section } of uniqueSections) {
           const key = `${department}/${section}`;
           if (!processedSections.has(key)) {
             processedSections.add(key);
@@ -430,20 +410,10 @@ export class OrganizationImporter extends BaseImporter<
               sec = await tx.section.create({
                 data: {
                   name: section,
-                  code: sectionCode, // 部コード（3-4桁目）
                   departmentId: deptId,
                 },
               });
-              console.log(
-                `Created section: ${department}/${section} (code: ${sectionCode})`,
-              );
-            } else if (sectionCode && sec.code !== sectionCode) {
-              // 既存のセクションのコードを更新
-              await tx.section.update({
-                where: { id: sec.id },
-                data: { code: sectionCode },
-              });
-              console.log(`Updated section code: ${section} -> ${sectionCode}`);
+              console.log(`Created section: ${department}/${section}`);
             }
 
             sectionMap.set(key, sec.id);
@@ -457,16 +427,10 @@ export class OrganizationImporter extends BaseImporter<
             department: e.department,
             section: e.section!,
             course: e.course!,
-            courseCode: e.courseCode, // 課コード（5-7桁目）
           }));
 
         const processedCourses = new Set<string>();
-        for (const {
-          department,
-          section,
-          course,
-          courseCode,
-        } of uniqueCourses) {
+        for (const { department, section, course } of uniqueCourses) {
           const key = `${department}/${section}/${course}`;
           if (!processedCourses.has(key)) {
             processedCourses.add(key);
@@ -482,20 +446,10 @@ export class OrganizationImporter extends BaseImporter<
               crs = await tx.course.create({
                 data: {
                   name: course,
-                  code: courseCode, // 課コード（5-7桁目）
                   sectionId,
                 },
               });
-              console.log(
-                `Created course: ${department}/${section}/${course} (code: ${courseCode})`,
-              );
-            } else if (courseCode && crs.code !== courseCode) {
-              // 既存のコースのコードを更新
-              await tx.course.update({
-                where: { id: crs.id },
-                data: { code: courseCode },
-              });
-              console.log(`Updated course code: ${course} -> ${courseCode}`);
+              console.log(`Created course: ${department}/${section}/${course}`);
             }
 
             courseMap.set(key, crs.id);
@@ -583,7 +537,7 @@ export class OrganizationImporter extends BaseImporter<
                   qualificationGradeCode: emp.qualificationGradeCode,
                   employmentType: emp.employmentType,
                   employmentTypeCode: emp.employmentTypeCode,
-                  departmentCode: emp.affiliationCode, // 7桁の所属コードを保存
+                  // departmentCode is no longer stored from import
                   joinDate: emp.joinDate,
                   birthDate: emp.birthDate,
                   isActive: true,
@@ -653,7 +607,7 @@ export class OrganizationImporter extends BaseImporter<
                 qualificationGradeCode: emp.qualificationGradeCode,
                 employmentType: emp.employmentType,
                 employmentTypeCode: emp.employmentTypeCode,
-                departmentCode: emp.affiliationCode, // 7桁の所属コードを保存
+                // departmentCode is no longer stored from import
                 joinDate: emp.joinDate,
                 birthDate: emp.birthDate,
                 isActive: true,

@@ -37,10 +37,36 @@ export async function GET(request: Request) {
     const page = parseInt(searchParams.get("page") || "1", 10);
     const limit = parseInt(searchParams.get("limit") || "50", 10);
 
-    // 組織を取得（最初の組織を使用）
-    const organization = await prisma.organization.findFirst({
-      orderBy: { createdAt: "asc" },
+    // 公開済み組織を取得（PUBLISHED優先、SCHEDULED自動昇格）
+    let organization = await prisma.organization.findFirst({
+      where: { status: "PUBLISHED" },
+      orderBy: { publishedAt: "desc" },
     });
+
+    if (!organization) {
+      const scheduledOrg = await prisma.organization.findFirst({
+        where: {
+          status: "SCHEDULED",
+          publishAt: { lte: new Date() },
+        },
+        orderBy: { publishAt: "asc" },
+      });
+
+      if (scheduledOrg) {
+        await prisma.organization.updateMany({
+          where: { status: "PUBLISHED" },
+          data: { status: "ARCHIVED" },
+        });
+
+        organization = await prisma.organization.update({
+          where: { id: scheduledOrg.id },
+          data: {
+            status: "PUBLISHED",
+            publishedAt: new Date(),
+          },
+        });
+      }
+    }
 
     if (!organization) {
       return NextResponse.json({
