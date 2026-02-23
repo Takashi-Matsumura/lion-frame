@@ -23,9 +23,14 @@ export async function GET() {
 
     if (config.provider === "local") {
       providerName = config.localProvider;
-      // ローカルLLMの場合、実際のモデル名を取得
-      const actualModelName = await AIService.getLocalModelName();
-      modelName = actualModelName || config.localModel;
+      // ユーザーがモデル名を設定している場合はそれを優先表示
+      if (config.localModel && config.localModel !== "default") {
+        modelName = config.localModel;
+      } else {
+        // 未設定の場合、APIから実際のモデル名を取得
+        const actualModelName = await AIService.getLocalModelName();
+        modelName = actualModelName || config.localModel;
+      }
     } else if (config.provider === "openai") {
       providerName = "OpenAI";
       modelName = config.model;
