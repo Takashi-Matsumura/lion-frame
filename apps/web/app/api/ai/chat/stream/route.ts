@@ -1,5 +1,10 @@
 import { auth } from "@/auth";
+import { prisma } from "@/lib/prisma";
 import { AIService, type ChatMessage } from "@/lib/core-modules/ai";
+import {
+  buildOrgContext,
+  ORG_CONTEXT_SYSTEM_ADDITION,
+} from "@/lib/core-modules/ai/services/org-context";
 
 /**
  * POST /api/ai/chat/stream
@@ -51,7 +56,34 @@ export async function POST(request: Request) {
     // デフォルトのシステムプロンプト
     const defaultSystemPrompt =
       "You are a helpful AI assistant. Be concise and helpful in your responses. Respond in the same language as the user's message.";
-    const finalSystemPrompt = systemPrompt || defaultSystemPrompt;
+    let finalSystemPrompt = systemPrompt || defaultSystemPrompt;
+
+    // ユーザーの組織データ連携設定をチェック
+    let userOrgContextEnabled = true;
+    if (session.user?.email) {
+      const user = await prisma.user.findUnique({
+        where: { email: session.user.email },
+        select: { orgContextEnabled: true },
+      });
+      userOrgContextEnabled = user?.orgContextEnabled ?? true;
+    }
+
+    // 組織データコンテキストの構築
+    // ユーザーがONにしている場合のみ、最新のユーザーメッセージから組織関連の意図を検出し、データを注入
+    if (userOrgContextEnabled) {
+      const userMessages = messages.filter(
+        (m: ChatMessage) => m.role === "user",
+      );
+      const lastUserMessage = userMessages[userMessages.length - 1]?.content;
+
+      if (lastUserMessage) {
+        const orgContext = await buildOrgContext(lastUserMessage);
+        if (orgContext) {
+          finalSystemPrompt += ORG_CONTEXT_SYSTEM_ADDITION;
+          finalSystemPrompt += `\n\n${orgContext}`;
+        }
+      }
+    }
 
     // システムプロンプトをメッセージの先頭に追加
     const messagesWithSystem: ChatMessage[] = [

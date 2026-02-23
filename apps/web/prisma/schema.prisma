@@ -57,6 +57,7 @@ model User {
   timezone      String        @default("Asia/Tokyo")
   braveApiKey   String?
   systemPrompt  String?
+  orgContextEnabled Boolean  @default(true)
   lastSignInAt  DateTime?
   twoFactorEnabled Boolean    @default(false)
   twoFactorSecret  String?

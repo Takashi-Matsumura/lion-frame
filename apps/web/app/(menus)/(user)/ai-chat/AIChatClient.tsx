@@ -57,6 +57,9 @@ export function AIChatClient({ language, userName }: AIChatClientProps) {
     providerName: string;
     modelName: string;
   } | null>(null);
+  const [orgContextAvailable, setOrgContextAvailable] = useState(false); // システムレベルで有効
+  const [orgContextEnabled, setOrgContextEnabled] = useState(false); // ユーザー設定ON/OFF
+  const [orgToggleLoading, setOrgToggleLoading] = useState(false); // トグル切り替え中
   const [isComposing, setIsComposing] = useState(false); // IME変換中かどうか
   const [streamingContent, setStreamingContent] = useState(""); // ストリーミング中のコンテンツ
   const [showStats, setShowStats] = useState(true); // 統計表示
@@ -90,6 +93,10 @@ export function AIChatClient({ language, userName }: AIChatClientProps) {
             data.modelName,
           );
           setTokenStats((prev) => ({ ...prev, contextWindow }));
+        }
+        if (data.orgContextAvailable) {
+          setOrgContextAvailable(true);
+          setOrgContextEnabled(!!data.orgContextEnabled);
         }
       })
       .catch(() => {
@@ -347,6 +354,26 @@ export function AIChatClient({ language, userName }: AIChatClientProps) {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
+  const handleToggleOrgContext = async () => {
+    if (orgToggleLoading) return;
+    setOrgToggleLoading(true);
+    try {
+      const res = await fetch("/api/user/org-context", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ enabled: !orgContextEnabled }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setOrgContextEnabled(data.enabled);
+      }
+    } catch {
+      // トグル失敗時は何もしない
+    } finally {
+      setOrgToggleLoading(false);
+    }
+  };
+
   const handleStop = () => {
     abortControllerRef.current?.abort();
     setIsLoading(false);
@@ -585,6 +612,44 @@ export function AIChatClient({ language, userName }: AIChatClientProps) {
               <span>{providerInfo.modelName}</span>
             </div>
           )}
+          {orgContextAvailable && (
+            <button
+              type="button"
+              onClick={handleToggleOrgContext}
+              disabled={orgToggleLoading}
+              className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs transition-colors cursor-pointer ${
+                orgContextEnabled
+                  ? "bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 hover:bg-green-200 dark:hover:bg-green-800"
+                  : "bg-muted text-muted-foreground hover:bg-muted/80"
+              } ${orgToggleLoading ? "opacity-50" : ""}`}
+              title={
+                language === "ja"
+                  ? orgContextEnabled
+                    ? "組織データ連携: ON（クリックでOFF）"
+                    : "組織データ連携: OFF（クリックでON）"
+                  : orgContextEnabled
+                    ? "Org Data: ON (click to disable)"
+                    : "Org Data: OFF (click to enable)"
+              }
+            >
+              <svg
+                className="w-3 h-3"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+                />
+              </svg>
+              <span>
+                {language === "ja" ? "組織データ連携" : "Org Data"}
+              </span>
+            </button>
+          )}
         </div>
         <div className="flex items-center gap-2">
           {/* Stats toggle button */}
@@ -633,6 +698,16 @@ export function AIChatClient({ language, userName }: AIChatClientProps) {
                   {suggestion}
                 </button>
               ))}
+              {orgContextEnabled &&
+                t.orgSuggestions.map((suggestion, index) => (
+                  <button
+                    key={`org-${index}`}
+                    onClick={() => handleSubmit(undefined, suggestion)}
+                    className="px-4 py-2 text-sm border border-green-300 dark:border-green-700 text-green-700 dark:text-green-300 rounded-full hover:bg-green-50 dark:hover:bg-green-950 transition-colors"
+                  >
+                    {suggestion}
+                  </button>
+                ))}
             </div>
           </div>
         ) : (

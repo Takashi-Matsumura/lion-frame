@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
+import { prisma } from "@/lib/prisma";
 import { AIService } from "@/lib/core-modules/ai";
+import { isOrgContextEnabled } from "@/lib/core-modules/ai/services/org-context";
 
 /**
  * GET /api/ai/chat
@@ -42,11 +44,25 @@ export async function GET() {
       modelName = config.model;
     }
 
+    // 組織データアクセスが有効か確認（システムレベル + ユーザー設定）
+    const orgContextAvailable = await isOrgContextEnabled();
+
+    let orgContextEnabled = false;
+    if (orgContextAvailable && session.user?.email) {
+      const user = await prisma.user.findUnique({
+        where: { email: session.user.email },
+        select: { orgContextEnabled: true },
+      });
+      orgContextEnabled = user?.orgContextEnabled ?? true;
+    }
+
     return NextResponse.json({
       available,
       provider: config.provider,
       providerName,
       modelName,
+      orgContextAvailable,
+      orgContextEnabled,
     });
   } catch (error) {
     console.error("Error checking AI availability:", error);
