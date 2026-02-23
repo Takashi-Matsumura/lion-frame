@@ -1,0 +1,25 @@
+{
+  "name": "@lion-frame/mcp-organization",
+  "version": "1.0.0",
+  "private": true,
+  "description": "MCP server for organization data (read-only)",
+  "type": "module",
+  "scripts": {
+    "generate": "prisma generate --schema=../../apps/web/prisma/schema.prisma",
+    "build": "pnpm generate && tsc",
+    "start": "node dist/index.js",
+    "dev": "tsc --watch"
+  },
+  "prisma": {
+    "schema": "../../apps/web/prisma/schema.prisma"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.1",
+    "@prisma/client": "^6.19.1",
+    "prisma": "^6.19.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "typescript": "^5.8.3"
+  }
+}

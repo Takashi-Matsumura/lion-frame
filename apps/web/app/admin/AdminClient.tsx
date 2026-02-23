@@ -2,10 +2,15 @@
 
 import type { AccessKey, Role } from "@prisma/client";
 import {
+  Check,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
+  Copy,
   Edit3,
+  Key,
   Plus,
+  RefreshCw,
   Search,
   Trash2,
 } from "lucide-react";
@@ -205,6 +210,14 @@ export function AdminClient({
   const [modulesData, setModulesData] = useState<ModulesData | null>(null);
   const [modulesLoading, setModulesLoading] = useState(false);
   const [selectedModule, setSelectedModule] = useState<ModuleInfo | null>(null);
+  const [mcpPanelOpen, setMcpPanelOpen] = useState(false);
+  const [mcpApiKeyExists, setMcpApiKeyExists] = useState(false);
+  const [mcpApiKeyMasked, setMcpApiKeyMasked] = useState<string | null>(null);
+  const [mcpApiKeyRevealed, setMcpApiKeyRevealed] = useState<string | null>(
+    null,
+  );
+  const [mcpApiKeyLoading, setMcpApiKeyLoading] = useState(false);
+  const [mcpApiKeyCopied, setMcpApiKeyCopied] = useState(false);
 
   // Google OAuth設定
   const [googleOAuthEnabled, setGoogleOAuthEnabled] = useState(false);
@@ -941,6 +954,73 @@ export function AdminClient({
   useEffect(() => {
     fetchModules();
   }, [fetchModules]);
+
+  // MCPサーバAPIキー取得
+  const fetchMcpApiKey = useCallback(
+    async (mcpServerId: string) => {
+      try {
+        setMcpApiKeyLoading(true);
+        // mcpServerIdからモジュール名を抽出（"organization-mcp" → "organization"）
+        const moduleName = mcpServerId.replace(/-mcp$/, "");
+        const response = await fetch(`/api/admin/mcp/${moduleName}`);
+        if (!response.ok) return;
+        const data = await response.json();
+        setMcpApiKeyExists(data.exists);
+        setMcpApiKeyMasked(data.maskedKey);
+        setMcpApiKeyRevealed(null);
+      } catch (error) {
+        console.error("Error fetching MCP API key:", error);
+      } finally {
+        setMcpApiKeyLoading(false);
+      }
+    },
+    [],
+  );
+
+  // MCPサーバAPIキー生成
+  const generateMcpApiKey = useCallback(
+    async (mcpServerId: string) => {
+      try {
+        setMcpApiKeyLoading(true);
+        const moduleName = mcpServerId.replace(/-mcp$/, "");
+        const response = await fetch(`/api/admin/mcp/${moduleName}`, {
+          method: "POST",
+        });
+        if (!response.ok) throw new Error("Failed to generate API key");
+        const data = await response.json();
+        setMcpApiKeyExists(true);
+        setMcpApiKeyRevealed(data.key);
+        setMcpApiKeyMasked(null);
+      } catch (error) {
+        console.error("Error generating MCP API key:", error);
+      } finally {
+        setMcpApiKeyLoading(false);
+      }
+    },
+    [],
+  );
+
+  // MCPサーバAPIキー削除
+  const deleteMcpApiKey = useCallback(
+    async (mcpServerId: string) => {
+      try {
+        setMcpApiKeyLoading(true);
+        const moduleName = mcpServerId.replace(/-mcp$/, "");
+        const response = await fetch(`/api/admin/mcp/${moduleName}`, {
+          method: "DELETE",
+        });
+        if (!response.ok) throw new Error("Failed to delete API key");
+        setMcpApiKeyExists(false);
+        setMcpApiKeyMasked(null);
+        setMcpApiKeyRevealed(null);
+      } catch (error) {
+        console.error("Error deleting MCP API key:", error);
+      } finally {
+        setMcpApiKeyLoading(false);
+      }
+    },
+    [],
+  );
 
   // ユーザデータを取得
   const fetchUsers = useCallback(async () => {
@@ -2007,7 +2087,7 @@ export function AdminClient({
                               {/* モジュールヘッダー */}
                               <div
                                 className="cursor-pointer"
-                                onClick={() => setSelectedModule(module)}
+                                onClick={() => { setSelectedModule(module); setMcpPanelOpen(false); }}
                               >
                                 <div className="flex items-start gap-3">
                                   <div className="flex-shrink-0 w-10 h-10 bg-primary rounded-lg flex items-center justify-center text-primary-foreground">
@@ -2031,7 +2111,7 @@ export function AdminClient({
 
                             <CardContent
                               className="cursor-pointer"
-                              onClick={() => setSelectedModule(module)}
+                              onClick={() => { setSelectedModule(module); setMcpPanelOpen(false); }}
                             >
                               {/* モジュール説明 */}
                               {(language === "ja"
@@ -2249,11 +2329,21 @@ export function AdminClient({
                       </code>
                     </div>
 
-                    {/* MCPサーバー詳細 */}
+                    {/* MCPサーバー詳細（折り畳み可能） */}
                     {selectedModule.mcpServer && (
-                      <div className="mb-6 p-4 bg-muted border border-border rounded-lg">
-                        <div className="flex items-center gap-3 mb-4">
-                          <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center text-white">
+                      <div className="mb-6 bg-muted border border-border rounded-lg">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const next = !mcpPanelOpen;
+                            setMcpPanelOpen(next);
+                            if (next && selectedModule.mcpServer) {
+                              fetchMcpApiKey(selectedModule.mcpServer.id);
+                            }
+                          }}
+                          className="w-full flex items-center gap-3 p-4 text-left cursor-pointer hover:bg-accent/50 rounded-lg transition-colors"
+                        >
+                          <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center text-white shrink-0">
                             <svg
                               className="w-5 h-5"
                               fill="none"
@@ -2268,7 +2358,7 @@ export function AdminClient({
                               />
                             </svg>
                           </div>
-                          <div>
+                          <div className="flex-1 min-w-0">
                             <h4 className="text-sm font-semibold">
                               {language === "ja"
                                 ? selectedModule.mcpServer.nameJa
@@ -2281,76 +2371,233 @@ export function AdminClient({
                               )}
                             </p>
                           </div>
-                        </div>
+                          <ChevronDown
+                            className={`w-4 h-4 text-muted-foreground shrink-0 transition-transform duration-200 ${
+                              mcpPanelOpen ? "rotate-180" : ""
+                            }`}
+                          />
+                        </button>
 
-                        <div className="space-y-3">
-                          {/* 説明 */}
-                          {(language === "ja"
-                            ? selectedModule.mcpServer.descriptionJa
-                            : selectedModule.mcpServer.description) && (
+                        {mcpPanelOpen && (
+                          <div className="px-4 pb-4 space-y-3">
+                            {/* 説明 */}
+                            {(language === "ja"
+                              ? selectedModule.mcpServer.descriptionJa
+                              : selectedModule.mcpServer.description) && (
+                              <div className="p-3 bg-card rounded-lg border border-border">
+                                <p className="text-sm font-medium mb-1">
+                                  {t("Description", "説明")}
+                                </p>
+                                <p className="text-sm text-muted-foreground">
+                                  {language === "ja"
+                                    ? selectedModule.mcpServer.descriptionJa
+                                    : selectedModule.mcpServer.description}
+                                </p>
+                              </div>
+                            )}
+
+                            {/* ツール一覧 */}
+                            <div className="p-3 bg-card rounded-lg border border-border">
+                              <p className="text-sm font-medium mb-2">
+                                {t("Tools", "ツール")} (
+                                {selectedModule.mcpServer.toolCount})
+                              </p>
+                              <div className="space-y-1.5">
+                                {selectedModule.mcpServer.tools.map((tool) => (
+                                  <div
+                                    key={tool.name}
+                                    className="flex items-center gap-2 text-xs"
+                                  >
+                                    <code className="text-blue-600 bg-blue-50 dark:bg-blue-950 dark:text-blue-400 px-1.5 py-0.5 rounded font-mono">
+                                      {tool.name}
+                                    </code>
+                                    <span className="text-muted-foreground">
+                                      {tool.descriptionJa}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* アクセスモード */}
                             <div className="p-3 bg-card rounded-lg border border-border">
                               <p className="text-sm font-medium mb-1">
-                                {t("Description", "説明")}
+                                {t("Access Mode", "アクセスモード")}
                               </p>
-                              <p className="text-sm text-muted-foreground">
-                                {language === "ja"
-                                  ? selectedModule.mcpServer.descriptionJa
-                                  : selectedModule.mcpServer.description}
-                              </p>
+                              <span
+                                className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
+                                  selectedModule.mcpServer.readOnly
+                                    ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
+                                    : "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200"
+                                }`}
+                              >
+                                {selectedModule.mcpServer.readOnly
+                                  ? t("Read Only", "読み取り専用")
+                                  : t("Read/Write", "読み書き可能")}
+                              </span>
                             </div>
-                          )}
 
-                          {/* ツール一覧 */}
-                          <div className="p-3 bg-card rounded-lg border border-border">
-                            <p className="text-sm font-medium mb-2">
-                              {t("Tools", "ツール")} (
-                              {selectedModule.mcpServer.toolCount})
-                            </p>
-                            <div className="space-y-1.5">
-                              {selectedModule.mcpServer.tools.map((tool) => (
-                                <div
-                                  key={tool.name}
-                                  className="flex items-center gap-2 text-xs"
-                                >
-                                  <code className="text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded font-mono">
-                                    {tool.name}
-                                  </code>
-                                  <span className="text-muted-foreground">
-                                    {tool.descriptionJa}
-                                  </span>
+                            {/* パス */}
+                            <div className="p-3 bg-card rounded-lg border border-border">
+                              <p className="text-sm font-medium mb-1">
+                                {t("Server Path", "サーバパス")}
+                              </p>
+                              <code className="text-sm text-muted-foreground bg-muted px-2 py-1 rounded">
+                                {selectedModule.mcpServer.path}
+                              </code>
+                            </div>
+
+                            {/* APIキー管理 */}
+                            <div className="p-3 bg-card rounded-lg border border-border">
+                              <div className="flex items-center gap-2 mb-2">
+                                <Key className="w-4 h-4 text-muted-foreground" />
+                                <p className="text-sm font-medium">
+                                  {t("API Key", "APIキー")}
+                                </p>
+                              </div>
+
+                              {mcpApiKeyLoading ? (
+                                <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
+                                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                                  {t("Loading...", "読み込み中...")}
                                 </div>
-                              ))}
+                              ) : mcpApiKeyRevealed ? (
+                                /* 生成直後: キー全文を表示 */
+                                <div className="space-y-2">
+                                  <div className="flex items-center gap-2">
+                                    <code className="flex-1 text-xs font-mono bg-muted px-2 py-1.5 rounded break-all select-all">
+                                      {mcpApiKeyRevealed}
+                                    </code>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="shrink-0 h-8 w-8 p-0"
+                                      onClick={async () => {
+                                        await navigator.clipboard.writeText(
+                                          mcpApiKeyRevealed,
+                                        );
+                                        setMcpApiKeyCopied(true);
+                                        setTimeout(
+                                          () => setMcpApiKeyCopied(false),
+                                          2000,
+                                        );
+                                      }}
+                                    >
+                                      {mcpApiKeyCopied ? (
+                                        <Check className="w-3.5 h-3.5 text-green-600" />
+                                      ) : (
+                                        <Copy className="w-3.5 h-3.5" />
+                                      )}
+                                    </Button>
+                                  </div>
+                                  <p className="text-xs text-amber-600 dark:text-amber-400">
+                                    {t(
+                                      "Copy the key now. It will not be shown again.",
+                                      "このキーを今すぐコピーしてください。再表示はできません。",
+                                    )}
+                                  </p>
+                                  <div className="flex items-center gap-2 pt-1">
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => {
+                                        if (selectedModule.mcpServer) {
+                                          generateMcpApiKey(
+                                            selectedModule.mcpServer.id,
+                                          );
+                                        }
+                                      }}
+                                      disabled={mcpApiKeyLoading}
+                                    >
+                                      <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
+                                      {t("Regenerate", "再生成")}
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="text-destructive hover:text-destructive"
+                                      onClick={() => {
+                                        if (selectedModule.mcpServer) {
+                                          deleteMcpApiKey(
+                                            selectedModule.mcpServer.id,
+                                          );
+                                        }
+                                      }}
+                                      disabled={mcpApiKeyLoading}
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5 mr-1.5" />
+                                      {t("Delete", "削除")}
+                                    </Button>
+                                  </div>
+                                </div>
+                              ) : mcpApiKeyExists ? (
+                                /* 既存キー: マスク表示 */
+                                <div className="space-y-2">
+                                  <code className="block text-xs font-mono bg-muted px-2 py-1.5 rounded text-muted-foreground">
+                                    {mcpApiKeyMasked}
+                                  </code>
+                                  <div className="flex items-center gap-2">
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => {
+                                        if (selectedModule.mcpServer) {
+                                          generateMcpApiKey(
+                                            selectedModule.mcpServer.id,
+                                          );
+                                        }
+                                      }}
+                                      disabled={mcpApiKeyLoading}
+                                    >
+                                      <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
+                                      {t("Regenerate", "再生成")}
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="text-destructive hover:text-destructive"
+                                      onClick={() => {
+                                        if (selectedModule.mcpServer) {
+                                          deleteMcpApiKey(
+                                            selectedModule.mcpServer.id,
+                                          );
+                                        }
+                                      }}
+                                      disabled={mcpApiKeyLoading}
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5 mr-1.5" />
+                                      {t("Delete", "削除")}
+                                    </Button>
+                                  </div>
+                                </div>
+                              ) : (
+                                /* キー未発行 */
+                                <div className="space-y-2">
+                                  <p className="text-xs text-muted-foreground">
+                                    {t(
+                                      "No API key has been generated. Generate one to use with the MCP server.",
+                                      "APIキーが未発行です。MCPサーバの利用にはキーを発行してください。",
+                                    )}
+                                  </p>
+                                  <Button
+                                    size="sm"
+                                    onClick={() => {
+                                      if (selectedModule.mcpServer) {
+                                        generateMcpApiKey(
+                                          selectedModule.mcpServer.id,
+                                        );
+                                      }
+                                    }}
+                                    disabled={mcpApiKeyLoading}
+                                  >
+                                    <Key className="w-3.5 h-3.5 mr-1.5" />
+                                    {t("Generate API Key", "APIキーを発行")}
+                                  </Button>
+                                </div>
+                              )}
                             </div>
                           </div>
-
-                          {/* アクセスモード */}
-                          <div className="p-3 bg-card rounded-lg border border-border">
-                            <p className="text-sm font-medium mb-1">
-                              {t("Access Mode", "アクセスモード")}
-                            </p>
-                            <span
-                              className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
-                                selectedModule.mcpServer.readOnly
-                                  ? "bg-blue-100 text-blue-800"
-                                  : "bg-amber-100 text-amber-800"
-                              }`}
-                            >
-                              {selectedModule.mcpServer.readOnly
-                                ? t("Read Only", "読み取り専用")
-                                : t("Read/Write", "読み書き可能")}
-                            </span>
-                          </div>
-
-                          {/* パス */}
-                          <div className="p-3 bg-card rounded-lg border border-border">
-                            <p className="text-sm font-medium mb-1">
-                              {t("Server Path", "サーバパス")}
-                            </p>
-                            <code className="text-sm text-muted-foreground bg-muted px-2 py-1 rounded">
-                              {selectedModule.mcpServer.path}
-                            </code>
-                          </div>
-                        </div>
+                        )}
                       </div>
                     )}
 

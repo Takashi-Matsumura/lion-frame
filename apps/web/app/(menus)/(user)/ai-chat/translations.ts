@@ -27,6 +27,11 @@ export const aiChatTranslations = {
       "Help me write a document",
       "What features are available?",
     ],
+    orgSuggestions: [
+      "Show me the organization structure",
+      "How many employees are there?",
+      "List all positions",
+    ],
     // Stats labels
     stats: {
       contextUsage: "Context Usage",
@@ -68,6 +73,11 @@ export const aiChatTranslations = {
       "このシステムの使い方を教えて",
       "ドキュメントの作成を手伝って",
       "どんな機能がありますか？",
+    ],
+    orgSuggestions: [
+      "組織構造を教えて",
+      "社員は何人いますか？",
+      "役職一覧を表示して",
     ],
     // Stats labels
     stats: {

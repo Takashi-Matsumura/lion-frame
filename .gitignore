@@ -90,5 +90,8 @@ chroma_data/
 .mcp.json
 .claude/memory/
 
+# MCP servers build output
+mcp-servers/*/dist/
+
 # Lock files (pnpm managed)
 package-lock.json

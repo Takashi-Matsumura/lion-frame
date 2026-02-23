@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "organization": {
+      "command": "node",
+      "args": ["mcp-servers/organization/dist/index.js"],
+      "env": {
+        "DATABASE_URL": "postgresql://user:pass@localhost:5432/dbname",
+        "MCP_API_KEY": "your-api-key-here"
+      }
+    }
+  }
+}

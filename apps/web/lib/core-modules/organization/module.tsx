@@ -126,5 +126,51 @@ export const organizationModule: AppModule = {
       apiEndpoints: ["/api/admin/organization/history"],
       enabled: true,
     },
+    {
+      id: "organizationReadApi",
+      moduleId: "organization",
+      name: "Organization Read API",
+      nameJa: "組織データ読み取りAPI",
+      description:
+        "Read-only API for addon modules to reference organization, employee, and position data",
+      descriptionJa:
+        "アドオンモジュールが組織・社員・役職データを参照するための読み取り専用API",
+      apiEndpoints: [
+        "/api/organization",
+        "/api/organization/employees",
+        "/api/organization/employees/[id]",
+        "/api/organization/positions",
+      ],
+      enabled: true,
+    },
   ],
+  mcpServer: {
+    id: "organization-mcp",
+    name: "Organization MCP Server",
+    nameJa: "組織データMCPサーバ",
+    description:
+      "Provides read-only access to organization, employee, and position data for external AI",
+    descriptionJa:
+      "外部AIから組織構造・社員・役職データへの読み取り専用アクセスを提供",
+    path: "mcp-servers/organization",
+    toolCount: 5,
+    readOnly: true,
+    tools: [
+      { name: "org_get_structure", descriptionJa: "組織階層構造を取得" },
+      {
+        name: "org_list_employees",
+        descriptionJa:
+          "社員一覧を取得（フィルタ・ページネーション対応）",
+      },
+      { name: "org_get_employee", descriptionJa: "社員詳細を取得" },
+      {
+        name: "org_search_employees",
+        descriptionJa: "社員をキーワード検索",
+      },
+      {
+        name: "org_list_positions",
+        descriptionJa: "役職マスタ一覧を取得",
+      },
+    ],
+  },
 };
