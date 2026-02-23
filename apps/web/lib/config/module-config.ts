@@ -8,6 +8,12 @@ export interface ModuleConfig {
 
 export const moduleConfigs: Record<string, ModuleConfig> = {
   // コアモジュール（常に有効）
+  ai: {
+    id: "ai",
+    enabled: true,
+    type: "core",
+    dependencies: [],
+  },
   organization: {
     id: "organization",
     enabled: true,
@@ -21,6 +27,15 @@ export const moduleConfigs: Record<string, ModuleConfig> = {
     dependencies: [],
   },
 } as const;
+
+/** コアモジュールIDのSet（サイドバーアイコンのアンダーバー判定等に使用） */
+export const CORE_MODULE_IDS = new Set(getCoreModuleIds());
+
+function getCoreModuleIds(): string[] {
+  return Object.entries(moduleConfigs)
+    .filter(([_, config]) => config.type === "core")
+    .map(([id]) => id);
+}
 
 export function isModuleEnabled(moduleId: string): boolean {
   return moduleConfigs[moduleId]?.enabled ?? false;

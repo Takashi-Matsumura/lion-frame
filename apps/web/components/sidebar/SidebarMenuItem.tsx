@@ -16,6 +16,7 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
 } from "@/components/ui/sidebar";
+import { CORE_MODULE_IDS } from "@/lib/config/module-config";
 import type { AppMenu } from "@/types/module";
 import { useSidebarNavigation } from "./SidebarNavigationContext";
 
@@ -77,7 +78,7 @@ export function SidebarMenuItemComponent({
 
     // TailwindクラスをHEX値に変換
     const hexColor = color ? colorMap[color] || color : undefined;
-    const isAddonModule = menu.moduleId !== "system";
+    const isAddonModule = !CORE_MODULE_IDS.has(menu.moduleId);
 
     return (
       <div className="relative flex items-center justify-center size-5 [&>svg]:size-4">

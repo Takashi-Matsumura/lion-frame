@@ -314,6 +314,42 @@ const roleColors = {
 | アイコンとテキスト間 | `gap-2` または `gap-3` |
 | ページとヘッダータブ間 | `mt-8` |
 
+## サイドバーメニューアイコンのアンダーバー
+
+サイドバーのメニューアイコンには、**アドオンモジュールのみ**アイコン下部にカラーアンダーバーが表示されます。コアモジュールには表示されません。
+
+| モジュール種別 | アンダーバー | 例 |
+|--------------|------------|-----|
+| **コア** (`lib/core-modules/`) | なし | system, ai, organization |
+| **アドオン** (`lib/addon-modules/`) | あり（メニューグループのカラー） | 将来の追加モジュール |
+
+### 判定ロジック
+
+```typescript
+// apps/web/components/sidebar/SidebarMenuItem.tsx
+import { CORE_MODULE_IDS } from "@/lib/config/module-config";
+
+const isAddonModule = !CORE_MODULE_IDS.has(menu.moduleId);
+```
+
+`CORE_MODULE_IDS` は `lib/config/module-config.ts` の `moduleConfigs` から自動生成されます。新しいコアモジュールを追加する場合は `moduleConfigs` に `type: "core"` で登録してください。
+
+### アンダーバーのスタイル
+
+```tsx
+{isAddonModule && hexColor && (
+  <div
+    className="absolute -bottom-1 left-0.5 right-0.5 h-0.5 rounded-full"
+    style={{ backgroundColor: hexColor }}
+  />
+)}
+```
+
+- 高さ: `h-0.5`（2px）
+- 位置: アイコン直下（`-bottom-1`）
+- 色: メニューグループのカラー（ユーザ=シアン、マネージャー=グリーン等）
+- 角丸: `rounded-full`
+
 ## 戻るボタン（BackButton）
 
 ```tsx
