@@ -22,8 +22,6 @@ export default async function DashboardPage() {
   }
 
   const language = await getLanguage();
-  const userName =
-    session.user.name || session.user.email?.split("@")[0] || "User";
   const userRole = session.user.role || "USER";
 
   return (
@@ -31,7 +29,6 @@ export default async function DashboardPage() {
       <DashboardClient
         language={language as "en" | "ja"}
         userRole={userRole}
-        userName={userName}
       />
     </div>
   );

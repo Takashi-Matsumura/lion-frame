@@ -1,92 +1,63 @@
-import { appConfig } from "@/lib/config/app";
-
 export const dashboardTranslations = {
   en: {
     title: "Dashboard",
-    welcomeBack: "Welcome back",
-    roleLabel: "Role",
-    today: "Today",
-    // Message Section
-    messageTitle: "About This Application",
-    messageDescription: `${appConfig.name} is a ${appConfig.description.toLowerCase()}. Add menus and features through plugins, and manage access control based on roles.`,
-    featureModular: "Modular Architecture",
-    featureModularDesc: "Extend menus and features via plugins",
-    featureRoles: "Role-Based Access",
-    featureRolesDesc: "Control page access by role",
-    featureAuth: "Flexible Authentication",
-    featureAuthDesc: "Credentials, OAuth, and more",
-    featureI18n: "Multi-Language",
-    featureI18nDesc: "Switch between Japanese and English",
-    // Component Demo Section
-    componentDemoTitle: "UI Component Showcase",
-    componentDemoDescription:
-      "This application uses shadcn/ui components. Below are examples of available components.",
-    demoButtons: "Buttons",
-    demoBadges: "Badges",
-    demoAlerts: "Alerts",
-    demoCards: "Cards",
-    demoInputs: "Form Inputs",
-    alertInfoTitle: "Information",
-    alertInfoDesc: "This is an informational alert.",
-    alertWarningTitle: "Warning",
-    alertWarningDesc: "Please review before proceeding.",
-    alertSuccessTitle: "Success",
-    alertSuccessDesc: "Operation completed successfully.",
-    cardTitle: "Sample Card",
-    cardDescription: "Cards can contain any content.",
-    cardContent: "This is a sample card using shadcn/ui Card component.",
-    // Floating Window Demo
-    demoFloatingWindow: "Floating Window",
-    floatingWindowButton: "Open Floating Window",
-    floatingWindowTitle: "Sample Floating Window",
-    floatingWindowContent:
-      "This window can be dragged, resized, minimized, and maximized. Try it out!",
-    floatingWindowNote:
-      "Drag title bar to move, edges to resize, double-click title for maximize.",
+    // KPI
+    totalEmployees: "Total Employees",
+    departments: "Departments",
+    sections: "Sections",
+    courses: "Courses",
+    managerRate: "Manager Rate",
+    people: "people",
+    // Department Composition
+    deptCompositionTitle: "Headcount by Department",
+    // Position Distribution
+    positionDistTitle: "Position Distribution",
+    managers: "Managers",
+    nonManagers: "General Staff",
+    positionNoData: "No position data available",
+    // Quick Links
+    quickLinksTitle: "Quick Links",
+    orgChart: "Organization Chart",
+    orgChartDesc: "View organizational structure",
+    aiChat: "AI Chat",
+    aiChatDesc: "Consult with AI assistant",
+    adminPanel: "Admin Panel",
+    adminPanelDesc: "System administration",
+    // Empty State
+    emptyTitle: "No Organization Data",
+    emptyDescription:
+      "Organization data has not been registered yet. Please import data from the admin panel.",
+    emptyAdminButton: "Go to Data Management",
   },
   ja: {
     title: "ダッシュボード",
-    welcomeBack: "お帰りなさい",
-    roleLabel: "ロール",
-    today: "今日",
-    // Message Section
-    messageTitle: "このアプリケーションについて",
-    messageDescription: `${appConfig.name}は、${appConfig.descriptionJa}です。プラグイン形式でメニューと機能を拡張し、ロールに応じたアクセス制御を行います。`,
-    featureModular: "モジュラーアーキテクチャ",
-    featureModularDesc: "プラグイン形式でメニューと機能を拡張",
-    featureRoles: "権限ベースのアクセス制御",
-    featureRolesDesc: "ロールに応じたページアクセス制御",
-    featureAuth: "柔軟な認証基盤",
-    featureAuthDesc: "Credentials、OAuth等に対応",
-    featureI18n: "多言語対応",
-    featureI18nDesc: "日本語・英語切り替え",
-    // Component Demo Section
-    componentDemoTitle: "UIコンポーネント ショーケース",
-    componentDemoDescription:
-      "このアプリケーションではshadcn/uiコンポーネントを使用しています。以下は利用可能なコンポーネントの例です。",
-    demoButtons: "ボタン",
-    demoBadges: "バッジ",
-    demoAlerts: "アラート",
-    demoCards: "カード",
-    demoInputs: "フォーム入力",
-    alertInfoTitle: "情報",
-    alertInfoDesc: "これは情報アラートです。",
-    alertWarningTitle: "警告",
-    alertWarningDesc: "続行する前に確認してください。",
-    alertSuccessTitle: "成功",
-    alertSuccessDesc: "操作が正常に完了しました。",
-    cardTitle: "サンプルカード",
-    cardDescription: "カードには任意のコンテンツを含められます。",
-    cardContent:
-      "これはshadcn/ui Cardコンポーネントを使用したサンプルカードです。",
-    // Floating Window Demo
-    demoFloatingWindow: "フローティングウィンドウ",
-    floatingWindowButton: "フローティングウィンドウを開く",
-    floatingWindowTitle: "サンプルフローティングウィンドウ",
-    floatingWindowContent:
-      "このウィンドウはドラッグ、リサイズ、最小化、最大化が可能です。お試しください！",
-    floatingWindowNote:
-      "タイトルバーをドラッグで移動、辺をドラッグでリサイズ、ダブルクリックで最大化。",
+    // KPI
+    totalEmployees: "総社員数",
+    departments: "本部数",
+    sections: "部数",
+    courses: "課数",
+    managerRate: "管理職率",
+    people: "名",
+    // Department Composition
+    deptCompositionTitle: "本部別人員構成",
+    // Position Distribution
+    positionDistTitle: "役職分布",
+    managers: "管理職",
+    nonManagers: "一般職",
+    positionNoData: "役職データがありません",
+    // Quick Links
+    quickLinksTitle: "クイックリンク",
+    orgChart: "組織図",
+    orgChartDesc: "組織構造を表示",
+    aiChat: "AIチャット",
+    aiChatDesc: "AIアシスタントに相談",
+    adminPanel: "管理画面",
+    adminPanelDesc: "システム管理",
+    // Empty State
+    emptyTitle: "組織データがありません",
+    emptyDescription:
+      "組織データが未登録です。管理画面からデータをインポートしてください。",
+    emptyAdminButton: "データ管理へ",
   },
 } as const;
 

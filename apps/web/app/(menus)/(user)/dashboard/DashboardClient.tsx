@@ -1,331 +1,468 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import {
-  RiAlertLine,
-  RiCheckboxCircleLine,
-  RiInformationLine,
-  RiPlugLine,
-  RiServerLine,
+  RiBuilding2Line,
+  RiChat1Line,
+  RiDatabase2Line,
+  RiFolder3Line,
+  RiOrganizationChart,
+  RiSettings3Line,
   RiShieldUserLine,
-  RiTranslate2,
-  RiWindowLine,
+  RiStackLine,
+  RiTeamLine,
 } from "react-icons/ri";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
-import { FloatingWindow } from "@/components/ui/floating-window";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
-import { useFloatingWindowStore } from "@/lib/stores/floating-window-store";
+import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
+import { getPositionColor } from "@/lib/core-modules/organization/position-utils";
 import { dashboardTranslations } from "./translations";
 
 interface DashboardClientProps {
   language: "en" | "ja";
   userRole: string;
-  userName: string;
 }
+
+interface OrgData {
+  organization: {
+    id: string;
+    name: string;
+    employeeCount: number;
+  } | null;
+  departments: {
+    id: string;
+    name: string;
+    employeeCount: number;
+    sections: {
+      id: string;
+      name: string;
+      employeeCount: number;
+      courses: {
+        id: string;
+        name: string;
+        employeeCount: number;
+      }[];
+    }[];
+  }[];
+}
+
+interface Position {
+  id: string;
+  code: string;
+  name: string;
+  nameJa: string;
+  level: number;
+  isManager: boolean;
+  color: string | null;
+  displayOrder: number;
+}
+
+interface Employee {
+  id: string;
+  position: string | null;
+  positionCode: string | null;
+  positionColor: string | null;
+}
+
+const BAR_COLORS = [
+  "bg-blue-500",
+  "bg-cyan-500",
+  "bg-purple-500",
+  "bg-green-500",
+  "bg-amber-500",
+  "bg-rose-500",
+];
 
 export function DashboardClient({
   language,
   userRole,
-  userName,
 }: DashboardClientProps) {
   const t = dashboardTranslations[language];
-  const [switchValue, setSwitchValue] = useState(false);
-  const [checkboxValue, setCheckboxValue] = useState(false);
-  const { open: openFloatingWindow, isOpen: isFloatingWindowOpen } =
-    useFloatingWindowStore();
+  const [loading, setLoading] = useState(true);
+  const [orgData, setOrgData] = useState<OrgData | null>(null);
+  const [positions, setPositions] = useState<Position[]>([]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
 
-  const handleOpenFloatingWindow = () => {
-    openFloatingWindow({
-      title: t.floatingWindowTitle,
-      titleJa: t.floatingWindowTitle,
-      content: (
-        <div className="space-y-4">
-          <p className="text-sm text-muted-foreground">
-            {t.floatingWindowContent}
-          </p>
-          <div className="flex flex-wrap gap-2">
-            <Badge>Draggable</Badge>
-            <Badge variant="secondary">Resizable</Badge>
-            <Badge variant="outline">Minimizable</Badge>
-            <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-              Maximizable
-            </Badge>
-          </div>
-        </div>
-      ),
-      initialPosition: { x: 200, y: 150 },
-      initialSize: { width: 400, height: 250 },
-    });
-  };
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    const [orgRes, posRes, empRes] = await Promise.allSettled([
+      fetch("/api/organization"),
+      fetch("/api/organization/positions"),
+      fetch("/api/organization/employees?limit=9999&isActive=true"),
+    ]);
 
-  const features = [
+    if (orgRes.status === "fulfilled" && orgRes.value.ok) {
+      setOrgData(await orgRes.value.json());
+    }
+    if (posRes.status === "fulfilled" && posRes.value.ok) {
+      const data = await posRes.value.json();
+      setPositions(data.positions ?? []);
+    }
+    if (empRes.status === "fulfilled" && empRes.value.ok) {
+      const data = await empRes.value.json();
+      setEmployees(data.employees ?? []);
+    }
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const isAdmin = userRole === "ADMIN";
+  const hasOrg = orgData?.organization != null;
+
+  // Computed KPIs
+  const totalEmployees = orgData?.organization?.employeeCount ?? 0;
+  const deptCount = orgData?.departments?.length ?? 0;
+  const sectionCount =
+    orgData?.departments?.reduce(
+      (sum, d) => sum + (d.sections?.length ?? 0),
+      0,
+    ) ?? 0;
+  const courseCount =
+    orgData?.departments?.reduce(
+      (sum, d) =>
+        sum +
+        (d.sections?.reduce((s, sec) => s + (sec.courses?.length ?? 0), 0) ??
+          0),
+      0,
+    ) ?? 0;
+
+  // Position-based stats from employees
+  const managerPositionCodes = new Set(
+    positions.filter((p) => p.isManager).map((p) => p.code),
+  );
+  const managerCount = employees.filter(
+    (e) => e.positionCode && managerPositionCodes.has(e.positionCode),
+  ).length;
+  const managerRate =
+    totalEmployees > 0
+      ? `${((managerCount / totalEmployees) * 100).toFixed(1)}%`
+      : "—";
+
+  // Position distribution counts
+  const positionCounts = new Map<string, number>();
+  for (const emp of employees) {
+    const key = emp.positionCode ?? "__none__";
+    positionCounts.set(key, (positionCounts.get(key) ?? 0) + 1);
+  }
+
+  const kpiItems = [
     {
-      icon: RiPlugLine,
-      title: t.featureModular,
-      description: t.featureModularDesc,
+      icon: RiTeamLine,
+      label: t.totalEmployees,
+      value: totalEmployees,
+      color: "text-blue-600 dark:text-blue-400",
+      bg: "bg-blue-100 dark:bg-blue-900/50",
+    },
+    {
+      icon: RiBuilding2Line,
+      label: t.departments,
+      value: deptCount,
+      color: "text-purple-600 dark:text-purple-400",
+      bg: "bg-purple-100 dark:bg-purple-900/50",
+    },
+    {
+      icon: RiStackLine,
+      label: t.sections,
+      value: sectionCount,
+      color: "text-cyan-600 dark:text-cyan-400",
+      bg: "bg-cyan-100 dark:bg-cyan-900/50",
+    },
+    {
+      icon: RiFolder3Line,
+      label: t.courses,
+      value: courseCount,
+      color: "text-green-600 dark:text-green-400",
+      bg: "bg-green-100 dark:bg-green-900/50",
     },
     {
       icon: RiShieldUserLine,
-      title: t.featureRoles,
-      description: t.featureRolesDesc,
-    },
-    {
-      icon: RiServerLine,
-      title: t.featureAuth,
-      description: t.featureAuthDesc,
-    },
-    {
-      icon: RiTranslate2,
-      title: t.featureI18n,
-      description: t.featureI18nDesc,
+      label: t.managerRate,
+      value: managerRate,
+      color: "text-amber-600 dark:text-amber-400",
+      bg: "bg-amber-100 dark:bg-amber-900/50",
     },
   ];
 
+  // Sort departments by employee count desc for bar chart
+  const sortedDepts = [...(orgData?.departments ?? [])].sort(
+    (a, b) => b.employeeCount - a.employeeCount,
+  );
+  const maxDeptCount = sortedDepts[0]?.employeeCount ?? 1;
+
   return (
     <div className="space-y-6">
-      {/* Welcome Banner */}
-      <Card className="bg-primary border-0">
-        <CardContent className="py-6">
-          <div className="flex items-center justify-between text-primary-foreground">
-            <div>
-              <h1 className="text-2xl font-bold mb-2">
-                {t.welcomeBack}, {userName}!
-              </h1>
-              <p className="opacity-80">
-                {t.roleLabel}: <span className="font-semibold">{userRole}</span>
-              </p>
-            </div>
-            <div className="hidden md:block">
-              <div className="text-right">
-                <p className="opacity-70 text-sm">{t.today}</p>
-                <p className="text-xl font-semibold">
-                  {new Date().toLocaleDateString(
-                    language === "ja" ? "ja-JP" : "en-US",
-                    {
-                      weekday: "long",
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                    },
-                  )}
-                </p>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* About This Application */}
-      <Card>
-        <CardHeader>
-          <CardTitle>{t.messageTitle}</CardTitle>
-          <CardDescription>{t.messageDescription}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {features.map((feature) => (
-              <div
-                key={feature.title}
-                className="flex items-start gap-3 p-4 rounded-lg bg-muted/50"
-              >
-                <div className="p-2 rounded-md bg-primary/10">
-                  <feature.icon className="w-5 h-5 text-primary" />
-                </div>
-                <div>
-                  <h4 className="font-medium text-sm">{feature.title}</h4>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {feature.description}
-                  </p>
-                </div>
-              </div>
+      {loading ? (
+        <LoadingSkeleton />
+      ) : hasOrg ? (
+        <>
+          {/* KPI Cards */}
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+            {kpiItems.map((item) => (
+              <Card key={item.label}>
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2 rounded-lg ${item.bg}`}>
+                      <item.icon className={`w-5 h-5 ${item.color}`} />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs text-muted-foreground truncate">
+                        {item.label}
+                      </p>
+                      <p className="text-2xl font-bold">{item.value}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             ))}
           </div>
+
+          {/* Department Composition + Position Distribution */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Department Composition */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">
+                  {t.deptCompositionTitle}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {sortedDepts.map((dept, idx) => {
+                  const pct =
+                    totalEmployees > 0
+                      ? ((dept.employeeCount / totalEmployees) * 100).toFixed(1)
+                      : "0";
+                  const barWidth =
+                    maxDeptCount > 0
+                      ? (dept.employeeCount / maxDeptCount) * 100
+                      : 0;
+                  return (
+                    <div key={dept.id}>
+                      <div className="flex items-center justify-between text-sm mb-1">
+                        <span className="truncate font-medium">
+                          {dept.name}
+                        </span>
+                        <span className="text-muted-foreground ml-2 shrink-0">
+                          {dept.employeeCount}
+                          {t.people} ({pct}%)
+                        </span>
+                      </div>
+                      <div className="h-2 rounded-full bg-muted overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all ${BAR_COLORS[idx % BAR_COLORS.length]}`}
+                          style={{ width: `${barWidth}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </CardContent>
+            </Card>
+
+            {/* Position Distribution */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">
+                  {t.positionDistTitle}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {positions.length > 0 ? (
+                  <div className="space-y-4">
+                    {/* Manager / Non-manager summary */}
+                    <div className="flex gap-4">
+                      <div className="flex-1 rounded-lg bg-muted/50 p-3 text-center">
+                        <p className="text-xs text-muted-foreground">
+                          {t.managers}
+                        </p>
+                        <p className="text-xl font-bold">{managerCount}</p>
+                      </div>
+                      <div className="flex-1 rounded-lg bg-muted/50 p-3 text-center">
+                        <p className="text-xs text-muted-foreground">
+                          {t.nonManagers}
+                        </p>
+                        <p className="text-xl font-bold">
+                          {totalEmployees - managerCount}
+                        </p>
+                      </div>
+                    </div>
+                    <Separator />
+                    {/* Per-position badges */}
+                    <div className="flex flex-wrap gap-2">
+                      {positions.map((pos) => {
+                        const count = positionCounts.get(pos.code) ?? 0;
+                        const colorClass = getPositionColor(
+                          pos.color,
+                          pos.nameJa,
+                        );
+                        return (
+                          <Badge key={pos.id} className={colorClass}>
+                            {language === "ja" ? pos.nameJa : pos.name}: {count}
+                          </Badge>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    {t.positionNoData}
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </>
+      ) : (
+        /* Empty State */
+        <Card>
+          <CardContent className="py-12">
+            <div className="flex flex-col items-center text-center">
+              <div className="p-4 rounded-full bg-muted mb-4">
+                <RiDatabase2Line className="w-8 h-8 text-muted-foreground" />
+              </div>
+              <h3 className="text-lg font-semibold mb-2">{t.emptyTitle}</h3>
+              <p className="text-sm text-muted-foreground max-w-md mb-4">
+                {t.emptyDescription}
+              </p>
+              {isAdmin && (
+                <Button asChild>
+                  <Link href="/admin/data-management">
+                    {t.emptyAdminButton}
+                  </Link>
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Quick Links */}
+      <div>
+        <h3 className="text-sm font-medium text-muted-foreground mb-3">
+          {t.quickLinksTitle}
+        </h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <QuickLinkCard
+            href="/org-chart"
+            icon={RiOrganizationChart}
+            title={t.orgChart}
+            description={t.orgChartDesc}
+          />
+          <QuickLinkCard
+            href="/ai-chat"
+            icon={RiChat1Line}
+            title={t.aiChat}
+            description={t.aiChatDesc}
+          />
+          {isAdmin && (
+            <QuickLinkCard
+              href="/admin"
+              icon={RiSettings3Line}
+              title={t.adminPanel}
+              description={t.adminPanelDesc}
+            />
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function QuickLinkCard({
+  href,
+  icon: Icon,
+  title,
+  description,
+}: {
+  href: string;
+  icon: React.ComponentType<{ className?: string }>;
+  title: string;
+  description: string;
+}) {
+  return (
+    <Link href={href}>
+      <Card className="hover:bg-muted/50 transition-colors cursor-pointer h-full">
+        <CardContent className="pt-6">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-primary/10">
+              <Icon className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <p className="font-medium text-sm">{title}</p>
+              <p className="text-xs text-muted-foreground">{description}</p>
+            </div>
+          </div>
         </CardContent>
       </Card>
+    </Link>
+  );
+}
 
-      {/* Component Demo Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle>{t.componentDemoTitle}</CardTitle>
-          <CardDescription>{t.componentDemoDescription}</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-8">
-          {/* Buttons */}
-          <div>
-            <h4 className="font-medium mb-3">{t.demoButtons}</h4>
-            <div className="flex flex-wrap gap-2">
-              <Button>Default</Button>
-              <Button variant="secondary">Secondary</Button>
-              <Button variant="destructive">Destructive</Button>
-              <Button variant="outline">Outline</Button>
-              <Button variant="ghost">Ghost</Button>
-              <Button variant="link">Link</Button>
-              <Button size="sm">Small</Button>
-              <Button size="lg">Large</Button>
-              <Button disabled>Disabled</Button>
-            </div>
-          </div>
-
-          {/* Badges */}
-          <div>
-            <h4 className="font-medium mb-3">{t.demoBadges}</h4>
-            <div className="flex flex-wrap gap-2">
-              <Badge>Default</Badge>
-              <Badge variant="secondary">Secondary</Badge>
-              <Badge variant="destructive">Destructive</Badge>
-              <Badge variant="outline">Outline</Badge>
-              <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                Success
-              </Badge>
-              <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
-                Warning
-              </Badge>
-              <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-                Info
-              </Badge>
-            </div>
-          </div>
-
-          {/* Alerts */}
-          <div>
-            <h4 className="font-medium mb-3">{t.demoAlerts}</h4>
-            <div className="space-y-3">
-              <Alert>
-                <RiInformationLine className="h-4 w-4" />
-                <AlertTitle>{t.alertInfoTitle}</AlertTitle>
-                <AlertDescription>{t.alertInfoDesc}</AlertDescription>
-              </Alert>
-              <Alert className="border-yellow-200 bg-yellow-50 text-yellow-800 dark:border-yellow-800 dark:bg-yellow-950 dark:text-yellow-200">
-                <RiAlertLine className="h-4 w-4" />
-                <AlertTitle>{t.alertWarningTitle}</AlertTitle>
-                <AlertDescription>{t.alertWarningDesc}</AlertDescription>
-              </Alert>
-              <Alert className="border-green-200 bg-green-50 text-green-800 dark:border-green-800 dark:bg-green-950 dark:text-green-200">
-                <RiCheckboxCircleLine className="h-4 w-4" />
-                <AlertTitle>{t.alertSuccessTitle}</AlertTitle>
-                <AlertDescription>{t.alertSuccessDesc}</AlertDescription>
-              </Alert>
-            </div>
-          </div>
-
-          {/* Cards */}
-          <div>
-            <h4 className="font-medium mb-3">{t.demoCards}</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle>{t.cardTitle}</CardTitle>
-                  <CardDescription>{t.cardDescription}</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">
-                    {t.cardContent}
-                  </p>
-                </CardContent>
-              </Card>
-              <Card className="bg-muted/50">
-                <CardHeader>
-                  <CardTitle className="text-base">Muted Card</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">
-                    This card has a muted background for visual hierarchy.
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-
-          {/* Floating Window */}
-          <div>
-            <h4 className="font-medium mb-3">{t.demoFloatingWindow}</h4>
-            <div className="flex items-center gap-4">
-              <Button
-                onClick={handleOpenFloatingWindow}
-                disabled={isFloatingWindowOpen}
-              >
-                <RiWindowLine className="w-4 h-4 mr-2" />
-                {t.floatingWindowButton}
-              </Button>
-              <span className="text-sm text-muted-foreground">
-                {t.floatingWindowNote}
-              </span>
-            </div>
-          </div>
-
-          {/* Form Inputs */}
-          <div>
-            <h4 className="font-medium mb-3">{t.demoInputs}</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-4">
+function LoadingSkeleton() {
+  return (
+    <div className="space-y-6">
+      {/* KPI Skeletons */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <Card key={i}>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-3">
+                <Skeleton className="h-9 w-9 rounded-lg" />
                 <div className="space-y-2">
-                  <Label htmlFor="demo-input">Input</Label>
-                  <Input id="demo-input" placeholder="Type something..." />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="demo-select">Select</Label>
-                  <Select>
-                    <SelectTrigger id="demo-select">
-                      <SelectValue placeholder="Select an option" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="option1">Option 1</SelectItem>
-                      <SelectItem value="option2">Option 2</SelectItem>
-                      <SelectItem value="option3">Option 3</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Skeleton className="h-3 w-16" />
+                  <Skeleton className="h-7 w-12" />
                 </div>
               </div>
-              <div className="space-y-4">
-                <div className="flex items-center space-x-2">
-                  <Switch
-                    id="demo-switch"
-                    checked={switchValue}
-                    onCheckedChange={setSwitchValue}
-                  />
-                  <Label htmlFor="demo-switch">
-                    Switch ({switchValue ? "ON" : "OFF"})
-                  </Label>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+      {/* Two column skeleton */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-5 w-32" />
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="space-y-2">
+                <div className="flex justify-between">
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-4 w-16" />
                 </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="demo-checkbox"
-                    checked={checkboxValue}
-                    onCheckedChange={(checked) =>
-                      setCheckboxValue(checked === true)
-                    }
-                  />
-                  <Label htmlFor="demo-checkbox">
-                    Checkbox ({checkboxValue ? "Checked" : "Unchecked"})
-                  </Label>
-                </div>
+                <Skeleton className="h-2 w-full rounded-full" />
               </div>
+            ))}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-5 w-24" />
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex gap-4">
+              <Skeleton className="h-16 flex-1 rounded-lg" />
+              <Skeleton className="h-16 flex-1 rounded-lg" />
             </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Floating Window Component */}
-      <FloatingWindow language={language} />
+            <Skeleton className="h-px w-full" />
+            <div className="flex flex-wrap gap-2">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Skeleton key={i} className="h-6 w-20 rounded-full" />
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
