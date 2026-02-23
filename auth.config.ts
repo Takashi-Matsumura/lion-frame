@@ -7,15 +7,17 @@ import { prisma } from "@/lib/prisma";
 
 // Warn if AUTH_SECRET is weak or missing
 const authSecret = process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET;
-if (process.env.NODE_ENV === "production" && (!authSecret || authSecret.length < 32)) {
+if (
+  process.env.NODE_ENV === "production" &&
+  (!authSecret || authSecret.length < 32)
+) {
   console.error(
     "[SECURITY] AUTH_SECRET is missing or too short (< 32 chars). " +
-    "Generate a strong secret with: openssl rand -base64 32",
+      "Generate a strong secret with: openssl rand -base64 32",
   );
 }
 
 // Lightweight auth config for middleware (Edge Runtime compatible)
-// Does not include LDAP/OpenLDAP providers to avoid Node.js module dependencies
 export const authConfig = {
   // Type assertion needed due to version mismatch between @auth/prisma-adapter and next-auth
   adapter: PrismaAdapter(prisma) as NextAuthConfig["adapter"],
@@ -135,17 +137,6 @@ export const authConfig = {
         }
       }
 
-      // LDAPプロバイダーの場合も最終サインイン日時を更新
-      if (
-        (account?.provider === "ldap" || account?.provider === "openldap") &&
-        user.id
-      ) {
-        await prisma.user.update({
-          where: { id: user.id },
-          data: { lastSignInAt: new Date() },
-        });
-      }
-
       return true;
     },
     async jwt({ token, user, trigger }) {
@@ -170,12 +161,7 @@ export const authConfig = {
           token.language = dbUser.language;
           token.twoFactorEnabled = dbUser.twoFactorEnabled;
 
-          // LDAPユーザの場合、パスワード変更必須フラグをチェック
-          const ldapMapping = await prisma.ldapUserMapping.findUnique({
-            where: { userId: dbUser.id },
-            select: { mustChangePassword: true },
-          });
-          token.mustChangePassword = ldapMapping?.mustChangePassword ?? false;
+          token.mustChangePassword = false;
         } else if (user) {
           // フォールバック: DBにない場合はuserオブジェクトから取得
           token.id = user.id;

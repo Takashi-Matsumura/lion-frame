@@ -31,7 +31,8 @@
 import type { HTMLAttributes } from "react";
 import { cn } from "@/lib/utils";
 
-interface LocaleDateProps extends Omit<HTMLAttributes<HTMLSpanElement>, "children"> {
+interface LocaleDateProps
+  extends Omit<HTMLAttributes<HTMLSpanElement>, "children"> {
   /** The date to format */
   date: Date | string | number;
   /** Locale string (e.g., "ja-JP", "en-US") */
@@ -57,17 +58,14 @@ export function LocaleDate({
   const formatted = dateObj.toLocaleDateString(locale, options);
 
   return (
-    <Tag
-      className={cn(className)}
-      suppressHydrationWarning
-      {...props}
-    >
+    <Tag className={cn(className)} suppressHydrationWarning {...props}>
       {formatted}
     </Tag>
   );
 }
 
-interface LocaleTimeProps extends Omit<HTMLAttributes<HTMLSpanElement>, "children"> {
+interface LocaleTimeProps
+  extends Omit<HTMLAttributes<HTMLSpanElement>, "children"> {
   /** The date/time to format */
   date: Date | string | number;
   /** Locale string (e.g., "ja-JP", "en-US") */
@@ -93,17 +91,14 @@ export function LocaleTime({
   const formatted = dateObj.toLocaleTimeString(locale, options);
 
   return (
-    <Tag
-      className={cn(className)}
-      suppressHydrationWarning
-      {...props}
-    >
+    <Tag className={cn(className)} suppressHydrationWarning {...props}>
       {formatted}
     </Tag>
   );
 }
 
-interface LocaleDateTimeProps extends Omit<HTMLAttributes<HTMLSpanElement>, "children"> {
+interface LocaleDateTimeProps
+  extends Omit<HTMLAttributes<HTMLSpanElement>, "children"> {
   /** The date/time to format */
   date: Date | string | number;
   /** Locale string (e.g., "ja-JP", "en-US") */
@@ -136,11 +131,7 @@ export function LocaleDateTime({
   const formattedTime = dateObj.toLocaleTimeString(locale, timeOptions);
 
   return (
-    <Tag
-      className={cn(className)}
-      suppressHydrationWarning
-      {...props}
-    >
+    <Tag className={cn(className)} suppressHydrationWarning {...props}>
       {formattedDate}
       {separator}
       {formattedTime}
@@ -148,7 +139,8 @@ export function LocaleDateTime({
   );
 }
 
-interface LocaleTimeRangeProps extends Omit<HTMLAttributes<HTMLSpanElement>, "children"> {
+interface LocaleTimeRangeProps
+  extends Omit<HTMLAttributes<HTMLSpanElement>, "children"> {
   /** Start date/time */
   start: Date | string | number;
   /** End date/time */
@@ -182,11 +174,7 @@ export function LocaleTimeRange({
   const formattedEnd = endObj.toLocaleTimeString(locale, options);
 
   return (
-    <Tag
-      className={cn(className)}
-      suppressHydrationWarning
-      {...props}
-    >
+    <Tag className={cn(className)} suppressHydrationWarning {...props}>
       {formattedStart}
       {separator}
       {formattedEnd}

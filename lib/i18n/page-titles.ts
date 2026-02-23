@@ -51,7 +51,6 @@ export const pageTitles = {
     "/backoffice/page-announcements": "Page Announcements",
     "/backoffice/ticket-sales": "Internal Ticket Sales",
     "/backoffice/ai-business-analysis": "AI Business Analysis",
-    "/admin/openldap": "OpenLDAP Settings",
   },
   ja: {
     "/": "ホーム",
@@ -98,7 +97,6 @@ export const pageTitles = {
     "/backoffice/page-announcements": "ページ案内",
     "/backoffice/ticket-sales": "社内チケット販売",
     "/backoffice/ai-business-analysis": "AI業務分析",
-    "/admin/openldap": "OpenLDAP設定",
   },
 } as const;
 
@@ -165,8 +163,6 @@ export const pageDescriptions = {
       "Manage internal ticket sales, customers, and products",
     "/backoffice/ai-business-analysis":
       "Analyze business processes through AI dialogue to create job descriptions and workflow diagrams",
-    "/admin/openldap":
-      "Manage OpenLDAP users, migrate from existing LDAP servers, and configure OpenLDAP settings",
   },
   ja: {
     "/": "BoX（BackOffice Transformation）は社内システムのデータを集約し可視化します。フレーム上でモジュールが動作し、様々なバックオフィス業務をサポートします。",
@@ -218,8 +214,6 @@ export const pageDescriptions = {
     "/backoffice/ticket-sales": "社内チケット販売、顧客、商品を管理します",
     "/backoffice/ai-business-analysis":
       "AIとの対話を通じて業務プロセスを分析し、業務分掌・業務フロー図を作成します",
-    "/admin/openldap":
-      "OpenLDAPユーザの管理、既存LDAPサーバからの移行、OpenLDAP設定を行います",
   },
 } as const;
 

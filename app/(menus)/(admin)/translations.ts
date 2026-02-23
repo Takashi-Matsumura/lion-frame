@@ -29,7 +29,7 @@ export const adminTranslations = {
     databaseValue: "SQLite (開発環境)",
     authentication: "認証:",
     authValue: "NextAuth.js v5",
-    provider: "プロバイダー:",
+    provider: "プロバイダ:",
     providerValue: "Google OAuth",
   },
 } as const;

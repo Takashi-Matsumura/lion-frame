@@ -1,13 +1,13 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import {
   createContext,
+  type ReactNode,
   useContext,
   useEffect,
   useState,
-  type ReactNode,
 } from "react";
-import { usePathname } from "next/navigation";
 
 interface SidebarNavigationContextType {
   loadingPath: string | null;

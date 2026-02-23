@@ -103,6 +103,19 @@ export async function GET(request: Request) {
     // 総件数を取得
     const total = await prisma.employee.count({ where });
 
+    // PositionMasterからdisplayOrderとcolorを取得
+    const positionMasters = await prisma.positionMaster.findMany({
+      where: { isActive: true },
+      select: { code: true, displayOrder: true, color: true },
+    });
+    const positionOrderMap = new Map<string, number>();
+    const positionColorMap = new Map<string, string | null>();
+    for (const pm of positionMasters) {
+      positionOrderMap.set(pm.code, pm.displayOrder);
+      positionColorMap.set(pm.code, pm.color);
+    }
+    const usePositionMaster = positionMasters.length > 0;
+
     // 社員一覧を取得（ソートはJavaScriptで行う）
     const allEmployees = await prisma.employee.findMany({
       where,
@@ -119,24 +132,30 @@ export async function GET(request: Request) {
       },
     });
 
-    // カスタムソート: 役職コード順（「000」は最後）、同じ役職コードは名前の五十音順
+    // カスタムソート: PositionMaster.displayOrder → 役職コード順（「000」は最後）→ 名前の五十音順
     const sortedEmployees = allEmployees.sort((a, b) => {
-      const codeA = a.positionCode || "999"; // null/undefinedは最後の方
-      const codeB = b.positionCode || "999";
+      if (usePositionMaster) {
+        // PositionMasterのdisplayOrderで並び替え
+        const orderA = a.positionCode != null ? (positionOrderMap.get(a.positionCode) ?? 99999) : 99999;
+        const orderB = b.positionCode != null ? (positionOrderMap.get(b.positionCode) ?? 99999) : 99999;
+        if (orderA !== orderB) return orderA - orderB;
+      } else {
+        // フォールバック: 従来の役職コード順
+        const codeA = a.positionCode || "999";
+        const codeB = b.positionCode || "999";
 
-      // 「000」（一般社員）は最後に
-      const isGeneralA = codeA === "000";
-      const isGeneralB = codeB === "000";
+        const isGeneralA = codeA === "000";
+        const isGeneralB = codeB === "000";
 
-      if (isGeneralA && !isGeneralB) return 1;
-      if (!isGeneralA && isGeneralB) return -1;
+        if (isGeneralA && !isGeneralB) return 1;
+        if (!isGeneralA && isGeneralB) return -1;
 
-      // 役職コードで昇順ソート
-      if (codeA !== codeB) {
-        return codeA.localeCompare(codeB);
+        if (codeA !== codeB) {
+          return codeA.localeCompare(codeB);
+        }
       }
 
-      // 同じ役職コードの場合は名前カナ（五十音順）でソート
+      // 同じ表示順の場合は名前カナ（五十音順）でソート
       const nameA = a.nameKana || a.name || "";
       const nameB = b.nameKana || b.name || "";
       return nameA.localeCompare(nameB, "ja");
@@ -155,14 +174,17 @@ export async function GET(request: Request) {
       distinct: ["position"],
     });
 
-    // 役職リストをソート（役職コード順、「000」は最後）
+    // 役職リストをソート（PositionMaster.displayOrder → 役職コード順）
     const sortedPositions = positionsData.sort((a, b) => {
+      if (usePositionMaster) {
+        const orderA = a.positionCode != null ? (positionOrderMap.get(a.positionCode) ?? 99999) : 99999;
+        const orderB = b.positionCode != null ? (positionOrderMap.get(b.positionCode) ?? 99999) : 99999;
+        return orderA - orderB;
+      }
       const codeA = a.positionCode || "999";
       const codeB = b.positionCode || "999";
-
       if (codeA === "000" && codeB !== "000") return 1;
       if (codeA !== "000" && codeB === "000") return -1;
-
       return codeA.localeCompare(codeB);
     });
 
@@ -176,6 +198,7 @@ export async function GET(request: Request) {
         phone: emp.phone,
         position: emp.position,
         positionCode: emp.positionCode,
+        positionColor: emp.positionCode != null ? (positionColorMap.get(emp.positionCode) ?? null) : null,
         department: emp.department,
         section: emp.section,
         course: emp.course,

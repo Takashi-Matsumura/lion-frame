@@ -5,6 +5,7 @@ export const dataManagementTranslations = {
     employees: "Employees",
     history: "History",
     organize: "Organization Setup",
+    positions: "Position Master",
 
     // Import Tab
     importTitle: "Import Organization Data",
@@ -152,6 +153,7 @@ export const dataManagementTranslations = {
     employees: "社員一覧",
     history: "履歴",
     organize: "組織整備",
+    positions: "役職マスタ",
 
     // Import Tab
     importTitle: "組織データインポート",

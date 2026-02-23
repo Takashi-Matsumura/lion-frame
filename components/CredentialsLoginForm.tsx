@@ -1,0 +1,122 @@
+"use client";
+
+import { useRouter } from "next/navigation";
+import { signIn } from "next-auth/react";
+import { useState } from "react";
+import { RiLoginBoxLine } from "react-icons/ri";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+
+const translations = {
+  en: {
+    email: "Email",
+    password: "Password",
+    emailPlaceholder: "Email address",
+    passwordPlaceholder: "Password",
+    signInButton: "Sign In",
+    signingIn: "Signing in...",
+    loginError: "Login failed. Please check your email or password.",
+    systemError: "An error occurred during login.",
+  },
+  ja: {
+    email: "メールアドレス",
+    password: "パスワード",
+    emailPlaceholder: "メールアドレス",
+    passwordPlaceholder: "パスワード",
+    signInButton: "サインイン",
+    signingIn: "ログイン中...",
+    loginError:
+      "ログインに失敗しました。メールアドレスまたはパスワードを確認してください。",
+    systemError: "ログイン中にエラーが発生しました。",
+  },
+} as const;
+
+interface CredentialsLoginFormProps {
+  language?: "en" | "ja";
+}
+
+export function CredentialsLoginForm({
+  language = "ja",
+}: CredentialsLoginFormProps) {
+  const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
+  const t = translations[language];
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setIsLoading(true);
+
+    try {
+      const result = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      });
+
+      if (result?.error) {
+        setError(t.loginError);
+      } else if (result?.ok) {
+        router.push("/");
+        router.refresh();
+      }
+    } catch (err) {
+      console.error("Credentials login error:", err);
+      setError(t.systemError);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-5">
+      {error && (
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
+      <div className="space-y-2">
+        <Label htmlFor="credentials-email">{t.email}</Label>
+        <Input
+          id="credentials-email"
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+          placeholder={t.emailPlaceholder}
+          disabled={isLoading}
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="credentials-password">{t.password}</Label>
+        <Input
+          id="credentials-password"
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+          placeholder={t.passwordPlaceholder}
+          disabled={isLoading}
+        />
+      </div>
+
+      <Button
+        type="submit"
+        size="lg"
+        className="w-full gap-2"
+        disabled={isLoading}
+        loading={isLoading}
+      >
+        <RiLoginBoxLine className="w-5 h-5" />
+        {isLoading ? t.signingIn : t.signInButton}
+      </Button>
+    </form>
+  );
+}

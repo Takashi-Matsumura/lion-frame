@@ -13,8 +13,8 @@ export const dashboardTranslations = {
     featureModularDesc: "Extend menus and features via plugins",
     featureRoles: "Role-Based Access",
     featureRolesDesc: "Control page access by role",
-    featureLdap: "OpenLDAP Integration",
-    featureLdapDesc: "Enterprise-grade authentication",
+    featureAuth: "Flexible Authentication",
+    featureAuthDesc: "Credentials, OAuth, and more",
     featureI18n: "Multi-Language",
     featureI18nDesc: "Switch between Japanese and English",
     // Component Demo Section
@@ -39,8 +39,10 @@ export const dashboardTranslations = {
     demoFloatingWindow: "Floating Window",
     floatingWindowButton: "Open Floating Window",
     floatingWindowTitle: "Sample Floating Window",
-    floatingWindowContent: "This window can be dragged, resized, minimized, and maximized. Try it out!",
-    floatingWindowNote: "Drag title bar to move, edges to resize, double-click title for maximize.",
+    floatingWindowContent:
+      "This window can be dragged, resized, minimized, and maximized. Try it out!",
+    floatingWindowNote:
+      "Drag title bar to move, edges to resize, double-click title for maximize.",
   },
   ja: {
     title: "ダッシュボード",
@@ -54,8 +56,8 @@ export const dashboardTranslations = {
     featureModularDesc: "プラグイン形式でメニューと機能を拡張",
     featureRoles: "権限ベースのアクセス制御",
     featureRolesDesc: "ロールに応じたページアクセス制御",
-    featureLdap: "OpenLDAP統合",
-    featureLdapDesc: "エンタープライズ向け認証基盤",
+    featureAuth: "柔軟な認証基盤",
+    featureAuthDesc: "Credentials、OAuth等に対応",
     featureI18n: "多言語対応",
     featureI18nDesc: "日本語・英語切り替え",
     // Component Demo Section
@@ -81,8 +83,10 @@ export const dashboardTranslations = {
     demoFloatingWindow: "フローティングウィンドウ",
     floatingWindowButton: "フローティングウィンドウを開く",
     floatingWindowTitle: "サンプルフローティングウィンドウ",
-    floatingWindowContent: "このウィンドウはドラッグ、リサイズ、最小化、最大化が可能です。お試しください！",
-    floatingWindowNote: "タイトルバーをドラッグで移動、辺をドラッグでリサイズ、ダブルクリックで最大化。",
+    floatingWindowContent:
+      "このウィンドウはドラッグ、リサイズ、最小化、最大化が可能です。お試しください！",
+    floatingWindowNote:
+      "タイトルバーをドラッグで移動、辺をドラッグでリサイズ、ダブルクリックで最大化。",
   },
 } as const;
 

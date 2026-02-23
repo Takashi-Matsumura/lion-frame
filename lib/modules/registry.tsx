@@ -1,12 +1,6 @@
 // コアモジュール（静的インポート）
-
-// アドオンモジュール
-import { generalAffairsModule } from "@/lib/addon-modules/general-affairs";
-import { ldapMigrationModule } from "@/lib/addon-modules/ldap-migration";
-import { openldapModule } from "@/lib/addon-modules/openldap";
-import { organizationModule } from "@/lib/addon-modules/organization";
-import { workflowModule } from "@/lib/addon-modules/workflow";
 import { aiModule } from "@/lib/core-modules/ai";
+import { organizationModule } from "@/lib/core-modules/organization";
 import { systemModule } from "@/lib/core-modules/system";
 import { prisma } from "@/lib/prisma";
 import type {
@@ -116,13 +110,7 @@ export const moduleRegistry: ModuleRegistry = {
   // コアモジュール
   ai: aiModule,
   system: systemModule,
-
-  // アドオンモジュール
-  "general-affairs": generalAffairsModule,
-  "ldap-migration": ldapMigrationModule,
-  openldap: openldapModule,
   organization: organizationModule,
-  workflow: workflowModule,
 };
 
 /**

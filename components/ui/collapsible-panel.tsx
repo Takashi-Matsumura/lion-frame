@@ -1,8 +1,8 @@
 "use client";
 
-import * as React from "react";
 import * as CollapsiblePrimitive from "@radix-ui/react-collapsible";
 import { ChevronDown } from "lucide-react";
+import * as React from "react";
 import { cn } from "@/lib/utils";
 
 // ============================================================================
@@ -22,7 +22,7 @@ function useCollapsiblePanel() {
   const context = React.useContext(CollapsiblePanelContext);
   if (!context) {
     throw new Error(
-      "useCollapsiblePanel must be used within a CollapsiblePanel"
+      "useCollapsiblePanel must be used within a CollapsiblePanel",
     );
   }
   return context;
@@ -55,7 +55,7 @@ function CollapsiblePanel({
       }
       onOpenChange?.(newOpen);
     },
-    [open, onOpenChange]
+    [open, onOpenChange],
   );
 
   const actualIsOpen = open !== undefined ? open : isOpen;
@@ -68,7 +68,7 @@ function CollapsiblePanel({
         onOpenChange={handleOpenChange}
         className={cn(
           "bg-card text-card-foreground rounded-xl border shadow-sm transition-all duration-300",
-          className
+          className,
         )}
         {...props}
       >
@@ -110,14 +110,14 @@ function CollapsiblePanelHeader({
               className={cn(
                 "flex-shrink-0 p-2 rounded-lg transition-all duration-200",
                 "hover:bg-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                "text-muted-foreground hover:text-foreground"
+                "text-muted-foreground hover:text-foreground",
               )}
               aria-label={isOpen ? "折りたたむ" : "展開する"}
             >
               <ChevronDown
                 className={cn(
                   "h-5 w-5 transition-transform duration-300 ease-out",
-                  isOpen && "rotate-180"
+                  isOpen && "rotate-180",
                 )}
               />
             </button>
@@ -139,7 +139,10 @@ function CollapsiblePanelTitle({
   return (
     <h3
       data-slot="collapsible-panel-title"
-      className={cn("text-lg font-semibold leading-none tracking-tight", className)}
+      className={cn(
+        "text-lg font-semibold leading-none tracking-tight",
+        className,
+      )}
       {...props}
     />
   );
@@ -188,7 +191,7 @@ function CollapsiblePanelSummary({
       className={cn(
         "px-6 pb-4 transition-opacity duration-200",
         isOpen && "opacity-0",
-        className
+        className,
       )}
       {...props}
     />
@@ -211,7 +214,7 @@ function CollapsiblePanelContent({
         "overflow-hidden",
         "data-[state=open]:animate-collapsible-down",
         "data-[state=closed]:animate-collapsible-up",
-        className
+        className,
       )}
       {...props}
     >
@@ -251,7 +254,7 @@ function CollapsiblePanelTrigger({
       className={cn(
         "inline-flex items-center gap-2 text-sm font-medium transition-colors",
         "text-primary hover:text-primary/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded",
-        className
+        className,
       )}
       {...props}
     />

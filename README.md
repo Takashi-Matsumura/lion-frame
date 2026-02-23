@@ -1,14 +1,19 @@
-# BoxFrame
+# LionFrame
 
-バックオフィス業務を支援するモジュラーフレームワーク。Next.js 15 App Routerベースの権限管理とプラグイン形式の機能拡張を提供します。
+組織管理システムの最小構成フレームワーク。
+認証・通知・監査ログなどのフレーム基盤の上に、モジュール形式で業務機能を追加できます。
 
-## 特徴
+## 主な機能
 
-- **モジュラーアーキテクチャ**: プラグイン形式でメニューと機能を拡張
-- **権限ベースのルーティング**: ロールに応じたページアクセス制御
-- **OpenLDAP統合**: エンタープライズ向け認証基盤
-- **多言語対応**: 日本語・英語切り替え
-- **ダークモード**: システム設定に連動したテーマ切り替え
+| 機能 | 説明 | 対象ユーザ |
+|------|------|-----------|
+| **組織図** | 部門・社員の階層表示・検索・社員詳細 | 全社員 |
+| **組織データ管理** | CSV/Excelインポート・役職マスタ・履歴管理 | 管理者 |
+| **生成AI連携** | AIチャット・翻訳・要約・データ抽出API | 全社員 / 全モジュール |
+| **ダッシュボード** | ロール別ウェルカム画面 | 全社員 |
+| **通知センター** | セキュリティ・業務通知の一元管理 | 全社員 |
+| **監査ログ** | 操作履歴の記録・閲覧 | 管理者 |
+| **システム管理** | ユーザ管理・モジュール管理・アクセスキー | 管理者 |
 
 ## 技術スタック
 
@@ -16,13 +21,13 @@
 |-----|-----------|
 | Next.js | 15 (App Router) |
 | React | 19 |
-| 認証 | NextAuth.js v5 (Auth.js) |
-| ORM | Prisma (PostgreSQL) |
-| CSS | Tailwind CSS 4 |
-| 言語 | TypeScript |
+| TypeScript | 5 |
+| Tailwind CSS | 4 |
+| Prisma | 6 (PostgreSQL) |
+| 認証 | NextAuth.js v5 |
 | 状態管理 | Zustand |
-| UI | shadcn/ui |
-| Linter | Biome |
+| Linter | Biome 2 |
+| テスト | Jest 30 |
 
 ## クイックスタート
 
@@ -34,19 +39,16 @@
 ### セットアップ
 
 ```bash
-# リポジトリをクローン
-git clone https://github.com/your-username/box-frame.git
-cd box-frame
-
 # 依存関係のインストール
 npm install
 
-# Dockerコンテナを起動（PostgreSQL + OpenLDAP）
-docker compose up -d
+# Dockerコンテナを起動（PostgreSQL）
+docker compose up -d postgres
 
 # 環境変数を設定
 cp .env.example .env
-# AUTH_SECRETを生成: npx auth secret
+# AUTH_SECRETを生成して .env に記入
+openssl rand -base64 48
 
 # データベースを初期化
 npx prisma db push
@@ -61,298 +63,138 @@ npm run dev
 | 項目 | 値 |
 |-----|-----|
 | URL | http://localhost:3000 |
-| ユーザ名 | admin |
+| メール | admin@lionframe.local |
 | パスワード | admin |
 
 ## アーキテクチャ
 
-### ディレクトリ構造
-
 ```
-box-frame/
-├── app/
-│   ├── (menus)/              # メニューページ（ルートグループ）
-│   │   ├── (user)/           # 全ユーザ向け
-│   │   ├── (manager)/        # 管理職向け
-│   │   └── (admin)/          # システム管理者向け
-│   ├── admin/                # 管理画面
-│   ├── login/                # ログインページ
-│   └── api/                  # APIルート
-├── components/
-│   ├── ui/                   # shadcn/ui コンポーネント
-│   └── sidebar/              # サイドバーコンポーネント
-├── lib/
-│   ├── modules/              # モジュールレジストリ
-│   ├── core-modules/         # コアモジュール
-│   ├── addon-modules/        # アドオンモジュール
-│   └── ldap/                 # LDAP認証
-├── prisma/
-│   └── schema.prisma         # データベーススキーマ
-└── docker/
-    └── openldap/             # OpenLDAP初期設定
+┌─────────────────────────────────────────────────────┐
+│                  フレーム基盤                         │
+│  認証 / 通知 / 監査ログ / i18n / Prisma / セキュリティ  │
+└──────────────────────┬──────────────────────────────┘
+                       │ 利用
+┌──────────────────────┴──────────────────────────────┐
+│              モジュール（コア + アドオン）               │
+│  system / ai / organization / ...                   │
+└─────────────────────────────────────────────────────┘
 ```
 
-### モジュールシステム
+モジュールは**メニュー**（画面あり）と**サービス**（API/ロジックのみ）の2種類を持ちます。
+コアモジュールはフレーム同梱、アドオンモジュールは `lib/addon-modules/` に追加します。
 
-プラグイン形式でメニューと機能を拡張できます。
+### コアモジュール
 
-```typescript
-// lib/addon-modules/example/module.tsx
-export const exampleModule: AppModule = {
-  id: "example",
-  name: "Example",
-  nameJa: "サンプル",
-  enabled: true,
-  menus: [
-    {
-      id: "example-page",
-      name: "Example Page",
-      nameJa: "サンプルページ",
-      path: "/example",
-      menuGroup: "user",
-      requiredRoles: ["USER", "MANAGER", "ADMIN"],
-    },
-  ],
-};
+| モジュール | 説明 | 主なメニュー |
+|-----------|------|------------|
+| **system** | システム管理・ユーザ管理 | ダッシュボード, システム環境 |
+| **ai** | 生成AI（チャット・翻訳・要約・抽出） | AIチャット |
+| **organization** | 組織図・社員管理・役職マスタ | 組織図, 組織データ管理 |
+
+### ロール階層
+
+```
+GUEST → USER → MANAGER → EXECUTIVE → ADMIN
 ```
 
-### カスタムモジュールの作成
+| ロール | 表示セクション | 主な用途 |
+|--------|-------------|---------|
+| USER | ユーザ | 組織図、AIチャット |
+| MANAGER | + マネージャー | 承認（将来拡張） |
+| EXECUTIVE | + エグゼクティブ | 経営（将来拡張） |
+| ADMIN | 全セクション | システム管理 |
 
-テンプレートモジュールをコピーして独自のモジュールを作成できます。
+### ディレクトリ構成
 
-#### 1. モジュール定義をコピー
+```
+app/
+├── (menus)/
+│   ├── (user)/             # 組織図, AIチャット, ダッシュボード
+│   ├── (manager)/          # マネージャー向け（将来拡張）
+│   └── (admin)/            # システム管理
+├── admin/                  # 管理画面（システム環境, データ管理）
+├── api/                    # REST API
+└── login/
 
-```bash
-cp -r lib/addon-modules/template lib/addon-modules/mymodule
+lib/
+├── core-modules/           # system, ai, organization
+├── addon-modules/          # 業務モジュール（追加先）
+├── modules/                # レジストリ, アクセス制御
+├── services/               # 通知, 監査, 暗号化, レート制限
+├── i18n/                   # 多言語対応（日英）
+├── importers/              # データインポート
+└── history/                # 履歴管理
+
+components/
+├── ui/                     # 共通UIコンポーネント（31個）
+├── sidebar/                # サイドバーナビゲーション
+└── notifications/          # 通知UI
 ```
 
-#### 2. モジュールIDと名前を変更
+## セキュリティ
 
-`lib/addon-modules/mymodule/module.tsx` を編集:
-
-```typescript
-export const myModule: AppModule = {
-  id: "mymodule",           // 変更
-  name: "My Module",        // 変更
-  nameJa: "マイモジュール",  // 変更
-  // ...
-};
-```
-
-#### 3. ページをコピー
-
-```bash
-cp -r app/(menus)/(user)/template app/(menus)/(user)/mypage
-```
-
-#### 4. モジュールを登録
-
-`lib/modules/registry.tsx` を編集:
-
-```typescript
-import { myModule } from "@/lib/addon-modules/mymodule";
-
-export const moduleRegistry: ModuleRegistry = {
-  system: systemModule,
-  openldap: openldapModule,
-  mymodule: myModule,  // 追加
-};
-```
-
-#### 5. 開発サーバを再起動
-
-```bash
-npm run dev
-```
-
-詳細は [docs/MODULE_GUIDE.md](docs/MODULE_GUIDE.md) を参照してください。
-
-### ロール
-
-| ロール | 説明 |
-|-------|-----|
-| USER | 一般ユーザ |
-| MANAGER | 管理職 |
-| ADMIN | システム管理者 |
+| 機能 | 説明 |
+|------|------|
+| **資格情報認証** | メール/パスワードによるログイン |
+| **OAuth** | Google / GitHub（管理画面で個別に有効化） |
+| **二要素認証** | TOTP (Google Authenticator等) |
+| **Cookie署名** | HMAC-SHA256によるタイミングセーフ検証 |
+| **フィールド暗号化** | AES-256-GCMで機密データを暗号化 |
+| **レート制限** | ログイン試行のスライディングウィンドウ制限 |
+| **セキュリティヘッダー** | X-Content-Type-Options, X-Frame-Options, HSTS |
 
 ## Docker環境
 
 ```yaml
-# docker-compose.yml
 services:
-  postgres:    # PostgreSQL (port: 5433)
-  openldap:    # OpenLDAP (port: 390)
+  postgres:        # PostgreSQL 16 (port: 5433)
+  airag-backend:   # RAG Backend  (port: 8000, オプション)
 ```
 
-### コンテナ操作
-
 ```bash
-# 起動
-docker compose up -d
-
-# 停止
-docker compose down
-
-# ログ確認
-docker compose logs -f
+docker compose up -d postgres     # PostgreSQLのみ起動
+docker compose up -d              # 全コンテナ起動
+docker compose down               # 停止
 ```
 
 ## 開発コマンド
 
 ```bash
-npm run dev          # 開発サーバ起動
-npm run build        # 本番ビルド
-npm run start        # 本番サーバ起動
-npm run lint         # Biomeチェック
-npm run format       # コードフォーマット
-npm run test         # テスト実行
-npx prisma studio    # Prisma Studio起動
+npm run dev           # 開発サーバ起動
+npm run build         # 本番ビルド
+npm run start         # 本番サーバ起動
+npm run lint          # Biomeチェック
+npm run format        # コードフォーマット
+npm run test          # テスト実行
+npm run test:coverage # カバレッジ付きテスト
+npx prisma studio     # Prisma Studio起動
+npx prisma db push    # スキーマをDBに反映
+npm run db:seed       # 初期データ投入
 ```
 
-## 認証
+## 環境変数
 
-### 対応プロバイダ
+`.env.example` を `.env` にコピーして設定してください。
 
-- Google OAuth（管理者が有効/無効を切り替え可能）
-- GitHub OAuth（管理者が有効/無効を切り替え可能）
-- OpenLDAP
-- 二要素認証 (TOTP)
+| 変数 | 説明 | 必須 |
+|------|------|------|
+| `AUTH_SECRET` | 認証シークレット（32文字以上） | Yes |
+| `AUTH_URL` | アプリケーションURL | Yes |
+| `DATABASE_URL` | PostgreSQL接続文字列 | Yes |
+| `NEXT_PUBLIC_APP_NAME` | アプリ表示名 | No |
+| `GOOGLE_CLIENT_ID` / `SECRET` | Google OAuth | No |
+| `GITHUB_CLIENT_ID` / `SECRET` | GitHub OAuth | No |
 
-### OAuth設定
+## ドキュメント
 
-管理画面（`/admin`）のシステム設定タブでOAuthプロバイダを有効/無効に切り替えできます。
-
-環境変数に以下を設定してください:
-
-```env
-# Google OAuth
-GOOGLE_CLIENT_ID=your_google_client_id
-GOOGLE_CLIENT_SECRET=your_google_client_secret
-
-# GitHub OAuth
-GITHUB_CLIENT_ID=your_github_client_id
-GITHUB_CLIENT_SECRET=your_github_client_secret
-```
-
-### 二要素認証 (2FA)
-
-ユーザは設定画面から二要素認証を有効化できます。
-
-1. 設定画面 (`/settings`) で「二要素認証を有効にする」をクリック
-2. 認証アプリ（Google Authenticator等）でQRコードをスキャン
-3. 6桁のコードを入力して有効化
-4. 次回ログイン時から認証コードの入力が必要
-
-### Edge Runtime対応
-
-Next.js middlewareはEdge Runtimeで動作するため、認証設定を分離:
-
-- `auth.config.ts` - Edge Runtime用（middleware）
-- `auth.ts` - Node.js Runtime用（LDAP認証を含む）
-
-## 通知機能
-
-### 概要
-
-アプリケーション内での重要なイベントをユーザに通知するシステムです。
-
-- **通知センター**: ヘッダーのベルアイコンから通知一覧を確認
-- **トースト通知**: 新着通知をリアルタイムで表示
-- **DB永続化**: 通知履歴をPostgreSQLに保存
-
-### 通知タイプ
-
-| タイプ | 説明 | 例 |
-|-------|------|-----|
-| SYSTEM | システム通知 | モジュール設定変更、LDAP設定変更 |
-| SECURITY | セキュリティ通知 | ログイン検出、2FA変更、パスワード変更 |
-| ACTION | アクション要求 | 承認依頼 |
-| INFO | 一般情報 | お知らせ |
-| WARNING | 警告 | 期限切れ警告 |
-| ERROR | エラー | 処理失敗 |
-
-### 優先度
-
-| 優先度 | 説明 |
-|-------|------|
-| URGENT | 緊急（即時対応必要） |
-| HIGH | 高（重要なセキュリティイベント） |
-| NORMAL | 通常 |
-| LOW | 低（情報通知） |
-
-### 開発者向け: 通知の発行方法
-
-通知は自動生成されません。開発者が明示的に `NotificationService` を呼び出す必要があります。
-
-```typescript
-import { NotificationService } from "@/lib/services/notification-service";
-
-// 特定ユーザへのセキュリティ通知
-await NotificationService.securityNotify(userId, {
-  title: "New login detected",
-  titleJa: "新しいログインを検出しました",
-  message: "You have logged in from a new device.",
-  messageJa: "新しいデバイスからログインしました。",
-});
-
-// 特定ロールへのブロードキャスト通知
-await NotificationService.broadcast({
-  role: "ADMIN",
-  type: "SYSTEM",
-  priority: "HIGH",
-  title: "Configuration updated",
-  titleJa: "設定が更新されました",
-  message: "LDAP configuration has been changed.",
-  messageJa: "LDAP設定が変更されました。",
-  source: "LDAP",
-});
-
-// カスタム通知
-await NotificationService.create({
-  userId: "user-id",
-  type: "ACTION",
-  priority: "NORMAL",
-  title: "Approval required",
-  titleJa: "承認が必要です",
-  message: "Please review the pending request.",
-  messageJa: "保留中のリクエストを確認してください。",
-  actionUrl: "/approvals/123",
-  actionLabel: "Review",
-  actionLabelJa: "確認する",
-});
-```
-
-### 現在の通知トリガー
-
-以下のイベントで自動的に通知が発行されます:
-
-**セキュリティイベント（対象ユーザへ通知）**
-- ログイン成功（OpenLDAP / Google OAuth）
-- 二要素認証の有効化/無効化
-- パスワード変更
-- ロール変更
-- アクセスキーの作成/変更/削除
-
-**システムイベント（全管理者へ通知）**
-- ユーザアカウント削除
-- OpenLDAP設定変更
-- LDAP移行設定変更
-- モジュールの有効化/無効化
-
-### APIエンドポイント
-
-| Method | Endpoint | 説明 |
-|--------|----------|------|
-| GET | /api/notifications | 通知一覧取得 |
-| POST | /api/notifications | 通知作成（管理者用） |
-| PATCH | /api/notifications/[id] | 既読更新 |
-| DELETE | /api/notifications/[id] | 通知削除 |
-| POST | /api/notifications/read-all | 一括既読 |
-| GET | /api/notifications/unread-count | 未読数取得 |
+- [モジュール作成ガイド](docs/MODULE_GUIDE.md) - カスタムモジュールの作成手順
+- [学習パス](docs/LEARNING_PATH.md) - フレームワーク理解のためのガイド
 
 ## ライセンス
 
-MIT License
+MIT License - Copyright (c) 2025 MatsBACCANO
+
+商用・非商用問わず自由に利用・改変・再配布できます。詳細は [LICENSE](LICENSE) を参照してください。
 
 ## 作者
 

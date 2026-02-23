@@ -63,10 +63,6 @@ export default async function RootLayout({
           id: true,
           language: true,
           email: true,
-          ldapMappings: {
-            select: { mustChangePassword: true },
-            take: 1,
-          },
         },
       }),
       getUserAccessKeyPermissions(session.user.id),
@@ -75,7 +71,7 @@ export default async function RootLayout({
     userPermissions = permissions;
     language = user?.language || "en";
     accessKeyPermissions = fetchedAccessKeyPermissions;
-    mustChangePassword = user?.ldapMappings?.[0]?.mustChangePassword ?? false;
+    mustChangePassword = false;
 
     // Module Registryから全モジュールを取得
     const allModules = await getAllModules();

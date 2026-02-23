@@ -13,6 +13,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { getPositionColor } from "@/lib/core-modules/organization/position-utils";
 import { cn } from "@/lib/utils";
 import type { Language, Translations } from "../translations";
 
@@ -31,6 +32,7 @@ interface EmployeeDetail {
   phone: string | null;
   position: string;
   positionCode: string | null;
+  positionColor: string | null;
   qualificationGrade: string | null;
   qualificationGradeCode: string | null;
   employmentType: string | null;
@@ -93,20 +95,6 @@ interface EmployeeDetailDialogProps {
   onClose: () => void;
   t: Translations;
   language: Language;
-}
-
-// 役職に基づいて色を決定
-function getPositionColor(position: string): string {
-  if (position.includes("本部長") || position.includes("部長")) {
-    return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200";
-  }
-  if (position.includes("課長") || position.includes("マネージャー")) {
-    return "bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-200";
-  }
-  if (position.includes("主任") || position.includes("リーダー")) {
-    return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
-  }
-  return "bg-muted text-muted-foreground";
 }
 
 // 変更タイプに基づいて色を決定
@@ -291,7 +279,7 @@ export function EmployeeDetailDialog({
                   <Badge
                     className={cn(
                       "text-xs",
-                      getPositionColor(employee.position),
+                      getPositionColor(employee.positionColor, employee.position),
                     )}
                   >
                     {employee.position}

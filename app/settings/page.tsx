@@ -25,32 +25,21 @@ export default async function SettingsPage() {
   const language = await getLanguage();
   const t = settingsTranslations[language];
 
-  // Get user's 2FA status and LDAP mapping
+  // Get user's 2FA status
   const user = await prisma.user.findUnique({
     where: { email: session.user.email ?? "" },
     select: {
       twoFactorEnabled: true,
-      ldapMappings: {
-        select: {
-          mustChangePassword: true,
-        },
-        take: 1,
-      },
     },
   });
-
-  // Check if this is an OpenLDAP user (has at least one LDAP mapping)
-  const ldapMapping = user?.ldapMappings?.[0];
-  const isLdapUser = !!ldapMapping;
-  const mustChangePassword = ldapMapping?.mustChangePassword ?? false;
 
   return (
     <SettingsClient
       language={language}
       translations={t}
       twoFactorEnabled={user?.twoFactorEnabled ?? false}
-      isLdapUser={isLdapUser}
-      mustChangePassword={mustChangePassword}
+      isLdapUser={false}
+      mustChangePassword={false}
     />
   );
 }

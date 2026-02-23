@@ -12,7 +12,7 @@ export const adminTranslations = {
     authentication: "Authentication:",
     authValue: "NextAuth.js v5",
     provider: "Provider:",
-    providerValue: "Google OAuth / LDAP",
+    providerValue: "Credentials / Google OAuth / GitHub OAuth",
   },
   ja: {
     title: "システム環境管理",
@@ -27,7 +27,7 @@ export const adminTranslations = {
     databaseValue: "SQLite (開発環境)",
     authentication: "認証:",
     authValue: "NextAuth.js v5",
-    provider: "プロバイダー:",
-    providerValue: "Google OAuth / LDAP",
+    provider: "プロバイダ:",
+    providerValue: "Credentials / Google OAuth / GitHub OAuth",
   },
 } as const;

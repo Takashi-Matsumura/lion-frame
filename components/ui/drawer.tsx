@@ -51,7 +51,10 @@ const DrawerContent = React.forwardRef<
       suppressHydrationWarning
       {...props}
     >
-      <div className="mx-auto mt-4 h-2 w-[100px] rounded-full bg-muted" suppressHydrationWarning />
+      <div
+        className="mx-auto mt-4 h-2 w-[100px] rounded-full bg-muted"
+        suppressHydrationWarning
+      />
       {children}
     </DrawerPrimitive.Content>
   </DrawerPortal>

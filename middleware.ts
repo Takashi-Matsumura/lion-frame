@@ -27,8 +27,9 @@ export default auth(async (req) => {
   const hasBuildIdMismatch = (s: typeof session): boolean => {
     if (!s) return false;
     const currentBuildId = process.env.NEXT_BUILD_ID;
-    const tokenBuildId = (s as unknown as Record<string, unknown>)
-      .buildId as string | undefined;
+    const tokenBuildId = (s as unknown as Record<string, unknown>).buildId as
+      | string
+      | undefined;
     return !!(
       currentBuildId &&
       currentBuildId !== "dev" &&
@@ -116,9 +117,7 @@ export default auth(async (req) => {
   // Check if password change is required for protected routes
   // Allow access to /settings for password change
   if (session.user.mustChangePassword && !pathname.startsWith("/settings")) {
-    return NextResponse.redirect(
-      redirectUrl("/settings?passwordReset=true"),
-    );
+    return NextResponse.redirect(redirectUrl("/settings?passwordReset=true"));
   }
 
   // Admin-only routes

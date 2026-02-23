@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
-import { OpenLdapService } from "@/lib/ldap/openldap-service";
 import { moduleRegistry } from "@/lib/modules/registry";
 import { prisma } from "@/lib/prisma";
 import { AuditService } from "@/lib/services/audit-service";
@@ -67,12 +66,6 @@ export async function GET() {
       try {
         // コンテナIDに基づいて適切なヘルスチェックを実行
         switch (containerId) {
-          case "openldap": {
-            // OpenLDAPはサービスを直接使用してチェック
-            const openLdapService =
-              await OpenLdapService.createWithDatabaseConfig();
-            return await openLdapService.isAvailable();
-          }
           case "postgres":
           case "postgresql": {
             // PostgreSQLはPrismaの接続チェック

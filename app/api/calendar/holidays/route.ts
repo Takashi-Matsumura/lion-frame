@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
   if (!date || !name) {
     return NextResponse.json(
       { error: "Date and name are required" },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
     console.error("Failed to create holiday:", error);
     return NextResponse.json(
       { error: "Failed to create holiday" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

@@ -66,6 +66,16 @@ export async function GET(
       );
     }
 
+    // PositionMasterからcolorを取得
+    let positionColor: string | null = null;
+    if (employee.positionCode) {
+      const positionMaster = await prisma.positionMaster.findUnique({
+        where: { code: employee.positionCode },
+        select: { color: true },
+      });
+      positionColor = positionMaster?.color ?? null;
+    }
+
     return NextResponse.json({
       employee: {
         id: employee.id,
@@ -76,6 +86,7 @@ export async function GET(
         phone: employee.phone,
         position: employee.position,
         positionCode: employee.positionCode,
+        positionColor,
         qualificationGrade: employee.qualificationGrade,
         qualificationGradeCode: employee.qualificationGradeCode,
         employmentType: employee.employmentType,

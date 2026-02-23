@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
-import { prisma } from "@/lib/prisma";
 import { AIService } from "@/lib/core-modules/ai";
+import { prisma } from "@/lib/prisma";
 
 // POST /api/calendar/holidays/generate - AIで祝日を自動生成
 export async function POST(request: NextRequest) {
@@ -19,10 +19,7 @@ export async function POST(request: NextRequest) {
   const { year } = body;
 
   if (!year || typeof year !== "number") {
-    return NextResponse.json(
-      { error: "Year is required" },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "Year is required" }, { status: 400 });
   }
 
   try {
@@ -57,7 +54,8 @@ Also include any substitute holidays (振替休日) when a national holiday fall
 
 Return ONLY the JSON array, no other text.`;
 
-    const systemPrompt = "You are a helpful assistant that generates accurate Japanese holiday data. Return only valid JSON arrays with no markdown formatting or additional text.";
+    const systemPrompt =
+      "You are a helpful assistant that generates accurate Japanese holiday data. Return only valid JSON arrays with no markdown formatting or additional text.";
 
     const result = await AIService.generate({
       input,
@@ -79,7 +77,9 @@ Return ONLY the JSON array, no other text.`;
 
       // Remove markdown code blocks if present
       if (jsonStr.startsWith("```")) {
-        jsonStr = jsonStr.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
+        jsonStr = jsonStr
+          .replace(/^```(?:json)?\n?/, "")
+          .replace(/\n?```$/, "");
       }
 
       holidays = JSON.parse(jsonStr);
@@ -87,7 +87,7 @@ Return ONLY the JSON array, no other text.`;
       console.error("Failed to parse AI response:", result.output);
       return NextResponse.json(
         { error: "Failed to parse AI response" },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -126,7 +126,7 @@ Return ONLY the JSON array, no other text.`;
     console.error("Failed to generate holidays:", error);
     return NextResponse.json(
       { error: "Failed to generate holidays" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

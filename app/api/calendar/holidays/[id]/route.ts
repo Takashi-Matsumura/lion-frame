@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 // PUT /api/calendar/holidays/[id] - 祝日更新
 export async function PUT(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const session = await auth();
   if (!session?.user?.id) {
@@ -53,7 +53,7 @@ export async function PUT(
     console.error("Failed to update holiday:", error);
     return NextResponse.json(
       { error: "Failed to update holiday" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -61,7 +61,7 @@ export async function PUT(
 // DELETE /api/calendar/holidays/[id] - 祝日削除
 export async function DELETE(
   _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const session = await auth();
   if (!session?.user?.id) {
@@ -88,7 +88,7 @@ export async function DELETE(
     console.error("Failed to delete holiday:", error);
     return NextResponse.json(
       { error: "Failed to delete holiday" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

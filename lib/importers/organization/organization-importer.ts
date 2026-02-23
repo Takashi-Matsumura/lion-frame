@@ -54,21 +54,26 @@ export class OrganizationImporter extends BaseImporter<
     }[] = [];
     const errors: { row: number; message: string }[] = [];
 
-    // 既存社員のIDセット
+    // 既存社員をバッチ取得（N+1防止）
+    const employeeIds = employees.map((e) => e.employeeId);
+    const existingEmployees = await prisma.employee.findMany({
+      where: { employeeId: { in: employeeIds } },
+      include: {
+        department: true,
+        section: true,
+        course: true,
+      },
+    });
+    const existingMap = new Map(
+      existingEmployees.map((e) => [e.employeeId, e]),
+    );
     const existingEmployeeIds = new Set<string>();
 
     for (let i = 0; i < employees.length; i++) {
       const emp = employees[i];
 
       try {
-        const existing = await prisma.employee.findUnique({
-          where: { employeeId: emp.employeeId },
-          include: {
-            department: true,
-            section: true,
-            course: true,
-          },
-        });
+        const existing = existingMap.get(emp.employeeId);
 
         if (!existing) {
           newEmployees.push(emp);
@@ -839,6 +844,7 @@ export class OrganizationImporter extends BaseImporter<
 
   /**
    * 管理者を自動割り当て
+   * PositionMasterのlevel+isManagerで判定し、未設定時はキーワードマッチにフォールバック
    */
   private async assignManagers(
     tx: any,
@@ -848,10 +854,41 @@ export class OrganizationImporter extends BaseImporter<
   ): Promise<void> {
     console.log("Assigning managers based on positions...");
 
+    // PositionMasterから管理職情報を取得
+    const positionMasters = await tx.positionMaster.findMany({
+      where: { isActive: true, isManager: true },
+    });
+
+    // positionCode → level のマッピング
+    const positionLevelMap = new Map<string, string>();
+    for (const pm of positionMasters) {
+      positionLevelMap.set(pm.code, pm.level);
+    }
+
+    const usePositionMaster = positionMasters.length > 0;
+
+    // フォールバック用キーワード（PositionMasterが空の場合のみ使用）
     const managerPositionKeywords = {
       department: ["本部長", "統括", "事業部長", "役員"],
       section: ["部長", "室長", "支店長"],
       course: ["課長", "グループ長", "チーム長"],
+    };
+
+    // 社員が指定レベルの管理職候補かどうかを判定
+    const isManagerForLevel = (
+      emp: any,
+      targetLevels: string[],
+      fallbackKeywords: string[],
+    ): boolean => {
+      if (usePositionMaster) {
+        const level = emp.positionCode
+          ? positionLevelMap.get(emp.positionCode)
+          : undefined;
+        return level !== undefined && targetLevels.includes(level);
+      }
+      return fallbackKeywords.some((keyword) =>
+        emp.position?.includes(keyword),
+      );
     };
 
     // 部門の管理者を設定
@@ -861,8 +898,10 @@ export class OrganizationImporter extends BaseImporter<
       });
 
       const manager = deptEmployees.find((emp: any) =>
-        managerPositionKeywords.department.some((keyword) =>
-          emp.position?.includes(keyword),
+        isManagerForLevel(
+          emp,
+          ["EXECUTIVE", "DEPARTMENT"],
+          managerPositionKeywords.department,
         ),
       );
 
@@ -891,8 +930,10 @@ export class OrganizationImporter extends BaseImporter<
       });
 
       const manager = sectionEmployees.find((emp: any) =>
-        managerPositionKeywords.section.some((keyword) =>
-          emp.position?.includes(keyword),
+        isManagerForLevel(
+          emp,
+          ["SECTION"],
+          managerPositionKeywords.section,
         ),
       );
 
@@ -922,8 +963,10 @@ export class OrganizationImporter extends BaseImporter<
       });
 
       const manager = courseEmployees.find((emp: any) =>
-        managerPositionKeywords.course.some((keyword) =>
-          emp.position?.includes(keyword),
+        isManagerForLevel(
+          emp,
+          ["COURSE"],
+          managerPositionKeywords.course,
         ),
       );
 

@@ -5,8 +5,8 @@
  * ファイル内容の検査で確認する。
  */
 
-import { readFileSync } from "fs";
-import { join } from "path";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
 const ROOT = process.cwd();
 
@@ -20,7 +20,7 @@ describe("セキュリティ静的検証", () => {
       const source = readSource("auth.config.ts");
       // auditLog.create の details 内に email が存在しないことを確認
       const auditLogMatch = source.match(
-        /auditLog[\s\S]*?\.create\([\s\S]*?details:\s*JSON\.stringify\(\{([\s\S]*?)\}\)/
+        /auditLog[\s\S]*?\.create\([\s\S]*?details:\s*JSON\.stringify\(\{([\s\S]*?)\}\)/,
       );
       expect(auditLogMatch).not.toBeNull();
       if (auditLogMatch) {
@@ -66,9 +66,7 @@ describe("セキュリティ静的検証", () => {
 
   describe("パストラバーサル防止", () => {
     it("uploads/profiles route で resolve ベースのホワイトリスト検証があること", () => {
-      const source = readSource(
-        "app/api/uploads/profiles/[...path]/route.ts"
-      );
+      const source = readSource("app/api/uploads/profiles/[...path]/route.ts");
       expect(source).toContain("resolve");
       expect(source).toContain("startsWith(baseDir)");
     });

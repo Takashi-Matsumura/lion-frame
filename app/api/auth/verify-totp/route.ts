@@ -3,10 +3,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { signValue } from "@/lib/services/cookie-signer";
-import {
-  checkRateLimit,
-  getClientIp,
-} from "@/lib/services/rate-limiter";
+import { checkRateLimit, getClientIp } from "@/lib/services/rate-limiter";
 import { verifyTotp } from "@/lib/totp";
 
 /**

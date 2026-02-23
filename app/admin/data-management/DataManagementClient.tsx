@@ -8,6 +8,7 @@ import { EmployeesTab } from "./components/EmployeesTab";
 import { HistoryTab } from "./components/HistoryTab";
 import { ImportTab } from "./components/ImportTab";
 import { OrganizeTab } from "./components/OrganizeTab";
+import { PositionsTab } from "./components/PositionsTab";
 import { dataManagementTranslations } from "./translations";
 
 interface Organization {
@@ -136,7 +137,9 @@ export function DataManagementClient({
           </div>
 
           {/* Tab Content */}
-          {!selectedOrgId && organizations.length === 0 ? (
+          {tab === "positions" ? (
+            <PositionsTab language={language} t={t} />
+          ) : !selectedOrgId && organizations.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
               <FaUsers className="w-12 h-12 mx-auto mb-4 opacity-50" />
               <p>{t.noOrganization}</p>

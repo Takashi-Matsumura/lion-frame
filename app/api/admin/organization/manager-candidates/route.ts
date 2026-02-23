@@ -35,7 +35,15 @@ export async function GET(request: Request) {
       );
     }
 
-    // 本部長クラスを示す役職キーワード
+    // PositionMasterから管理職コードを取得
+    const managerPositions = await prisma.positionMaster.findMany({
+      where: { isActive: true, isManager: true },
+      select: { code: true },
+    });
+    const managerCodes = new Set(managerPositions.map((p) => p.code));
+    const usePositionMaster = managerPositions.length > 0;
+
+    // 本部長クラスを示す役職キーワード（フォールバック）
     const departmentHeadPositions = [
       "本部長",
       "事業部長",
@@ -43,17 +51,21 @@ export async function GET(request: Request) {
       "統括部長",
     ];
 
-    // エキスパートの役職コード（これ未満の役職コードを持つ社員のみ候補とする）
+    // フォールバック用定数
     const EXPERT_POSITION_CODE = "302";
 
-    // 役職コードがエキスパート未満かチェック（責任者候補として適格か）
+    // 役職コードが責任者候補として適格かチェック
     const isEligibleForManager = (positionCode: string | null): boolean => {
       if (!positionCode) return false;
-      // 一般社員（000）は除外
+
+      // PositionMasterが設定されている場合はisManagerフラグで判定
+      if (usePositionMaster) {
+        return managerCodes.has(positionCode);
+      }
+
+      // フォールバック: 従来のハードコードロジック
       if (positionCode === "000") return false;
-      // 特殊コード（名誉会長900、監査役903など）は除外
       if (positionCode >= "900") return false;
-      // エキスパート以上の役職のみ（役職コードが小さい＝役職が高い）
       return positionCode < EXPERT_POSITION_CODE;
     };
 

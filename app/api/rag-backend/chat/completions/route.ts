@@ -5,9 +5,16 @@
  * by using ReadableStream instead of Next.js rewrites.
  */
 
+import { auth } from "@/auth";
+
 const RAG_BACKEND_URL = process.env.RAG_BACKEND_URL || "http://localhost:8000";
 
 export async function POST(request: Request) {
+  const session = await auth();
+  if (!session?.user) {
+    return new Response("Unauthorized", { status: 401 });
+  }
+
   const body = await request.json();
 
   const response = await fetch(`${RAG_BACKEND_URL}/api/chat/completions`, {

@@ -1,4 +1,4 @@
-import { readFileSync } from "fs";
+import { readFileSync } from "node:fs";
 import type { NextConfig } from "next";
 
 // Read build ID generated during Docker build (used for session invalidation on redeploy)
@@ -40,9 +40,6 @@ const nextConfig: NextConfig = {
       },
     ];
   },
-
-  // Server-side only packages (Node.js native modules)
-  serverExternalPackages: ["ldapts"],
 
   experimental: {
     serverActions: {
@@ -86,11 +83,6 @@ const nextConfig: NextConfig = {
   },
   webpack: (config, { isServer }) => {
     config.externals.push("@node-rs/argon2", "@node-rs/bcrypt");
-
-    // ldapts uses Node.js native modules - let Node.js resolve it from node_modules
-    if (isServer) {
-      config.externals.push("ldapts");
-    }
 
     // Docker開発環境でのホットリロード対応
     if (process.env.NODE_ENV === "development" && !isServer) {

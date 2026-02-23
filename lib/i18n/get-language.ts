@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 
-export const LANGUAGE_COOKIE_NAME = "boxframe-language";
+export const LANGUAGE_COOKIE_NAME = "lionframe-language";
 
 /**
  * Get the current user's language preference

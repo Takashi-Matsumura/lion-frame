@@ -22,6 +22,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { FloatingWindow } from "@/components/ui/floating-window";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -32,7 +33,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { FloatingWindow } from "@/components/ui/floating-window";
 import { useFloatingWindowStore } from "@/lib/stores/floating-window-store";
 import { dashboardTranslations } from "./translations";
 
@@ -59,7 +59,9 @@ export function DashboardClient({
       titleJa: t.floatingWindowTitle,
       content: (
         <div className="space-y-4">
-          <p className="text-sm text-muted-foreground">{t.floatingWindowContent}</p>
+          <p className="text-sm text-muted-foreground">
+            {t.floatingWindowContent}
+          </p>
           <div className="flex flex-wrap gap-2">
             <Badge>Draggable</Badge>
             <Badge variant="secondary">Resizable</Badge>
@@ -88,8 +90,8 @@ export function DashboardClient({
     },
     {
       icon: RiServerLine,
-      title: t.featureLdap,
-      description: t.featureLdapDesc,
+      title: t.featureAuth,
+      description: t.featureAuthDesc,
     },
     {
       icon: RiTranslate2,

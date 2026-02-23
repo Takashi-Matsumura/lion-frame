@@ -10,7 +10,6 @@
  */
 
 import type { ReactElement } from "react";
-import { RiShieldUserLine, RiUserSharedLine } from "react-icons/ri";
 
 /**
  * アイコンのSVGパス定義
@@ -131,8 +130,7 @@ export const iconPaths = {
     "M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z",
 
   // 承認 - チェックサークル
-  approvals:
-    "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z",
+  approvals: "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z",
 
   // ワークフロー設定 - 歯車
   workflowSettings:
@@ -150,8 +148,6 @@ export type IconName = keyof typeof iconPaths;
  * モジュール名を表す漢字アイコン用
  */
 export const textIcons: Record<string, string> = {
-  generalAffairs: "総", // 総務庶務
-  "general-affairs": "総", // 総務庶務（モジュールID用）
   hrManagement: "人", // 人事労務
   finance: "財", // 財務会計
 } as const;
@@ -160,10 +156,7 @@ export const textIcons: Record<string, string> = {
  * React-iconsを使用するモジュール
  * react-iconsライブラリのアイコンを使用
  */
-export const reactIcons: Record<string, (className: string) => ReactElement> = {
-  openldap: (className) => <RiShieldUserLine className={className} />,
-  "ldap-migration": (className) => <RiUserSharedLine className={className} />,
-} as const;
+export const reactIcons: Record<string, (className: string) => ReactElement> = {} as const;
 
 /**
  * アイコンパスからSVG要素を生成

@@ -3,6 +3,7 @@
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { getPositionColor } from "@/lib/core-modules/organization/position-utils";
 import { cn } from "@/lib/utils";
 import type { Language, Translations } from "../translations";
 
@@ -14,6 +15,7 @@ interface Employee {
   email: string | null;
   phone: string | null;
   position: string;
+  positionColor?: string | null;
   department: { id: string; name: string } | null;
   section: { id: string; name: string } | null;
   course: { id: string; name: string } | null;
@@ -26,20 +28,6 @@ interface MemberCardProps {
   onClick: () => void;
   t: Translations;
   language: Language;
-}
-
-// 役職に基づいて色を決定
-function getPositionColor(position: string): string {
-  if (position.includes("本部長") || position.includes("部長")) {
-    return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200";
-  }
-  if (position.includes("課長") || position.includes("マネージャー")) {
-    return "bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-200";
-  }
-  if (position.includes("主任") || position.includes("リーダー")) {
-    return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
-  }
-  return "bg-muted text-muted-foreground";
 }
 
 // 名前からイニシャルを取得
@@ -99,7 +87,7 @@ export function MemberCard({
             <Badge
               className={cn(
                 "mt-1 text-xs",
-                getPositionColor(employee.position),
+                getPositionColor(employee.positionColor, employee.position),
               )}
             >
               {employee.position}

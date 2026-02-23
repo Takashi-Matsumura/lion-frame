@@ -216,7 +216,7 @@ export function OrganizationChartClient({
       setEmployees(data.employees);
       setTotal(data.total);
       setTotalPages(data.totalPages);
-      if (data.positions.length > 0) {
+      if (data.positions?.length > 0) {
         setPositions(data.positions);
       }
     } catch (error) {
