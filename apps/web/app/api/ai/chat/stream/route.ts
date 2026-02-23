@@ -1,5 +1,4 @@
 import { auth } from "@/auth";
-import { prisma } from "@/lib/prisma";
 import { AIService, type ChatMessage } from "@/lib/core-modules/ai";
 import {
   buildOrgContext,
@@ -22,7 +21,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { messages, systemPrompt } = body;
+    const { messages, systemPrompt, useOrgContext } = body;
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return new Response(JSON.stringify({ error: "Messages are required" }), {
@@ -58,19 +57,9 @@ export async function POST(request: Request) {
       "You are a helpful AI assistant. Be concise and helpful in your responses. Respond in the same language as the user's message.";
     let finalSystemPrompt = systemPrompt || defaultSystemPrompt;
 
-    // ユーザーの組織データ連携設定をチェック
-    let userOrgContextEnabled = true;
-    if (session.user?.email) {
-      const user = await prisma.user.findUnique({
-        where: { email: session.user.email },
-        select: { orgContextEnabled: true },
-      });
-      userOrgContextEnabled = user?.orgContextEnabled ?? true;
-    }
-
     // 組織データコンテキストの構築
-    // ユーザーがONにしている場合のみ、最新のユーザーメッセージから組織関連の意図を検出し、データを注入
-    if (userOrgContextEnabled) {
+    // クライアントからuseOrgContextフラグが送られた場合のみ、組織データを注入
+    if (useOrgContext) {
       const userMessages = messages.filter(
         (m: ChatMessage) => m.role === "user",
       );

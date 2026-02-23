@@ -29,6 +29,7 @@ interface Message {
   content: string;
   timestamp: Date;
   tokenCount?: number; // 推定トークン数
+  orgContext?: boolean; // 組織データを使用したか
 }
 
 interface TokenStats {
@@ -58,8 +59,8 @@ export function AIChatClient({ language, userName }: AIChatClientProps) {
     modelName: string;
   } | null>(null);
   const [orgContextAvailable, setOrgContextAvailable] = useState(false); // システムレベルで有効
-  const [orgContextEnabled, setOrgContextEnabled] = useState(false); // ユーザー設定ON/OFF
-  const [orgToggleLoading, setOrgToggleLoading] = useState(false); // トグル切り替え中
+  const [mentionPopupOpen, setMentionPopupOpen] = useState(false); // @メンションポップアップ
+  const [useOrgContext, setUseOrgContext] = useState(false); // 今回のメッセージで組織データを使うか
   const [isComposing, setIsComposing] = useState(false); // IME変換中かどうか
   const [streamingContent, setStreamingContent] = useState(""); // ストリーミング中のコンテンツ
   const [showStats, setShowStats] = useState(true); // 統計表示
@@ -96,7 +97,6 @@ export function AIChatClient({ language, userName }: AIChatClientProps) {
         }
         if (data.orgContextAvailable) {
           setOrgContextAvailable(true);
-          setOrgContextEnabled(!!data.orgContextEnabled);
         }
       })
       .catch(() => {
@@ -130,10 +130,16 @@ export function AIChatClient({ language, userName }: AIChatClientProps) {
     };
   }, []);
 
-  const handleSubmit = async (e?: React.FormEvent, suggestionText?: string) => {
+  const handleSubmit = async (
+    e?: React.FormEvent,
+    suggestionText?: string,
+    forceOrgContext?: boolean,
+  ) => {
     e?.preventDefault();
     const text = suggestionText || input.trim();
     if (!text || isLoading) return;
+
+    const orgContextForThisMessage = forceOrgContext ?? useOrgContext;
 
     const userMessage: Message = {
       id: crypto.randomUUID(),
@@ -141,10 +147,13 @@ export function AIChatClient({ language, userName }: AIChatClientProps) {
       content: text,
       timestamp: new Date(),
       tokenCount: estimateTokens(text),
+      orgContext: orgContextForThisMessage,
     };
 
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
+    setUseOrgContext(false);
+    setMentionPopupOpen(false);
     setIsLoading(true);
     setError(null);
     setStreamingContent("");
@@ -199,6 +208,7 @@ export function AIChatClient({ language, userName }: AIChatClientProps) {
         },
         body: JSON.stringify({
           messages: conversationHistory,
+          useOrgContext: orgContextForThisMessage,
         }),
         signal: abortControllerRef.current.signal,
       });
@@ -326,11 +336,51 @@ export function AIChatClient({ language, userName }: AIChatClientProps) {
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // @メンションポップアップが開いている場合
+    if (mentionPopupOpen) {
+      if (e.key === "Enter" || e.key === "Tab") {
+        e.preventDefault();
+        setUseOrgContext(true);
+        setMentionPopupOpen(false);
+        // @文字を削除
+        setInput((prev) => prev.replace(/@$/, ""));
+        return;
+      }
+      if (e.key === "Escape") {
+        e.preventDefault();
+        setMentionPopupOpen(false);
+        return;
+      }
+    }
+
     // IME変換中はEnterキーでメッセージを送信しない
     if (e.key === "Enter" && !e.shiftKey && !isComposing) {
       e.preventDefault();
       handleSubmit();
     }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const value = e.target.value;
+    setInput(value);
+
+    // @メンションポップアップの制御
+    if (orgContextAvailable) {
+      // 最後の文字が@で、その前がスペースか先頭の場合にポップアップを表示
+      if (value.endsWith("@") && (value.length === 1 || value.slice(-2, -1) === " ")) {
+        setMentionPopupOpen(true);
+      } else if (mentionPopupOpen && !value.endsWith("@")) {
+        setMentionPopupOpen(false);
+      }
+    }
+  };
+
+  const handleSelectMention = () => {
+    setUseOrgContext(true);
+    setMentionPopupOpen(false);
+    // @文字を削除
+    setInput((prev) => prev.replace(/@$/, ""));
+    textareaRef.current?.focus();
   };
 
   const handleClearChat = () => {
@@ -354,26 +404,6 @@ export function AIChatClient({ language, userName }: AIChatClientProps) {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  const handleToggleOrgContext = async () => {
-    if (orgToggleLoading) return;
-    setOrgToggleLoading(true);
-    try {
-      const res = await fetch("/api/user/org-context", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ enabled: !orgContextEnabled }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setOrgContextEnabled(data.enabled);
-      }
-    } catch {
-      // トグル失敗時は何もしない
-    } finally {
-      setOrgToggleLoading(false);
-    }
-  };
-
   const handleStop = () => {
     abortControllerRef.current?.abort();
     setIsLoading(false);
@@ -386,9 +416,10 @@ export function AIChatClient({ language, userName }: AIChatClientProps) {
     const newMessages = messages.slice(0, -1);
     setMessages(newMessages);
 
-    // Get the last user message
+    // Get the last user message and its orgContext flag
     const lastUserMessage = newMessages[newMessages.length - 1];
     if (lastUserMessage?.role === "user") {
+      const regenerateOrgContext = lastUserMessage.orgContext ?? false;
       setIsLoading(true);
       setError(null);
       setStreamingContent("");
@@ -437,6 +468,7 @@ export function AIChatClient({ language, userName }: AIChatClientProps) {
           },
           body: JSON.stringify({
             messages: conversationHistory,
+            useOrgContext: regenerateOrgContext,
           }),
           signal: abortControllerRef.current.signal,
         });
@@ -612,44 +644,6 @@ export function AIChatClient({ language, userName }: AIChatClientProps) {
               <span>{providerInfo.modelName}</span>
             </div>
           )}
-          {orgContextAvailable && (
-            <button
-              type="button"
-              onClick={handleToggleOrgContext}
-              disabled={orgToggleLoading}
-              className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs transition-colors cursor-pointer ${
-                orgContextEnabled
-                  ? "bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 hover:bg-green-200 dark:hover:bg-green-800"
-                  : "bg-muted text-muted-foreground hover:bg-muted/80"
-              } ${orgToggleLoading ? "opacity-50" : ""}`}
-              title={
-                language === "ja"
-                  ? orgContextEnabled
-                    ? "組織データ連携: ON（クリックでOFF）"
-                    : "組織データ連携: OFF（クリックでON）"
-                  : orgContextEnabled
-                    ? "Org Data: ON (click to disable)"
-                    : "Org Data: OFF (click to enable)"
-              }
-            >
-              <svg
-                className="w-3 h-3"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
-                />
-              </svg>
-              <span>
-                {language === "ja" ? "組織データ連携" : "Org Data"}
-              </span>
-            </button>
-          )}
         </div>
         <div className="flex items-center gap-2">
           {/* Stats toggle button */}
@@ -698,11 +692,11 @@ export function AIChatClient({ language, userName }: AIChatClientProps) {
                   {suggestion}
                 </button>
               ))}
-              {orgContextEnabled &&
+              {orgContextAvailable &&
                 t.orgSuggestions.map((suggestion, index) => (
                   <button
                     key={`org-${index}`}
-                    onClick={() => handleSubmit(undefined, suggestion)}
+                    onClick={() => handleSubmit(undefined, suggestion, true)}
                     className="px-4 py-2 text-sm border border-green-300 dark:border-green-700 text-green-700 dark:text-green-300 rounded-full hover:bg-green-50 dark:hover:bg-green-950 transition-colors"
                   >
                     {suggestion}
@@ -737,6 +731,24 @@ export function AIChatClient({ language, userName }: AIChatClientProps) {
                       <span className="font-medium text-sm">
                         {message.role === "user" ? userName : t.ai}
                       </span>
+                      {message.orgContext && (
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300">
+                          <svg
+                            className="w-2.5 h-2.5"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+                            />
+                          </svg>
+                          {t.orgBadge}
+                        </span>
+                      )}
                       <span className="text-xs text-muted-foreground">
                         {message.timestamp.toLocaleTimeString(
                           language === "ja" ? "ja-JP" : "en-US",
@@ -958,6 +970,35 @@ export function AIChatClient({ language, userName }: AIChatClientProps) {
 
       {/* Input area */}
       <div className="flex-shrink-0 border-t px-4 py-4">
+        {/* Org context chip */}
+        {useOrgContext && (
+          <div className="flex items-center gap-2 mb-2 px-1">
+            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300">
+              <svg
+                className="w-3 h-3"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+                />
+              </svg>
+              @{t.orgMention}
+              <button
+                type="button"
+                onClick={() => setUseOrgContext(false)}
+                className="ml-0.5 hover:text-green-900 dark:hover:text-green-100 cursor-pointer"
+              >
+                &times;
+              </button>
+            </span>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="flex gap-2 items-center">
           {/* Regenerate button - left side */}
           {messages.length > 0 && !isLoading && (
@@ -988,14 +1029,44 @@ export function AIChatClient({ language, userName }: AIChatClientProps) {
           )}
 
           <div className="flex-1 relative">
+            {/* @Mention popup */}
+            {mentionPopupOpen && (
+              <div className="absolute bottom-full mb-1 left-0 bg-popover border border-border rounded-lg shadow-lg py-1 z-10 min-w-[180px]">
+                <button
+                  type="button"
+                  onClick={handleSelectMention}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-muted transition-colors cursor-pointer"
+                >
+                  <svg
+                    className="w-4 h-4 text-green-600 dark:text-green-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+                    />
+                  </svg>
+                  <span>@{t.orgMention}</span>
+                </button>
+              </div>
+            )}
+
             <textarea
               ref={textareaRef}
               value={input}
-              onChange={(e) => setInput(e.target.value)}
+              onChange={handleInputChange}
               onKeyDown={handleKeyDown}
               onCompositionStart={() => setIsComposing(true)}
               onCompositionEnd={() => setIsComposing(false)}
-              placeholder={t.placeholder}
+              placeholder={
+                orgContextAvailable
+                  ? `${t.placeholder} (${t.orgMentionHint})`
+                  : t.placeholder
+              }
               className="w-full resize-none rounded-xl border border-input bg-background px-4 py-3 pr-12 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 min-h-[48px] max-h-[200px]"
               rows={1}
               disabled={isLoading}

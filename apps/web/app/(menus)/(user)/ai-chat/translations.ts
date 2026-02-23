@@ -32,6 +32,9 @@ export const aiChatTranslations = {
       "How many employees are there?",
       "List all positions",
     ],
+    orgMention: "Org Data",
+    orgMentionHint: "Type @ to reference org data",
+    orgBadge: "Org Data",
     // Stats labels
     stats: {
       contextUsage: "Context Usage",
@@ -79,6 +82,9 @@ export const aiChatTranslations = {
       "社員は何人いますか？",
       "役職一覧を表示して",
     ],
+    orgMention: "組織データ",
+    orgMentionHint: "@を入力して組織データを参照",
+    orgBadge: "組織データ",
     // Stats labels
     stats: {
       contextUsage: "コンテキスト使用量",
