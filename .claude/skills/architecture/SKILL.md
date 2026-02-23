@@ -205,6 +205,269 @@ interface ContainerDependency {
 - **稼働中**: 緑色インジケーター
 - **停止中**: 黄色インジケーター + ⚠️（必須コンテナの場合）
 
+## MCPサーバ定義（外部AI連携）
+
+モジュールが外部の生成AI（Claude Desktop、Claude Code等）からアクセス可能なMCPサーバを提供する場合、`mcpServer`プロパティで定義します。
+
+### MCPサーバとは
+
+- **Model Context Protocol** に準拠したサーバ
+- 外部の生成AIからモジュールのデータ・機能にアクセス可能にする
+- stdio通信で動作（標準入出力）
+- 読み取り専用アクセスを基本とする
+- Webアプリとは独立したNode.jsプロセスとして実行
+
+### ディレクトリ構造
+
+```
+mcp-servers/
+└── {module-name}/
+    ├── package.json           # 依存: @modelcontextprotocol/sdk
+    ├── tsconfig.json
+    ├── README.md              # 環境変数・設定方法
+    └── src/
+        ├── index.ts           # エントリポイント（Server起動）
+        ├── tools.ts           # ツール定義（inputSchema）
+        └── {client}.ts        # データアクセス層（DB/LDAP等）
+```
+
+### モジュール定義例
+
+```typescript
+// apps/web/lib/addon-modules/openldap/module.tsx
+export const openldapModule: AppModule = {
+  id: "openldap",
+  menus: [...],
+  mcpServer: {
+    id: "openldap-mcp",
+    name: "OpenLDAP MCP Server",
+    nameJa: "OpenLDAP MCPサーバ",
+    description: "Provides read-only access to LDAP user information for external AI",
+    descriptionJa: "外部AIからLDAPユーザ情報への読み取り専用アクセスを提供",
+    path: "mcp-servers/openldap",
+    toolCount: 5,
+    readOnly: true,
+    tools: [
+      { name: "ldap_check_status", descriptionJa: "サーバ接続状態を確認" },
+      { name: "ldap_list_users", descriptionJa: "ユーザ一覧を取得" },
+      { name: "ldap_get_user", descriptionJa: "ユーザ詳細を取得" },
+      { name: "ldap_search_users", descriptionJa: "ユーザを検索" },
+      { name: "ldap_user_exists", descriptionJa: "ユーザ存在確認" },
+    ],
+  },
+};
+```
+
+### MCPサーバ実装パターン
+
+#### エントリポイント（index.ts）
+
+```typescript
+#!/usr/bin/env node
+import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import {
+  CallToolRequestSchema,
+  ListToolsRequestSchema,
+} from "@modelcontextprotocol/sdk/types.js";
+import { tools } from "./tools.js";
+
+class MyMcpServer {
+  private server: Server;
+
+  constructor() {
+    this.server = new Server(
+      { name: "my-mcp-server", version: "1.0.0" },
+      { capabilities: { tools: {} } },
+    );
+    this.setupHandlers();
+  }
+
+  private setupHandlers(): void {
+    // ツール一覧
+    this.server.setRequestHandler(ListToolsRequestSchema, async () => ({
+      tools,
+    }));
+
+    // ツール実行
+    this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
+      const { name, arguments: args } = request.params;
+      try {
+        switch (name) {
+          case "my_tool":
+            return await this.handleMyTool(args);
+          default:
+            throw new Error(`Unknown tool: ${name}`);
+        }
+      } catch (error) {
+        return {
+          content: [{
+            type: "text" as const,
+            text: JSON.stringify({ success: false, error: String(error) }, null, 2),
+          }],
+        };
+      }
+    });
+  }
+
+  async run(): Promise<void> {
+    const transport = new StdioServerTransport();
+    await this.server.connect(transport);
+    console.error("MCP Server running on stdio");
+  }
+}
+
+new MyMcpServer().run().catch(console.error);
+```
+
+#### ツール定義（tools.ts）
+
+```typescript
+import type { Tool } from "@modelcontextprotocol/sdk/types.js";
+
+export const tools: Tool[] = [
+  {
+    name: "my_list_items",
+    description: "アイテム一覧を取得します。ページネーション対応。",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        limit: { type: "number", description: "最大件数（デフォルト: 100）" },
+        offset: { type: "number", description: "スキップ件数（デフォルト: 0）" },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "my_get_item",
+    description: "指定IDのアイテム詳細を取得します。",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        id: { type: "string", description: "アイテムID" },
+      },
+      required: ["id"],
+    },
+  },
+];
+```
+
+#### レスポンス形式
+
+```typescript
+// 成功時
+return {
+  content: [{
+    type: "text" as const,
+    text: JSON.stringify({ success: true, data: result }, null, 2),
+  }],
+};
+
+// エラー時
+return {
+  content: [{
+    type: "text" as const,
+    text: JSON.stringify({ success: false, error: errorMessage }, null, 2),
+  }],
+};
+```
+
+### package.json
+
+```json
+{
+  "name": "@lion-frame/mcp-{module}",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsc --watch"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "typescript": "^5"
+  }
+}
+```
+
+### クライアント設定
+
+#### Claude Desktop（claude_desktop_config.json）
+
+```json
+{
+  "mcpServers": {
+    "my-module": {
+      "command": "node",
+      "args": ["mcp-servers/{module}/dist/index.js"],
+      "env": {
+        "DATABASE_URL": "postgresql://..."
+      }
+    }
+  }
+}
+```
+
+#### Claude Code（.mcp.json）
+
+```json
+{
+  "mcpServers": {
+    "my-module": {
+      "command": "node",
+      "args": ["mcp-servers/{module}/dist/index.js"],
+      "env": {
+        "DATABASE_URL": "postgresql://..."
+      }
+    }
+  }
+}
+```
+
+### MCPサーバ追加手順
+
+1. **`mcp-servers/{module}/` ディレクトリを作成**
+2. **`package.json`、`tsconfig.json` を作成**（上記テンプレート参照）
+3. **`src/tools.ts`** にツール定義を記述
+4. **`src/{client}.ts`** にデータアクセス層を実装（環境変数から設定を読み込み）
+5. **`src/index.ts`** にサーバ本体を実装（ツール実行のswitch/case）
+6. **モジュール定義に `mcpServer` を追加**（`apps/web/lib/{core,addon}-modules/{module}/module.tsx`）
+7. **`README.md`** に環境変数と設定方法を記載
+
+### ツール命名規則
+
+```
+{module}_{action}
+
+例:
+  ldap_check_status      # OpenLDAP: 状態確認
+  ldap_list_users        # OpenLDAP: ユーザ一覧
+  org_get_structure      # Organization: 組織階層取得
+  org_search_employees   # Organization: 社員検索
+```
+
+### 設計原則
+
+| 原則 | 説明 |
+|------|------|
+| **読み取り専用** | 基本的にデータの取得・検索のみ。書き込みは慎重に |
+| **環境変数で設定** | DB接続先、認証情報は環境変数から読み込み |
+| **エラーハンドリング** | 全ツールでtry/catchし、`{ success: false, error }` 形式で返す |
+| **ページネーション** | 一覧取得には `limit`/`offset` パラメータを提供 |
+| **独立プロセス** | Webアプリとは別プロセスで動作、直接importしない |
+
+### UI表示
+
+モジュール管理画面に以下が表示されます:
+- MCPサーバ名、ツール数バッジ、読み取り専用バッジ
+- 折りたたみ可能なツール一覧（ツール名 + 説明）
+- サーバパス
+
 ## コア/アドオンモジュール分離
 
 ```
