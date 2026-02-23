@@ -158,27 +158,6 @@ type MenuGroupId = "guest" | "user" | "manager" | "executive" | "admin";
 | EXECUTIVE | `bg-rose-600` / `bg-rose-700` |
 | ADMIN | `bg-purple-600` / `bg-purple-700` |
 
-## レスポンシブ対応
-
-| サイズ | 幅 | サイドバー |
-|--------|-----|-----------|
-| モバイル | < 768px | オーバーレイ（Sheet） |
-| タブレット | 768px - 1023px | オーバーレイ（Sheet） |
-| デスクトップ | >= 1024px | 固定表示 |
-
-**ベース端末**: iPad Mini（768x1024）
-
-```typescript
-import { useIsMobile, useIsTabletOrMobile } from "@/hooks/use-mobile";
-
-// ✅ タブレット対応のレイアウト
-const isTabletOrMobile = useIsTabletOrMobile();
-<div style={{ left: isTabletOrMobile ? "0" : `${sidebarWidth}px` }}>
-
-// ❌ モバイルのみの判定（タブレットで問題発生）
-const isMobile = useIsMobile();
-```
-
 ## 認証アーキテクチャ
 
 Next.js 15のmiddlewareはEdge Runtimeで動作するため、認証設定を分離:

@@ -14,7 +14,7 @@ interface TabItem {
   active: boolean;
 }
 
-import { Info, Menu } from "lucide-react";
+import { Info } from "lucide-react";
 import {
   FaChartBar,
   FaDatabase,
@@ -26,14 +26,12 @@ import {
 import { AnnouncementBanner } from "@/components/AnnouncementBanner";
 import { NotificationBell } from "@/components/notifications";
 import { Button } from "@/components/ui/button";
-import { useSidebar } from "@/components/ui/sidebar";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useIsTabletOrMobile } from "@/hooks/use-mobile";
 import { getPageTitle } from "@/lib/i18n/page-titles";
 import { useSidebarStore } from "@/lib/stores/sidebar-store";
 
@@ -47,22 +45,6 @@ interface HeaderProps {
   accessKeyTabPermissions?: Record<string, string[]>;
 }
 
-function SidebarToggleButton() {
-  const { toggleSidebar } = useSidebar();
-
-  return (
-    <Button
-      variant="ghost"
-      size="icon"
-      className="h-9 w-9"
-      onClick={toggleSidebar}
-    >
-      <Menu className="h-5 w-5" />
-      <span className="sr-only">Toggle Sidebar</span>
-    </Button>
-  );
-}
-
 export function Header({
   session,
   language = "en",
@@ -71,7 +53,6 @@ export function Header({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { width, open } = useSidebarStore();
-  const isTabletOrMobile = useIsTabletOrMobile();
   const pageTitle = getPageTitle(pathname, language as "en" | "ja");
 
   // ユーザーがADMINロールか判定
@@ -300,13 +281,7 @@ export function Header({
     <header
       className="bg-card shadow-lg border-b border-border fixed top-0 right-0 z-[8] transition-all duration-300"
       style={{
-        left: session
-          ? isTabletOrMobile
-            ? "0"
-            : open
-              ? `${width}px`
-              : "4rem"
-          : "0",
+        left: session ? (open ? `${width}px` : "4rem") : "0",
       }}
     >
       {/* システムアナウンスバナー */}
@@ -315,7 +290,6 @@ export function Header({
       <div className="px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            {session && isTabletOrMobile && <SidebarToggleButton />}
             {session ? (
               <h1 className="text-xl font-bold">{pageTitle}</h1>
             ) : (

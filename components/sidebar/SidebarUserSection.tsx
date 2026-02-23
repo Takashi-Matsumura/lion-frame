@@ -29,7 +29,6 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  useSidebar,
 } from "@/components/ui/sidebar";
 
 interface SidebarUserSectionProps {
@@ -43,7 +42,6 @@ export function SidebarUserSection({
   language,
   mustChangePassword,
 }: SidebarUserSectionProps) {
-  const { isMobile } = useSidebar();
   const { theme, setTheme } = useTheme();
 
   const t = (en: string, ja: string) => (language === "ja" ? ja : en);
@@ -87,7 +85,7 @@ export function SidebarUserSection({
             </DropdownMenuTrigger>
             <DropdownMenuContent
               className="w-[--radix-dropdown-menu-trigger-width] min-w-56"
-              side={isMobile ? "bottom" : "right"}
+              side="right"
               align="end"
               sideOffset={4}
             >

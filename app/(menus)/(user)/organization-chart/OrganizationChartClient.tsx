@@ -13,15 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
-import { useIsTabletOrMobile } from "@/hooks/use-mobile";
 import { EXECUTIVES_DEPARTMENT_NAME } from "@/lib/importers/organization/parser";
 import { EmployeeDetailDialog } from "./components/EmployeeDetailDialog";
 import { MemberGrid } from "./components/MemberGrid";
@@ -114,7 +106,6 @@ export function OrganizationChartClient({
   language,
 }: OrganizationChartClientProps) {
   const t: Translations = translations[language];
-  const isTabletOrMobile = useIsTabletOrMobile();
 
   // 組織データ
   const [orgData, setOrgData] = useState<OrganizationData | null>(null);
@@ -150,9 +141,6 @@ export function OrganizationChartClient({
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(
     null,
   );
-
-  // モバイルメニュー
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // 検索のデバウンス
   useEffect(() => {
@@ -291,11 +279,8 @@ export function OrganizationChartClient({
           break;
       }
 
-      if (isTabletOrMobile) {
-        setMobileMenuOpen(false);
-      }
     },
-    [isTabletOrMobile],
+    [],
   );
 
   // ページ変更ハンドラ
@@ -337,38 +322,6 @@ export function OrganizationChartClient({
         <CardContent className="p-6">
           {/* 検索・フィルターバー */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-6">
-            {/* モバイル: 組織選択ボタン */}
-            {isTabletOrMobile && (
-              <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-                <SheetTrigger asChild>
-                  <Button variant="outline" className="w-full sm:w-auto">
-                    <svg
-                      className="w-4 h-4 mr-2"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M4 6h16M4 12h16M4 18h16"
-                      />
-                    </svg>
-                    {t.selectOrganization}
-                  </Button>
-                </SheetTrigger>
-                <SheetContent side="left" className="w-[300px] p-0">
-                  <SheetHeader className="p-4 pb-0">
-                    <SheetTitle>{t.selectOrganization}</SheetTitle>
-                  </SheetHeader>
-                  <ScrollArea className="h-[calc(100%-60px)] p-4">
-                    {treeView}
-                  </ScrollArea>
-                </SheetContent>
-              </Sheet>
-            )}
-
             {/* 検索入力 */}
             <div className="flex-1 w-full sm:max-w-sm">
               <Input
@@ -408,14 +361,12 @@ export function OrganizationChartClient({
 
           {/* メインコンテンツ */}
           <div className="flex gap-6">
-            {/* デスクトップ: 左パネル（ツリービュー） */}
-            {!isTabletOrMobile && (
-              <div className="w-[300px] flex-shrink-0">
-                <ScrollArea className="h-[calc(100vh-280px)]">
-                  {treeView}
-                </ScrollArea>
-              </div>
-            )}
+            {/* 左パネル（ツリービュー） */}
+            <div className="w-[300px] flex-shrink-0">
+              <ScrollArea className="h-[calc(100vh-280px)]">
+                {treeView}
+              </ScrollArea>
+            </div>
 
             {/* 右パネル（メンバーグリッド） */}
             <div className="flex-1 min-w-0">

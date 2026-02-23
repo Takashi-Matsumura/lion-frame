@@ -51,7 +51,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useIsTabletOrMobile } from "@/hooks/use-mobile";
 import { getModuleIcon } from "@/lib/modules/icons";
 import { useSidebarStore } from "@/lib/stores/sidebar-store";
 import type { AppMenu, AppModule } from "@/types/module";
@@ -183,7 +182,6 @@ export function AdminClient({
   const searchParams = useSearchParams();
   const { open } = useSidebar();
   const { width } = useSidebarStore();
-  const isTabletOrMobile = useIsTabletOrMobile();
   const activeTab = (searchParams.get("tab") as TabType) || "users";
 
   // ユーザ管理タブの状態
@@ -1068,7 +1066,7 @@ export function AdminClient({
       className="fixed inset-0 flex flex-col bg-muted/30 transition-all duration-300"
       style={{
         top: headerHeight,
-        left: isTabletOrMobile ? "0" : open ? `${width}px` : "4rem",
+        left: open ? `${width}px` : "4rem",
       }}
     >
       <div className="flex-1 overflow-y-auto">

@@ -29,7 +29,7 @@ interface ClientLayoutProps {
 
 function ResizeHandle() {
   const { width, setWidth, isModalOpen } = useSidebarStore();
-  const { open, isMobile } = useSidebar();
+  const { open } = useSidebar();
   const isResizingRef = useRef(false);
   const [isResizing, setIsResizing] = useState(false);
 
@@ -63,8 +63,7 @@ function ResizeHandle() {
     document.body.style.userSelect = "none";
   };
 
-  // タブレット/モバイル時は非表示
-  if (!open || isModalOpen || isMobile) return null;
+  if (!open || isModalOpen) return null;
 
   return (
     <div
