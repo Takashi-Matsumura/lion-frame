@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { AuditService } from "@/lib/services/audit-service";
 import { NotificationService } from "@/lib/services/notification-service";
 import { verifyTotp } from "@/lib/totp";
 
@@ -54,6 +55,14 @@ export async function POST(request: Request) {
       twoFactorEnabled: false,
       twoFactorSecret: null,
     },
+  });
+
+  await AuditService.log({
+    action: "TWO_FACTOR_DISABLE",
+    category: "USER_MANAGEMENT",
+    userId: updatedUser.id,
+    targetId: updatedUser.id,
+    targetType: "User",
   });
 
   // 2FA無効化通知を発行

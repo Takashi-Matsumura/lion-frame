@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { AuditService } from "@/lib/services/audit-service";
 
 /**
  * DELETE /api/admin/organization/clear-data
@@ -130,6 +131,15 @@ export async function DELETE(request: Request) {
         organizationHistories: orgHistoryCount.count,
         changeLogs: changeLogCount.count,
       };
+    });
+
+    await AuditService.log({
+      action: "DATA_CLEAR",
+      category: "SYSTEM_SETTING",
+      userId: session.user?.id,
+      targetId: organizationId,
+      targetType: "Organization",
+      details: { deleted: result },
     });
 
     return NextResponse.json({

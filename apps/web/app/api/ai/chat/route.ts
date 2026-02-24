@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { AIService } from "@/lib/core-modules/ai";
 import { isOrgContextEnabled } from "@/lib/core-modules/ai/services/org-context";
+import { AuditService } from "@/lib/services/audit-service";
 
 /**
  * GET /api/ai/chat
@@ -103,6 +104,13 @@ export async function POST(request: Request) {
     const response = await AIService.chat({
       messages,
       systemPrompt,
+    });
+
+    await AuditService.log({
+      action: "AI_CHAT_MESSAGE",
+      category: "MODULE",
+      userId: session.user.id,
+      details: { messageCount: messages.length, mode: "standard" },
     });
 
     return NextResponse.json(response);

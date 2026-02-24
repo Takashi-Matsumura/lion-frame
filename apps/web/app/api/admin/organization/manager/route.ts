@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { AuditService } from "@/lib/services/audit-service";
 
 /**
  * PATCH /api/admin/organization/manager
@@ -75,6 +76,19 @@ export async function PATCH(request: Request) {
         },
       });
     }
+
+    await AuditService.log({
+      action: "MANAGER_ASSIGN",
+      category: "SYSTEM_SETTING",
+      userId: session.user?.id,
+      targetId: id,
+      targetType: type,
+      details: {
+        type,
+        managerId: managerId || null,
+        managerName: result?.manager?.name || null,
+      },
+    });
 
     return NextResponse.json({
       success: true,

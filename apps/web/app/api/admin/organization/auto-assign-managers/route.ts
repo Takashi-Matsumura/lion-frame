@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { EXECUTIVES_DEPARTMENT_NAME } from "@/lib/importers/organization/parser";
 import { prisma } from "@/lib/prisma";
+import { AuditService } from "@/lib/services/audit-service";
 
 interface Assignment {
   type: "department" | "section" | "course";
@@ -297,6 +298,18 @@ export async function POST(request: Request) {
         }
       }
     }
+
+    await AuditService.log({
+      action: "MANAGER_AUTO_ASSIGN",
+      category: "SYSTEM_SETTING",
+      userId: session.user?.id,
+      targetId: organizationId,
+      targetType: "Organization",
+      details: {
+        assignmentsCount: assignments.length,
+        skippedCount: skipped.length,
+      },
+    });
 
     return NextResponse.json({ assignments, skipped });
   } catch (error) {

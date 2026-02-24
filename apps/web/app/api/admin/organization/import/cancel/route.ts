@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { AuditService } from "@/lib/services/audit-service";
 
 /**
  * POST /api/admin/organization/import/cancel
@@ -239,6 +240,14 @@ export async function POST(_request: Request) {
         employeesRestored: restoredCount,
         employeesReactivated: reactivatedCount,
       };
+    });
+
+    await AuditService.log({
+      action: "DATA_IMPORT_CANCEL",
+      category: "SYSTEM_SETTING",
+      userId: session.user?.id,
+      targetType: "Organization",
+      details: result,
     });
 
     return NextResponse.json({

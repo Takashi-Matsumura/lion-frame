@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { AuditService } from "@/lib/services/audit-service";
 
 const SETTING_KEY = "github_oauth_enabled";
 
@@ -52,6 +53,13 @@ export async function POST(request: Request) {
       where: { key: SETTING_KEY },
       update: { value: String(enabled) },
       create: { key: SETTING_KEY, value: String(enabled) },
+    });
+
+    await AuditService.log({
+      action: "OAUTH_TOGGLE",
+      category: "SYSTEM_SETTING",
+      userId: session.user.id,
+      details: { provider: "github", enabled },
     });
 
     return NextResponse.json({ success: true, enabled });

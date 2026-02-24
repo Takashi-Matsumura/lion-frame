@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { AuditService } from "@/lib/services/audit-service";
 
 /**
  * GET /api/admin/organization/publish
@@ -191,6 +192,19 @@ export async function PATCH(request: Request) {
         status: true,
         publishAt: true,
         publishedAt: true,
+      },
+    });
+
+    await AuditService.log({
+      action: "ORGANIZATION_PUBLISH",
+      category: "SYSTEM_SETTING",
+      userId: session.user?.id,
+      targetId: organizationId,
+      targetType: "Organization",
+      details: {
+        action,
+        previousStatus: organization.status,
+        newStatus: updatedOrganization.status,
       },
     });
 

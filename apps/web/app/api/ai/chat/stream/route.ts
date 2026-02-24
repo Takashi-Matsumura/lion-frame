@@ -4,6 +4,7 @@ import {
   buildOrgContext,
   ORG_CONTEXT_SYSTEM_ADDITION,
 } from "@/lib/core-modules/ai/services/org-context";
+import { AuditService } from "@/lib/services/audit-service";
 
 /**
  * POST /api/ai/chat/stream
@@ -79,6 +80,14 @@ export async function POST(request: Request) {
       { role: "system", content: finalSystemPrompt },
       ...messages.filter((m: ChatMessage) => m.role !== "system"),
     ];
+
+    // ストリーム開始前に監査ログを記録
+    await AuditService.log({
+      action: "AI_CHAT_MESSAGE",
+      category: "MODULE",
+      userId: session.user.id,
+      details: { messageCount: messages.length, mode: "streaming" },
+    });
 
     // ストリーミングレスポンスを作成
     const stream = new ReadableStream({

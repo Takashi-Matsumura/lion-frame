@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { AuditService } from "@/lib/services/audit-service";
 import { NotificationService } from "@/lib/services/notification-service";
 
 // Generate random Access key
@@ -127,6 +128,15 @@ export async function POST(request: Request) {
       console.error("[AccessKey] Failed to create notification:", err);
     });
 
+    await AuditService.log({
+      action: "ACCESS_KEY_CREATE",
+      category: "SYSTEM_SETTING",
+      userId: session.user.id,
+      targetId: accessKey?.id,
+      targetType: "AccessKey",
+      details: { name, targetUserId },
+    });
+
     return NextResponse.json({ accessKey });
   } catch (error) {
     console.error("Error creating Access key:", error);
@@ -179,6 +189,15 @@ export async function PATCH(request: Request) {
         console.error("[AccessKey] Failed to create notification:", err);
       });
     }
+
+    await AuditService.log({
+      action: "ACCESS_KEY_TOGGLE",
+      category: "SYSTEM_SETTING",
+      userId: session.user.id,
+      targetId: id,
+      targetType: "AccessKey",
+      details: { name: accessKey.name, isActive },
+    });
 
     return NextResponse.json({ accessKey });
   } catch (error) {
@@ -234,6 +253,15 @@ export async function DELETE(request: Request) {
         console.error("[AccessKey] Failed to create notification:", err);
       });
     }
+
+    await AuditService.log({
+      action: "ACCESS_KEY_DELETE",
+      category: "SYSTEM_SETTING",
+      userId: session.user.id,
+      targetId: id,
+      targetType: "AccessKey",
+      details: { name: accessKey?.name },
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {

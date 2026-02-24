@@ -4,6 +4,7 @@ import { HistoryRecorder } from "@/lib/history";
 import { parseXlsxBuffer } from "@/lib/importers/organization/xlsx-parser";
 import { processEmployeeDataWithDeduplication } from "@/lib/importers/organization/parser";
 import { prisma } from "@/lib/prisma";
+import { AuditService } from "@/lib/services/audit-service";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
@@ -475,6 +476,15 @@ export async function POST(request: Request) {
       batchId,
       changedBy,
       changeDescription: `インポート完了: 新規${statistics.created}名, 更新${statistics.updated}名, 異動${statistics.transferred}名, 退職${statistics.retired}名, 重複除外${statistics.excludedDuplicates}名`,
+    });
+
+    await AuditService.log({
+      action: "DATA_IMPORT",
+      category: "SYSTEM_SETTING",
+      userId: session.user.id,
+      targetId: organizationId,
+      targetType: "Organization",
+      details: { batchId, statistics },
     });
 
     return NextResponse.json({

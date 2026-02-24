@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { AuditService } from "@/lib/services/audit-service";
 
 // Upload profile image
 export async function POST(request: Request) {
@@ -87,6 +88,14 @@ export async function POST(request: Request) {
       data: { image: imageUrl },
     });
 
+    await AuditService.log({
+      action: "PROFILE_IMAGE_UPDATE",
+      category: "USER_MANAGEMENT",
+      userId: session.user.id,
+      targetId: session.user.id,
+      targetType: "User",
+    });
+
     return NextResponse.json({
       success: true,
       imageUrl,
@@ -130,6 +139,14 @@ export async function DELETE() {
     await prisma.user.update({
       where: { id: session.user.id },
       data: { image: null },
+    });
+
+    await AuditService.log({
+      action: "PROFILE_IMAGE_DELETE",
+      category: "USER_MANAGEMENT",
+      userId: session.user.id,
+      targetId: session.user.id,
+      targetType: "User",
     });
 
     return NextResponse.json({ success: true });

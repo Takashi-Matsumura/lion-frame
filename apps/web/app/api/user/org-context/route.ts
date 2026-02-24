@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { isOrgContextEnabled } from "@/lib/core-modules/ai/services/org-context";
+import { AuditService } from "@/lib/services/audit-service";
 
 /**
  * GET /api/user/org-context
@@ -57,6 +58,13 @@ export async function PUT(request: NextRequest) {
     await prisma.user.update({
       where: { email: session.user.email },
       data: { orgContextEnabled: enabled },
+    });
+
+    await AuditService.log({
+      action: "ORG_CONTEXT_TOGGLE",
+      category: "MODULE",
+      userId: session.user.id,
+      details: { enabled },
     });
 
     return NextResponse.json({

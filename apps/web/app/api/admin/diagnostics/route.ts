@@ -1,0 +1,253 @@
+import { access, mkdir } from "node:fs/promises";
+import { constants } from "node:fs";
+import { join } from "node:path";
+import { NextResponse } from "next/server";
+import { auth } from "@/auth";
+import { prisma } from "@/lib/prisma";
+import { AuditService } from "@/lib/services/audit-service";
+
+type DiagnosticStatus = "pass" | "fail" | "warn";
+
+interface DiagnosticResult {
+  id: string;
+  name: string;
+  nameJa: string;
+  status: DiagnosticStatus;
+  message: string;
+  messageJa: string;
+  durationMs: number;
+}
+
+async function runDiagnostic(
+  id: string,
+  name: string,
+  nameJa: string,
+  fn: () => Promise<{ status: DiagnosticStatus; message: string; messageJa: string }>,
+): Promise<DiagnosticResult> {
+  const start = Date.now();
+  try {
+    const result = await fn();
+    return {
+      id,
+      name,
+      nameJa,
+      status: result.status,
+      message: result.message,
+      messageJa: result.messageJa,
+      durationMs: Date.now() - start,
+    };
+  } catch (error) {
+    const errMsg = error instanceof Error ? error.message : "Unknown error";
+    return {
+      id,
+      name,
+      nameJa,
+      status: "fail",
+      message: errMsg,
+      messageJa: errMsg,
+      durationMs: Date.now() - start,
+    };
+  }
+}
+
+/**
+ * POST /api/admin/diagnostics
+ * Run system diagnostics (ADMIN only)
+ *
+ * 各診断項目を個別の監査ログエントリとして記録する。
+ */
+export async function POST() {
+  const session = await auth();
+
+  if (!session || session.user.role !== "ADMIN") {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const results: DiagnosticResult[] = [];
+
+  // 1. DB Connection
+  results.push(
+    await runDiagnostic("db_connection", "Database Connection", "データベース接続", async () => {
+      await prisma.$queryRaw`SELECT 1`;
+      return {
+        status: "pass",
+        message: "Database connection successful",
+        messageJa: "データベース接続に成功しました",
+      };
+    }),
+  );
+
+  // 2. Auth System
+  results.push(
+    await runDiagnostic("auth_system", "Authentication", "認証システム", async () => {
+      if (session.user?.email) {
+        return {
+          status: "pass",
+          message: `Authenticated as ${session.user.email}`,
+          messageJa: `${session.user.email} として認証済み`,
+        };
+      }
+      return {
+        status: "warn",
+        message: "Session exists but no email found",
+        messageJa: "セッションはありますがメールアドレスがありません",
+      };
+    }),
+  );
+
+  // 3. Audit Log (write → read → delete)
+  results.push(
+    await runDiagnostic("audit_log", "Audit Log", "監査ログ", async () => {
+      const testLog = await prisma.auditLog.create({
+        data: {
+          action: "SYSTEM_DIAGNOSTIC",
+          category: "SYSTEM_SETTING",
+          userId: session.user.id,
+          details: JSON.stringify({ test: true }),
+        },
+      });
+
+      const found = await prisma.auditLog.findUnique({
+        where: { id: testLog.id },
+      });
+
+      if (!found) {
+        return {
+          status: "fail",
+          message: "Failed to read test audit log",
+          messageJa: "テスト監査ログの読み取りに失敗しました",
+        };
+      }
+
+      await prisma.auditLog.delete({
+        where: { id: testLog.id },
+      });
+
+      return {
+        status: "pass",
+        message: "Audit log write/read/delete successful",
+        messageJa: "監査ログの書込/読取/削除に成功しました",
+      };
+    }),
+  );
+
+  // 4. Notification (create → read → delete)
+  results.push(
+    await runDiagnostic("notification", "Notification", "通知", async () => {
+      const testNotification = await prisma.notification.create({
+        data: {
+          userId: session.user.id,
+          type: "SYSTEM",
+          title: "Diagnostic test",
+          titleJa: "診断テスト",
+          message: "This is a diagnostic test notification",
+          messageJa: "診断テスト通知です",
+        },
+      });
+
+      const found = await prisma.notification.findUnique({
+        where: { id: testNotification.id },
+      });
+
+      if (!found) {
+        return {
+          status: "fail",
+          message: "Failed to read test notification",
+          messageJa: "テスト通知の読み取りに失敗しました",
+        };
+      }
+
+      await prisma.notification.delete({
+        where: { id: testNotification.id },
+      });
+
+      return {
+        status: "pass",
+        message: "Notification write/read/delete successful",
+        messageJa: "通知の書込/読取/削除に成功しました",
+      };
+    }),
+  );
+
+  // 5. API Health
+  results.push(
+    await runDiagnostic("api_health", "API Health", "API応答", async () => {
+      const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
+      const response = await fetch(`${baseUrl}/api/health`);
+      if (response.status === 200) {
+        return {
+          status: "pass",
+          message: "Health endpoint returned 200",
+          messageJa: "ヘルスエンドポイントが200を返しました",
+        };
+      }
+      return {
+        status: "fail",
+        message: `Health endpoint returned ${response.status}`,
+        messageJa: `ヘルスエンドポイントが${response.status}を返しました`,
+      };
+    }),
+  );
+
+  // 6. Storage
+  results.push(
+    await runDiagnostic("storage", "Storage", "ストレージ", async () => {
+      const uploadsDir = join(process.cwd(), "public", "uploads");
+      try {
+        await access(uploadsDir, constants.W_OK);
+        return {
+          status: "pass",
+          message: "Uploads directory is writable",
+          messageJa: "uploadsディレクトリは書込可能です",
+        };
+      } catch {
+        try {
+          await mkdir(uploadsDir, { recursive: true });
+          return {
+            status: "warn",
+            message: "Uploads directory was missing, created successfully",
+            messageJa: "uploadsディレクトリが存在しなかったため作成しました",
+          };
+        } catch {
+          return {
+            status: "warn",
+            message: "Uploads directory is not writable",
+            messageJa: "uploadsディレクトリに書込権限がありません",
+          };
+        }
+      }
+    }),
+  );
+
+  // 各診断結果を個別の監査ログエントリとして記録
+  for (const result of results) {
+    await AuditService.log({
+      action: "SYSTEM_DIAGNOSTIC",
+      category: "SYSTEM_SETTING",
+      userId: session.user.id,
+      details: {
+        diagnosticId: result.id,
+        diagnosticName: result.name,
+        diagnosticNameJa: result.nameJa,
+        status: result.status,
+        message: result.message,
+        messageJa: result.messageJa,
+        durationMs: result.durationMs,
+      },
+    });
+  }
+
+  const summary = {
+    total: results.length,
+    pass: results.filter((r) => r.status === "pass").length,
+    fail: results.filter((r) => r.status === "fail").length,
+    warn: results.filter((r) => r.status === "warn").length,
+    totalDurationMs: results.reduce((sum, r) => sum + r.durationMs, 0),
+  };
+
+  return NextResponse.json({
+    results,
+    summary,
+    timestamp: new Date().toISOString(),
+  });
+}
