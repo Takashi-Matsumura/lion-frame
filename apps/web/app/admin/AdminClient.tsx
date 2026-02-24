@@ -10,10 +10,13 @@ import {
   Copy,
   Edit3,
   Key,
+  Megaphone,
   Plus,
   RefreshCw,
   Search,
+  Shield,
   Trash2,
+  Wrench,
 } from "lucide-react";
 import Image from "next/image";
 import { useSearchParams } from "next/navigation";
@@ -57,6 +60,14 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  type AnnouncementTemplate,
+  type TemplateCategory,
+  applyPlaceholders,
+  getAnnouncementTemplates,
+  getDefaultPlaceholderValues,
+  getTemplateById,
+} from "@/lib/core-modules/system/announcement-templates";
 import { getModuleIcon } from "@/lib/modules/icons";
 import { useSidebarStore } from "@/lib/stores/sidebar-store";
 import type { AppMenu, AppModule } from "@/types/module";
@@ -268,6 +279,10 @@ export function AdminClient({
     useState<Announcement | null>(null);
   const [announcementDeleting, setAnnouncementDeleting] = useState(false);
 
+  // テンプレートの状態
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
+  const [placeholderValues, setPlaceholderValues] = useState<Record<string, string>>({});
+
   // AI設定の状態
   interface AIConfig {
     enabled: boolean;
@@ -423,6 +438,8 @@ export function AdminClient({
       endAt: "",
       notifyUsers: false,
     });
+    setSelectedTemplateId(null);
+    setPlaceholderValues({});
     setUseAiTranslation(false);
     setShowAnnouncementModal(true);
 
@@ -439,6 +456,51 @@ export function AdminClient({
     } catch {
       setAiTranslationAvailable(false);
     }
+  };
+
+  // テンプレートからアナウンス作成
+  const openTemplateModal = async (template: AnnouncementTemplate) => {
+    setEditingAnnouncement(null);
+    setSelectedTemplateId(template.id);
+    const defaults = getDefaultPlaceholderValues(template);
+    setPlaceholderValues(defaults);
+    setAnnouncementForm({
+      title: applyPlaceholders(template.title, defaults, "en"),
+      titleJa: applyPlaceholders(template.titleJa, defaults, "ja"),
+      message: applyPlaceholders(template.message, defaults, "en"),
+      messageJa: applyPlaceholders(template.messageJa, defaults, "ja"),
+      level: template.level,
+      startAt: formatLocalDateTime(new Date()),
+      endAt: "",
+      notifyUsers: template.notifyUsers,
+    });
+    setUseAiTranslation(false);
+    setShowAnnouncementModal(true);
+    try {
+      const response = await fetch("/api/ai/translate");
+      if (response.ok) {
+        const data = await response.json();
+        setAiTranslationAvailable(data.available);
+        if (data.available) setUseAiTranslation(true);
+      }
+    } catch {
+      setAiTranslationAvailable(false);
+    }
+  };
+
+  // プレースホルダー値変更ハンドラ
+  const handlePlaceholderChange = (key: string, value: string) => {
+    const template = selectedTemplateId ? getTemplateById(selectedTemplateId) : null;
+    if (!template) return;
+    const newValues = { ...placeholderValues, [key]: value };
+    setPlaceholderValues(newValues);
+    setAnnouncementForm((f) => ({
+      ...f,
+      title: applyPlaceholders(template.title, newValues, "en"),
+      titleJa: applyPlaceholders(template.titleJa, newValues, "ja"),
+      message: applyPlaceholders(template.message, newValues, "en"),
+      messageJa: applyPlaceholders(template.messageJa, newValues, "ja"),
+    }));
   };
 
   // アナウンスモーダルを開く（編集）
@@ -2693,6 +2755,44 @@ export function AdminClient({
                   </Button>
                 </div>
 
+                {/* テンプレートパネル */}
+                <div className="mb-6">
+                  <h4 className="text-sm font-medium text-muted-foreground mb-3">
+                    {t("Quick Create from Template", "テンプレートから作成")}
+                  </h4>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {getAnnouncementTemplates()
+                      .filter((tmpl) => tmpl.id !== "general-notice")
+                      .map((tmpl) => {
+                        const categoryIcons: Record<TemplateCategory, typeof Wrench> = {
+                          maintenance: Wrench,
+                          security: Shield,
+                          update: RefreshCw,
+                          general: Megaphone,
+                        };
+                        const levelColors: Record<string, string> = {
+                          critical: "border-red-300 dark:border-red-800 hover:bg-red-50 dark:hover:bg-red-950",
+                          warning: "border-amber-300 dark:border-amber-800 hover:bg-amber-50 dark:hover:bg-amber-950",
+                          info: "border-blue-300 dark:border-blue-800 hover:bg-blue-50 dark:hover:bg-blue-950",
+                        };
+                        const Icon = categoryIcons[tmpl.category];
+                        return (
+                          <button
+                            key={tmpl.id}
+                            type="button"
+                            onClick={() => openTemplateModal(tmpl)}
+                            className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-left text-sm transition-colors cursor-pointer ${levelColors[tmpl.level] ?? ""}`}
+                          >
+                            <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
+                            <span className="truncate">
+                              {language === "ja" ? tmpl.nameJa : tmpl.name}
+                            </span>
+                          </button>
+                        );
+                      })}
+                  </div>
+                </div>
+
                 {/* ローディング */}
                 {announcementsLoading && (
                   <div className="text-center py-12">
@@ -2941,7 +3041,7 @@ export function AdminClient({
         open={showAnnouncementModal}
         onOpenChange={(open) => !open && setShowAnnouncementModal(false)}
       >
-        <DialogContent className="sm:max-w-xl">
+        <DialogContent className="sm:max-w-xl max-h-[85vh] flex flex-col">
           <DialogHeader>
             <DialogTitle>
               {editingAnnouncement
@@ -2956,7 +3056,41 @@ export function AdminClient({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-4">
+          <div className="space-y-4 py-4 overflow-y-auto flex-1 pr-1">
+            {/* プレースホルダー入力（テンプレート選択時のみ） */}
+            {!editingAnnouncement &&
+              selectedTemplateId &&
+              (() => {
+                const tmpl = getTemplateById(selectedTemplateId);
+                return (
+                  tmpl &&
+                  tmpl.placeholders.length > 0 && (
+                    <div className="rounded-lg border bg-muted/50 p-3 space-y-3">
+                      <p className="text-xs font-medium text-muted-foreground">
+                        {t("Template Parameters", "テンプレートパラメータ")}
+                      </p>
+                      <div className="grid grid-cols-2 gap-3">
+                        {tmpl.placeholders.map((ph) => (
+                          <div key={ph.key} className="space-y-1">
+                            <Label className="text-xs">
+                              {language === "ja" ? ph.labelJa : ph.label}
+                            </Label>
+                            <Input
+                              type={ph.type}
+                              value={placeholderValues[ph.key] ?? ""}
+                              onChange={(e) =>
+                                handlePlaceholderChange(ph.key, e.target.value)
+                              }
+                              className="h-8 text-sm"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )
+                );
+              })()}
+
             {/* タイトル（日本語） */}
             <div className="space-y-2">
               <Label htmlFor="titleJa">
