@@ -4,7 +4,6 @@ import Credentials from "next-auth/providers/credentials";
 import { authConfig } from "@/auth.config";
 import { prisma } from "@/lib/prisma";
 import { AuditService } from "@/lib/services/audit-service";
-import { NotificationService } from "@/lib/services/notification-service";
 import { checkRateLimit, getClientIp } from "@/lib/services/rate-limiter";
 
 // Full auth config (for API routes - Node.js runtime)
@@ -73,16 +72,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           await prisma.user.update({
             where: { id: user.id },
             data: { lastSignInAt: new Date() },
-          });
-
-          // ログイン通知を発行
-          await NotificationService.securityNotify(user.id, {
-            title: "New login detected",
-            titleJa: "新しいログインを検出しました",
-            message: "You have successfully logged in.",
-            messageJa: "ログインしました。",
-          }).catch((err) => {
-            console.error("[Auth] Failed to create login notification:", err);
           });
 
           // ログイン成功を監査ログに記録

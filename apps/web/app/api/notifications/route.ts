@@ -40,10 +40,17 @@ export async function GET(request: NextRequest) {
   const isRead =
     isReadParam === "true" ? true : isReadParam === "false" ? false : undefined;
 
+  // 確率的クリーンアップ（1%の確率で期限切れ通知を削除）
+  if (Math.random() < 0.01) {
+    NotificationService.cleanupAll().catch(() => {});
+  }
+
   const where = {
     userId: user.id,
     ...(type && { type }),
     ...(isRead !== undefined && { isRead }),
+    // 期限切れ通知を除外
+    OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
   };
 
   const [notifications, total, unreadCount] = await Promise.all([

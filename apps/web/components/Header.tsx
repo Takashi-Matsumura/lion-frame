@@ -285,7 +285,7 @@ export function Header({
       }}
     >
       {/* システムアナウンスバナー */}
-      <AnnouncementBanner language={language as "en" | "ja"} />
+      <AnnouncementBanner language={language as "en" | "ja"} isAuthenticated={!!session} />
 
       <div className="px-6 py-4">
         <div className="flex items-center justify-between">

@@ -29,11 +29,32 @@ interface BroadcastNotificationInput
   broadcast?: boolean;
 }
 
+/**
+ * 通知タイプごとのデフォルト有効期限（日数）
+ * ACTION は期限なし（ユーザーの対応が必要なため）
+ */
+const DEFAULT_EXPIRY_DAYS: Partial<Record<NotificationType, number>> = {
+  SECURITY: 30,
+  SYSTEM: 14,
+  WARNING: 14,
+  INFO: 7,
+};
+
+function computeDefaultExpiry(type: NotificationType): Date | undefined {
+  const days = DEFAULT_EXPIRY_DAYS[type];
+  if (!days) return undefined;
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  return d;
+}
+
 export class NotificationService {
   /**
    * 単一ユーザへの通知作成
    */
   static async create(input: CreateNotificationInput) {
+    const expiresAt = input.expiresAt ?? computeDefaultExpiry(input.type);
+
     return prisma.notification.create({
       data: {
         userId: input.userId,
@@ -51,7 +72,7 @@ export class NotificationService {
         metadata: input.metadata
           ? JSON.parse(JSON.stringify(input.metadata))
           : undefined,
-        expiresAt: input.expiresAt,
+        expiresAt,
       },
     });
   }
@@ -79,6 +100,8 @@ export class NotificationService {
 
     if (userIds.length === 0) return { count: 0 };
 
+    const expiresAt = input.expiresAt ?? computeDefaultExpiry(input.type);
+
     const notifications = await prisma.notification.createMany({
       data: userIds.map((userId) => ({
         userId,
@@ -96,7 +119,7 @@ export class NotificationService {
         metadata: input.metadata
           ? JSON.parse(JSON.stringify(input.metadata))
           : undefined,
-        expiresAt: input.expiresAt,
+        expiresAt,
       })),
     });
 
@@ -172,6 +195,22 @@ export class NotificationService {
   }
 
   /**
+   * ログイン通知の一括削除（既存ゴミデータ除去用）
+   */
+  static async purgeLoginNotifications() {
+    return prisma.notification.deleteMany({
+      where: {
+        source: "SECURITY",
+        OR: [
+          { title: { contains: "login detected" } },
+          { titleJa: { contains: "ログインを検出" } },
+          { source: "AUTH" },
+        ],
+      },
+    });
+  }
+
+  /**
    * 期限切れ通知の削除
    */
   static async cleanupExpired() {
@@ -199,5 +238,16 @@ export class NotificationService {
         },
       },
     });
+  }
+
+  /**
+   * 期限切れ＋古い既読通知の一括クリーンアップ
+   */
+  static async cleanupAll() {
+    const [expired, oldRead] = await Promise.all([
+      NotificationService.cleanupExpired(),
+      NotificationService.cleanupOldRead(),
+    ]);
+    return { expired: expired.count, oldRead: oldRead.count };
   }
 }

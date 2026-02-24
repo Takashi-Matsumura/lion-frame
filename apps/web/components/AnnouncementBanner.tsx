@@ -15,6 +15,7 @@ interface Announcement {
 
 interface AnnouncementBannerProps {
   language?: "en" | "ja";
+  isAuthenticated?: boolean;
 }
 
 const levelStyles = {
@@ -38,14 +39,38 @@ const levelStyles = {
   },
 };
 
+const LS_KEY = "dismissed-announcements";
+
+function getLocalDismissals(): Set<string> {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (raw) return new Set(JSON.parse(raw));
+  } catch {}
+  return new Set();
+}
+
+function addLocalDismissal(id: string) {
+  try {
+    const ids = getLocalDismissals();
+    ids.add(id);
+    localStorage.setItem(LS_KEY, JSON.stringify([...ids]));
+  } catch {}
+}
+
 export function AnnouncementBanner({
   language = "ja",
+  isAuthenticated = false,
 }: AnnouncementBannerProps) {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    // 未認証時はlocalStorageから非表示IDを復元
+    if (!isAuthenticated) {
+      setDismissedIds(getLocalDismissals());
+    }
+
     const fetchAnnouncements = async () => {
       try {
         const res = await fetch("/api/announcements");
@@ -65,13 +90,25 @@ export function AnnouncementBanner({
     // 5分ごとに更新
     const interval = setInterval(fetchAnnouncements, 5 * 60 * 1000);
     return () => clearInterval(interval);
-  }, []);
+  }, [isAuthenticated]);
 
-  const handleDismiss = (id: string) => {
+  const handleDismiss = async (id: string) => {
     setDismissedIds((prev) => new Set(prev).add(id));
+
+    if (isAuthenticated) {
+      // 認証ユーザー: APIで永続化
+      try {
+        await fetch(`/api/announcements/${id}/dismiss`, { method: "POST" });
+      } catch (error) {
+        console.error("Failed to dismiss announcement:", error);
+      }
+    } else {
+      // 未認証: localStorageフォールバック
+      addLocalDismissal(id);
+    }
   };
 
-  // 非表示にしたアナウンスを除外
+  // 非表示にしたアナウンスを除外（未認証時のクライアントサイドフィルタ）
   const visibleAnnouncements = announcements.filter(
     (a) => !dismissedIds.has(a.id),
   );

@@ -95,30 +95,6 @@ export const authConfig = {
             data: { lastSignInAt: new Date() },
           });
 
-          // プロバイダー名の取得
-          const providerName =
-            account.provider === "google" ? "Google" : "GitHub";
-          const providerNameJa =
-            account.provider === "google" ? "Google" : "GitHub";
-
-          // ログイン通知を発行
-          await prisma.notification
-            .create({
-              data: {
-                userId: existingUser.id,
-                type: "SECURITY",
-                priority: "NORMAL",
-                title: "New login detected",
-                titleJa: "新しいログインを検出しました",
-                message: `You have successfully logged in via ${providerName}.`,
-                messageJa: `${providerNameJa}でログインしました。`,
-                source: "AUTH",
-              },
-            })
-            .catch((err) => {
-              console.error("[Auth] Failed to create login notification:", err);
-            });
-
           // ログイン成功を監査ログに記録
           await prisma.auditLog
             .create({

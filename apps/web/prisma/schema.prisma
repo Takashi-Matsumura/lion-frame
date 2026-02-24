@@ -68,6 +68,7 @@ model User {
   notifications Notification[]
   auditLogs     AuditLog[]
   announcements Announcement[]
+  announcementDismissals AnnouncementDismissal[]
   calendarEvents CalendarEvent[]
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
@@ -259,8 +260,21 @@ model Announcement {
   updatedAt   DateTime  @updatedAt
 
   creator     User      @relation(fields: [createdBy], references: [id])
+  dismissals  AnnouncementDismissal[]
 
   @@index([isActive, startAt, endAt])
+}
+
+model AnnouncementDismissal {
+  id             String       @id @default(cuid())
+  announcementId String
+  userId         String
+  dismissedAt    DateTime     @default(now())
+  announcement   Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([announcementId, userId])
+  @@index([userId])
 }
 
 // ========================================

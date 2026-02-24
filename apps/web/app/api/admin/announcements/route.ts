@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { AuditService } from "@/lib/services/audit-service";
+import { NotificationService } from "@/lib/services/notification-service";
 
 /**
  * GET /api/admin/announcements
@@ -51,7 +52,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { title, titleJa, message, messageJa, level, startAt, endAt } = body;
+    const { title, titleJa, message, messageJa, level, startAt, endAt, notifyUsers } = body;
 
     // 日本語が必須、英語は任意
     if (!titleJa || !messageJa) {
@@ -81,8 +82,26 @@ export async function POST(request: Request) {
       userId: session.user.id,
       targetId: announcement.id,
       targetType: "Announcement",
-      details: { title, level },
+      details: { title, level, notifyUsers: !!notifyUsers },
     }).catch(() => {});
+
+    // ユーザーへ通知を配信
+    if (notifyUsers) {
+      const notificationType = level === "critical" || level === "warning" ? "WARNING" as const : "INFO" as const;
+      await NotificationService.broadcast({
+        type: notificationType,
+        priority: level === "critical" ? "HIGH" : "NORMAL",
+        title: title || titleJa,
+        titleJa,
+        message: message || messageJa,
+        messageJa,
+        source: "ANNOUNCEMENT",
+        sourceId: announcement.id,
+        broadcast: true,
+      }).catch((err) => {
+        console.error("[Announcement] Failed to broadcast notification:", err);
+      });
+    }
 
     return NextResponse.json({ success: true, announcement });
   } catch (error) {

@@ -5,6 +5,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { AuditService } from "@/lib/services/audit-service";
+import { NotificationService } from "@/lib/services/notification-service";
 
 type DiagnosticStatus = "pass" | "fail" | "warn";
 
@@ -189,7 +190,26 @@ export async function POST() {
     }),
   );
 
-  // 6. Storage
+  // 6. Login Notification Cleanup
+  results.push(
+    await runDiagnostic("login_notification_cleanup", "Login Notification Cleanup", "ログイン通知クリーンアップ", async () => {
+      const result = await NotificationService.purgeLoginNotifications();
+      if (result.count > 0) {
+        return {
+          status: "pass",
+          message: `Purged ${result.count} login notifications`,
+          messageJa: `${result.count}件のログイン通知を削除しました`,
+        };
+      }
+      return {
+        status: "pass",
+        message: "No login notifications to purge",
+        messageJa: "削除対象のログイン通知はありません",
+      };
+    }),
+  );
+
+  // 7. Storage
   results.push(
     await runDiagnostic("storage", "Storage", "ストレージ", async () => {
       const uploadsDir = join(process.cwd(), "public", "uploads");

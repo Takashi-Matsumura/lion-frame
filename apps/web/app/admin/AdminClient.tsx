@@ -2,6 +2,7 @@
 
 import type { AccessKey, Role } from "@prisma/client";
 import {
+  Bell,
   Check,
   ChevronDown,
   ChevronLeft,
@@ -258,6 +259,7 @@ export function AdminClient({
     level: "info",
     startAt: "",
     endAt: "",
+    notifyUsers: false,
   });
   const [announcementSaving, setAnnouncementSaving] = useState(false);
   const [showAnnouncementDeleteModal, setShowAnnouncementDeleteModal] =
@@ -419,6 +421,7 @@ export function AdminClient({
       level: "info",
       startAt: formatLocalDateTime(new Date()),
       endAt: "",
+      notifyUsers: false,
     });
     setUseAiTranslation(false);
     setShowAnnouncementModal(true);
@@ -451,6 +454,7 @@ export function AdminClient({
       endAt: announcement.endAt
         ? formatLocalDateTime(new Date(announcement.endAt))
         : "",
+      notifyUsers: false,
     });
     setUseAiTranslation(false);
     setShowAnnouncementModal(true);
@@ -544,6 +548,7 @@ export function AdminClient({
           level: announcementForm.level,
           startAt: announcementForm.startAt,
           endAt: announcementForm.endAt || null,
+          ...(!editingAnnouncement && { notifyUsers: announcementForm.notifyUsers }),
         }),
       });
 
@@ -3039,7 +3044,13 @@ export function AdminClient({
               <Select
                 value={announcementForm.level}
                 onValueChange={(value) =>
-                  setAnnouncementForm((f) => ({ ...f, level: value }))
+                  setAnnouncementForm((f) => ({
+                    ...f,
+                    level: value,
+                    ...(!editingAnnouncement && {
+                      notifyUsers: value === "critical" || value === "warning",
+                    }),
+                  }))
                 }
               >
                 <SelectTrigger>
@@ -3090,6 +3101,33 @@ export function AdminClient({
                   checked={useAiTranslation}
                   onCheckedChange={setUseAiTranslation}
                   disabled={announcementSaving || aiTranslating}
+                />
+              </div>
+            )}
+
+            {/* ユーザーに通知（新規作成時のみ） */}
+            {!editingAnnouncement && (
+              <div className="flex items-center justify-between p-3 rounded-lg border bg-muted/50">
+                <div className="flex items-center gap-3">
+                  <Bell className="w-5 h-5 text-muted-foreground" />
+                  <div>
+                    <Label className="text-sm font-medium">
+                      {t("Notify Users", "ユーザーに通知")}
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      {t(
+                        "Send a notification to all users' notification bell",
+                        "全ユーザーの通知ベルに通知を送信します",
+                      )}
+                    </p>
+                  </div>
+                </div>
+                <Switch
+                  checked={announcementForm.notifyUsers}
+                  onCheckedChange={(checked) =>
+                    setAnnouncementForm((f) => ({ ...f, notifyUsers: checked }))
+                  }
+                  disabled={announcementSaving}
                 />
               </div>
             )}
