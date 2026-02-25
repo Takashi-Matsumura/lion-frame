@@ -45,7 +45,7 @@ export default auth(async (req) => {
     if (pathname === "/login" && session) {
       // If build ID doesn't match, clear session cookies and stay on /login
       if (hasBuildIdMismatch(session)) {
-        const response = NextResponse.next();
+        const response = NextResponse.redirect(redirectUrl("/login?reason=system-update"));
         response.cookies.delete("authjs.session-token");
         response.cookies.delete("__Secure-authjs.session-token");
         return response;
@@ -92,7 +92,7 @@ export default auth(async (req) => {
 
   // Build ID validation: invalidate sessions from previous deployments
   if (session && hasBuildIdMismatch(session)) {
-    const response = NextResponse.redirect(redirectUrl("/login"));
+    const response = NextResponse.redirect(redirectUrl("/login?reason=system-update"));
     response.cookies.delete("authjs.session-token");
     response.cookies.delete("__Secure-authjs.session-token");
     return response;

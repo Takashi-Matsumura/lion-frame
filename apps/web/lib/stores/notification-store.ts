@@ -95,12 +95,13 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
   fetchUnreadCount: async () => {
     try {
       const res = await fetch("/api/notifications/unread-count");
+      if (res.status === 401) return;
       if (!res.ok) throw new Error("Failed to fetch");
 
       const data = await res.json();
       set({ unreadCount: data.count });
-    } catch (error) {
-      console.error("Failed to fetch unread count:", error);
+    } catch {
+      // ネットワークエラー（サーバ再起動中など）は無視
     }
   },
 
