@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { X, Send } from "lucide-react";
+import { X, Send, Bot, Trash2 } from "lucide-react";
 import { scheduleTranslations, type Language } from "./translations";
 
 interface Message {
@@ -165,12 +165,81 @@ export function ScheduleConcierge({
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b">
-        <h3 className="font-semibold text-sm">{t.concierge}</h3>
-        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onClose}>
-          <X className="h-4 w-4" />
-        </Button>
+      <div className="flex items-center justify-between px-4 py-3 border-b min-h-[3rem]">
+        <div className="flex items-center gap-2">
+          <Bot className="h-4 w-4 text-muted-foreground" />
+          <h3 className="font-semibold text-sm">{t.concierge}</h3>
+        </div>
+        <div className="flex items-center gap-1">
+          {messages.length > 0 && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 text-muted-foreground"
+              onClick={() => setMessages([])}
+              title={t.conciergeClear}
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          )}
+          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onClose}>
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
+
+      {/* Quick prompts */}
+      {messages.length === 0 && !loading && (
+        <div className="flex flex-wrap gap-1.5 px-3 py-2 border-b">
+          {t.conciergeQuickPrompts.map((prompt) => (
+            <button
+              type="button"
+              key={prompt}
+              className="text-xs px-2.5 py-1 rounded-full border bg-muted/50 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer"
+              onClick={() => {
+                setInput(prompt);
+                // Trigger send after state update
+                setTimeout(() => {
+                  const fakeInput = prompt;
+                  setInput("");
+                  const userMsg: Message = { role: "user", content: fakeInput };
+                  setMessages((prev) => [...prev, userMsg]);
+                  setLoading(true);
+                  fetch("/api/calendar/concierge", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      message: fakeInput,
+                      history: [],
+                      year,
+                      month: month + 1,
+                    }),
+                  })
+                    .then((res) => {
+                      if (!res.ok) throw new Error("API error");
+                      return res.json();
+                    })
+                    .then((data) => {
+                      setMessages((prev) => [
+                        ...prev,
+                        { role: "assistant", content: data.reply },
+                      ]);
+                    })
+                    .catch(() => {
+                      setMessages((prev) => [
+                        ...prev,
+                        { role: "assistant", content: t.conciergeError },
+                      ]);
+                    })
+                    .finally(() => setLoading(false));
+                }, 0);
+              }}
+            >
+              {prompt}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Messages */}
       <ScrollArea className="flex-1 p-4" ref={scrollRef}>

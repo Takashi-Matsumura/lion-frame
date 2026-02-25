@@ -62,6 +62,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   work: "bg-green-500",
   meeting: "bg-purple-500",
   visitor: "bg-orange-500",
+  trip: "bg-teal-500",
   other: "bg-gray-500",
 };
 
@@ -72,7 +73,7 @@ const INITIAL_FORM: EventFormData = {
   allDay: false,
   startTime: "",
   endTime: "",
-  category: "personal",
+  category: "work",
 };
 
 function getCalendarDays(year: number, month: number): (number | null)[] {
@@ -340,6 +341,7 @@ export function ScheduleClient({ language }: ScheduleClientProps) {
         work: t.categoryWork,
         meeting: t.categoryMeeting,
         visitor: t.categoryVisitor,
+        trip: t.categoryTrip,
         other: t.categoryOther,
       };
       return map[cat] ?? cat;
@@ -637,11 +639,14 @@ export function ScheduleClient({ language }: ScheduleClientProps) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="personal">{t.categoryPersonal}</SelectItem>
-                  <SelectItem value="work">{t.categoryWork}</SelectItem>
-                  <SelectItem value="meeting">{t.categoryMeeting}</SelectItem>
-                  <SelectItem value="visitor">{t.categoryVisitor}</SelectItem>
-                  <SelectItem value="other">{t.categoryOther}</SelectItem>
+                  {(["work", "meeting", "visitor", "trip", "personal", "other"] as const).map((cat) => (
+                    <SelectItem key={cat} value={cat}>
+                      <span className="flex items-center gap-2">
+                        <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${CATEGORY_COLORS[cat]}`} />
+                        {categoryLabel(cat)}
+                      </span>
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -700,27 +705,29 @@ export function ScheduleClient({ language }: ScheduleClientProps) {
             }`}
           >
             <div
-              className={`sticky top-0 h-svh pt-14 ${conciergeOpen ? "w-80" : "w-10"}`}
+              className={`sticky top-0 h-svh flex flex-col pt-16 ${conciergeOpen ? "w-80" : "w-10"}`}
             >
-              {conciergeOpen ? (
-                <ScheduleConcierge
-                  language={language}
-                  year={year}
-                  month={month}
-                  onClose={() => setConciergeOpen(false)}
-                />
-              ) : (
-                <button
-                  type="button"
-                  className="w-full h-full flex flex-col items-center pt-4 gap-3 hover:bg-accent/50 transition-colors cursor-pointer"
-                  onClick={() => setConciergeOpen(true)}
-                >
-                  <Bot className="h-5 w-5 text-muted-foreground shrink-0" />
-                  <span className="text-xs text-muted-foreground [writing-mode:vertical-rl]">
-                    {t.concierge}
-                  </span>
-                </button>
-              )}
+              <div className="flex-1 min-h-0">
+                {conciergeOpen ? (
+                  <ScheduleConcierge
+                    language={language}
+                    year={year}
+                    month={month}
+                    onClose={() => setConciergeOpen(false)}
+                  />
+                ) : (
+                  <button
+                    type="button"
+                    className="w-full h-full flex flex-col items-center pt-4 gap-3 hover:bg-accent/50 transition-colors cursor-pointer"
+                    onClick={() => setConciergeOpen(true)}
+                  >
+                    <Bot className="h-5 w-5 text-muted-foreground shrink-0" />
+                    <span className="text-xs text-muted-foreground [writing-mode:vertical-rl]">
+                      {t.concierge}
+                    </span>
+                  </button>
+                )}
+              </div>
             </div>
           </div>,
           portalTarget,

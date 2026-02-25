@@ -34,6 +34,7 @@ export const scheduleTranslations = {
     categoryWork: "Work",
     categoryMeeting: "Meeting",
     categoryVisitor: "Visitor",
+    categoryTrip: "Business Trip",
     categoryOther: "Other",
     // Actions
     save: "Save",
@@ -52,6 +53,12 @@ export const scheduleTranslations = {
     conciergeThinking: "Thinking...",
     conciergeWelcome: "Hello! I can answer questions about your schedule. For example, \"What's on my schedule this week?\" or \"When is my next meeting?\"",
     conciergeError: "Failed to get a response. Please try again.",
+    conciergeClear: "Clear conversation",
+    conciergeQuickPrompts: [
+      "What's this week's schedule?",
+      "Any visitors this week?",
+      "Any scheduling conflicts?",
+    ],
   },
   ja: {
     title: "カレンダー",
@@ -88,6 +95,7 @@ export const scheduleTranslations = {
     categoryWork: "仕事",
     categoryMeeting: "会議",
     categoryVisitor: "来客",
+    categoryTrip: "出張",
     categoryOther: "その他",
     // Actions
     save: "保存",
@@ -106,6 +114,12 @@ export const scheduleTranslations = {
     conciergeThinking: "考え中...",
     conciergeWelcome: "こんにちは！スケジュールに関する質問にお答えします。例えば「今週の予定は？」「次の会議はいつ？」などと聞いてみてください。",
     conciergeError: "回答の取得に失敗しました。もう一度お試しください。",
+    conciergeClear: "会話をクリア",
+    conciergeQuickPrompts: [
+      "今週の予定は？",
+      "今週の来客は？",
+      "スケジュールに不備はない？",
+    ],
   },
 } as const;
 
