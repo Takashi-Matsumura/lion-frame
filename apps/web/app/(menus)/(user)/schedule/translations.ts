@@ -33,6 +33,7 @@ export const scheduleTranslations = {
     categoryPersonal: "Personal",
     categoryWork: "Work",
     categoryMeeting: "Meeting",
+    categoryVisitor: "Visitor",
     categoryOther: "Other",
     // Actions
     save: "Save",
@@ -43,6 +44,14 @@ export const scheduleTranslations = {
     error: "Failed to load data",
     // Holiday
     holiday: "Holiday",
+    // Concierge
+    concierge: "AI Concierge",
+    conciergeOpen: "AI Concierge",
+    conciergePlaceholder: "Ask about your schedule...",
+    conciergeSend: "Send",
+    conciergeThinking: "Thinking...",
+    conciergeWelcome: "Hello! I can answer questions about your schedule. For example, \"What's on my schedule this week?\" or \"When is my next meeting?\"",
+    conciergeError: "Failed to get a response. Please try again.",
   },
   ja: {
     title: "カレンダー",
@@ -78,6 +87,7 @@ export const scheduleTranslations = {
     categoryPersonal: "プライベート",
     categoryWork: "仕事",
     categoryMeeting: "会議",
+    categoryVisitor: "来客",
     categoryOther: "その他",
     // Actions
     save: "保存",
@@ -88,6 +98,14 @@ export const scheduleTranslations = {
     error: "データの読み込みに失敗しました",
     // Holiday
     holiday: "祝日",
+    // Concierge
+    concierge: "AIコンシェルジュ",
+    conciergeOpen: "AIコンシェルジュ",
+    conciergePlaceholder: "スケジュールについて質問...",
+    conciergeSend: "送信",
+    conciergeThinking: "考え中...",
+    conciergeWelcome: "こんにちは！スケジュールに関する質問にお答えします。例えば「今週の予定は？」「次の会議はいつ？」などと聞いてみてください。",
+    conciergeError: "回答の取得に失敗しました。もう一度お試しください。",
   },
 } as const;
 

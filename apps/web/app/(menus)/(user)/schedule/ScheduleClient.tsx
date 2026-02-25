@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -21,7 +22,9 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { Bot } from "lucide-react";
 import { scheduleTranslations, type Language } from "./translations";
+import { ScheduleConcierge } from "./ScheduleConcierge";
 
 // Types
 interface CalendarEvent {
@@ -58,6 +61,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   personal: "bg-blue-500",
   work: "bg-green-500",
   meeting: "bg-purple-500",
+  visitor: "bg-orange-500",
   other: "bg-gray-500",
 };
 
@@ -113,6 +117,14 @@ export function ScheduleClient({ language }: ScheduleClientProps) {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [holidays, setHolidays] = useState<Holiday[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Concierge panel state
+  const [conciergeOpen, setConciergeOpen] = useState(false);
+  const [portalTarget, setPortalTarget] = useState<Element | null>(null);
+
+  useEffect(() => {
+    setPortalTarget(document.querySelector('[data-slot="sidebar-wrapper"]'));
+  }, []);
 
   // Dialog state
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -327,6 +339,7 @@ export function ScheduleClient({ language }: ScheduleClientProps) {
         personal: t.categoryPersonal,
         work: t.categoryWork,
         meeting: t.categoryMeeting,
+        visitor: t.categoryVisitor,
         other: t.categoryOther,
       };
       return map[cat] ?? cat;
@@ -336,7 +349,7 @@ export function ScheduleClient({ language }: ScheduleClientProps) {
 
   if (loading && events.length === 0) {
     return (
-      <div className="max-w-5xl mx-auto space-y-4">
+      <div className="space-y-4">
         <Skeleton className="h-10 w-64" />
         <Skeleton className="h-[400px] w-full" />
       </div>
@@ -344,7 +357,7 @@ export function ScheduleClient({ language }: ScheduleClientProps) {
   }
 
   return (
-    <div className="max-w-5xl mx-auto space-y-4">
+    <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -400,33 +413,36 @@ export function ScheduleClient({ language }: ScheduleClientProps) {
               <button
                 type="button"
                 key={dateKey}
-                className={`min-h-[80px] border-b border-r p-1 text-left transition-colors hover:bg-accent/50 cursor-pointer ${
+                className={`min-h-[80px] border-b border-r p-1 flex flex-col transition-colors hover:bg-accent/50 cursor-pointer ${
                   isSelected ? "bg-accent" : ""
                 } ${isToday ? "bg-primary/5 ring-1 ring-inset ring-primary" : ""}`}
                 onClick={() => setSelectedDay(day)}
               >
-                <div
-                  className={`text-sm font-medium ${
-                    isSunday || isHoliday
-                      ? "text-red-500"
-                      : isSaturday
-                        ? "text-blue-500"
-                        : ""
-                  }`}
-                >
-                  {day}
-                </div>
-                {/* Holiday name */}
-                {dayHolidays.map((h) => (
-                  <div
-                    key={h.id}
-                    className="text-[10px] text-red-500 truncate leading-tight"
+                <div className="text-left">
+                  <span
+                    className={`text-sm font-medium ${
+                      isSunday || isHoliday
+                        ? "text-red-500"
+                        : isSaturday
+                          ? "text-blue-500"
+                          : ""
+                    }`}
                   >
-                    {language === "ja" ? h.name : (h.nameEn ?? h.name)}
-                  </div>
-                ))}
+                    {day}
+                  </span>
+                  {/* Holiday name */}
+                  {dayHolidays.map((h) => (
+                    <div
+                      key={h.id}
+                      className="text-[10px] text-red-500 truncate leading-tight"
+                    >
+                      {language === "ja" ? h.name : (h.nameEn ?? h.name)}
+                    </div>
+                  ))}
+                </div>
                 {/* Event dots */}
-                <div className="flex flex-wrap gap-0.5 mt-0.5">
+                <div className="flex-1" />
+                <div className="flex justify-center gap-0.5 pb-0.5">
                   {dayEvents.slice(0, 3).map((ev) => (
                     <span
                       key={ev.id}
@@ -447,7 +463,7 @@ export function ScheduleClient({ language }: ScheduleClientProps) {
 
       {/* Selected day detail */}
       {selectedDay && (
-        <div className="border rounded-lg p-4">
+        <div className="border rounded-lg p-4 min-h-[calc(100vh-11rem-400px)]">
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-semibold">{selectedDayLabel}</h3>
             <Button size="sm" onClick={openAddDialog}>
@@ -464,9 +480,9 @@ export function ScheduleClient({ language }: ScheduleClientProps) {
             {selectedHolidays.map((h) => (
               <div
                 key={h.id}
-                className="flex items-center gap-2 text-sm py-1.5 px-2 rounded bg-red-50 dark:bg-red-950/20"
+                className="flex items-center gap-2 text-sm py-2 px-3 rounded bg-red-50 dark:bg-red-950/20"
               >
-                <span className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0" />
+                <span className="w-2.5 h-2.5 rounded-full bg-red-500 flex-shrink-0" />
                 <span className="text-red-600 dark:text-red-400 font-medium">
                   {language === "ja" ? h.name : (h.nameEn ?? h.name)}
                 </span>
@@ -479,17 +495,15 @@ export function ScheduleClient({ language }: ScheduleClientProps) {
               <button
                 type="button"
                 key={ev.id}
-                className="w-full flex items-center gap-2 text-sm py-1.5 px-2 rounded hover:bg-accent transition-colors cursor-pointer text-left"
+                className="w-full flex items-center gap-2 text-sm py-2 px-3 rounded hover:bg-accent transition-colors cursor-pointer text-left"
                 onClick={() => openEditDialog(ev)}
               >
                 <span
-                  className={`w-2 h-2 rounded-full flex-shrink-0 ${CATEGORY_COLORS[ev.category] ?? CATEGORY_COLORS.other}`}
+                  className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${CATEGORY_COLORS[ev.category] ?? CATEGORY_COLORS.other}`}
                 />
-                {!ev.allDay && (
-                  <span className="text-muted-foreground font-mono text-xs whitespace-nowrap">
-                    {formatTime(ev.startTime)}-{formatTime(ev.endTime)}
-                  </span>
-                )}
+                <span className="text-muted-foreground font-mono text-xs whitespace-nowrap">
+                  {ev.allDay ? t.allDay : `${formatTime(ev.startTime)}-${formatTime(ev.endTime)}`}
+                </span>
                 <span className="truncate">{ev.title}</span>
                 <span className="text-muted-foreground text-xs ml-auto whitespace-nowrap">
                   [{categoryLabel(ev.category)}]
@@ -626,6 +640,7 @@ export function ScheduleClient({ language }: ScheduleClientProps) {
                   <SelectItem value="personal">{t.categoryPersonal}</SelectItem>
                   <SelectItem value="work">{t.categoryWork}</SelectItem>
                   <SelectItem value="meeting">{t.categoryMeeting}</SelectItem>
+                  <SelectItem value="visitor">{t.categoryVisitor}</SelectItem>
                   <SelectItem value="other">{t.categoryOther}</SelectItem>
                 </SelectContent>
               </Select>
@@ -675,6 +690,41 @@ export function ScheduleClient({ language }: ScheduleClientProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Concierge right panel — portal into sidebar-wrapper flex */}
+      {portalTarget &&
+        createPortal(
+          <div
+            className={`shrink-0 border-l bg-background transition-[width] duration-200 overflow-hidden ${
+              conciergeOpen ? "w-80" : "w-10"
+            }`}
+          >
+            <div
+              className={`sticky top-0 h-svh pt-14 ${conciergeOpen ? "w-80" : "w-10"}`}
+            >
+              {conciergeOpen ? (
+                <ScheduleConcierge
+                  language={language}
+                  year={year}
+                  month={month}
+                  onClose={() => setConciergeOpen(false)}
+                />
+              ) : (
+                <button
+                  type="button"
+                  className="w-full h-full flex flex-col items-center pt-4 gap-3 hover:bg-accent/50 transition-colors cursor-pointer"
+                  onClick={() => setConciergeOpen(true)}
+                >
+                  <Bot className="h-5 w-5 text-muted-foreground shrink-0" />
+                  <span className="text-xs text-muted-foreground [writing-mode:vertical-rl]">
+                    {t.concierge}
+                  </span>
+                </button>
+              )}
+            </div>
+          </div>,
+          portalTarget,
+        )}
     </div>
   );
 }

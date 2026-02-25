@@ -413,6 +413,96 @@ import { Languages } from "lucide-react";
 - 翻訳中も `disabled`（二重送信防止）
 - 翻訳APIは `POST /api/calendar/holidays/translate`（`{ name: string }` → `{ nameEn: string }`）を参考に、各機能のAPIルートに配置
 
+## 右サイドパネル（ポータル方式）
+
+左サイドバーと同じレイアウトレベルに、`createPortal` で右サイドパネルを配置するパターン。
+コンテンツ領域の横幅が自然に詰まり、オーバーラップしない。
+
+### アーキテクチャ
+
+```
+sidebar-wrapper (flex row)
+├── AppSidebar（左サイドバー）
+├── SidebarInset（メインコンテンツ flex-1）
+│   └── <main class="container mx-auto px-4 py-8 pt-24">
+│       └── ページコンポーネント
+└── 右サイドパネル ← createPortal でここに追加
+```
+
+**ポイント:** ページコンポーネントは `<main class="container mx-auto">` 内にあるため、ページ内にパネルを置くと padding の影響を受ける。`sidebar-wrapper` にポータルで追加することで、左サイドバーと同じflexレベルに配置し、メインコンテンツが自然に幅を詰める。
+
+### 実装パターン
+
+```tsx
+"use client";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
+import { Bot } from "lucide-react"; // 任意のアイコン
+
+export function MyPageClient() {
+  const [panelOpen, setPanelOpen] = useState(false);
+  const [portalTarget, setPortalTarget] = useState<Element | null>(null);
+
+  useEffect(() => {
+    setPortalTarget(document.querySelector('[data-slot="sidebar-wrapper"]'));
+  }, []);
+
+  return (
+    <div>
+      {/* メインコンテンツ */}
+
+      {/* 右サイドパネル（ポータル） */}
+      {portalTarget &&
+        createPortal(
+          <div
+            className={`shrink-0 border-l bg-background transition-[width] duration-200 overflow-hidden ${
+              panelOpen ? "w-80" : "w-10"
+            }`}
+          >
+            <div
+              className={`sticky top-0 h-svh pt-14 ${
+                panelOpen ? "w-80" : "w-10"
+              }`}
+            >
+              {panelOpen ? (
+                <PanelContent onClose={() => setPanelOpen(false)} />
+              ) : (
+                <button
+                  type="button"
+                  className="w-full h-full flex flex-col items-center pt-4 gap-3 hover:bg-accent/50 transition-colors cursor-pointer"
+                  onClick={() => setPanelOpen(true)}
+                >
+                  <Bot className="h-5 w-5 text-muted-foreground shrink-0" />
+                  <span className="text-xs text-muted-foreground [writing-mode:vertical-rl]">
+                    パネル名
+                  </span>
+                </button>
+              )}
+            </div>
+          </div>,
+          portalTarget,
+        )}
+    </div>
+  );
+}
+```
+
+### 構造の要点
+
+| 要素 | クラス | 説明 |
+|------|--------|------|
+| 外枠（フロー用） | `shrink-0 border-l bg-background` | flex内でスペースを確保 |
+| 幅切り替え | `w-80`（展開）/ `w-10`（畳み込み） | `transition-[width] duration-200` でアニメーション |
+| 内枠（固定用） | `sticky top-0 h-svh pt-14` | スクロールしても固定。`pt-14` でヘッダー（`z-[8]` fixed）の下から開始 |
+| 畳み込みレール | `[writing-mode:vertical-rl]` | アイコン＋縦書きラベルで省スペースなトグル |
+
+### 注意事項
+
+- `pt-14` はフレームヘッダーの高さに合わせる（ヘッダーが `fixed z-[8]` のため、パネルの中身がヘッダーの下に隠れるのを防ぐ）
+- 初期状態は畳み込み（`w-10`）を推奨。畳み込みレールにアイコンとラベルを表示
+- パネル内コンポーネントは `flex flex-col h-full` で構成し、ヘッダー・コンテンツ（ScrollArea）・フッター（入力欄等）の3分割が基本
+- 既存実装例: `apps/web/app/(menus)/(user)/schedule/ScheduleClient.tsx` + `ScheduleConcierge.tsx`
+
 ## チェックリスト
 
 新しいUIを作成する際:
