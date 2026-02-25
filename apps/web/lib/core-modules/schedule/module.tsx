@@ -76,5 +76,15 @@ export const scheduleModule: AppModule = {
       ],
       enabled: true,
     },
+    {
+      id: "concierge",
+      moduleId: "schedule",
+      name: "AI Concierge",
+      nameJa: "AIコンシェルジュ",
+      description: "2-step AI schedule concierge with tool selection",
+      descriptionJa: "2ステップAIスケジュールコンシェルジュ（ツール選択方式）",
+      apiEndpoints: ["/api/calendar/concierge"],
+      enabled: true,
+    },
   ],
 };

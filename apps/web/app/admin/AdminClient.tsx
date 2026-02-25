@@ -171,6 +171,15 @@ interface ModuleInfo {
     order: number;
     requiredRoles: string[];
   }>;
+  services: Array<{
+    id: string;
+    name: string;
+    nameJa: string;
+    description?: string;
+    descriptionJa?: string;
+    apiEndpoints: string[];
+    enabled: boolean;
+  }>;
   containers: ContainerStatus[];
   mcpServer: McpServerInfo | null;
 }
@@ -221,6 +230,9 @@ export function AdminClient({
   const [modulesData, setModulesData] = useState<ModulesData | null>(null);
   const [modulesLoading, setModulesLoading] = useState(false);
   const [selectedModule, setSelectedModule] = useState<ModuleInfo | null>(null);
+  const [expandedServices, setExpandedServices] = useState<
+    Record<string, boolean>
+  >({});
   const [mcpPanelOpen, setMcpPanelOpen] = useState(false);
   const [mcpApiKeyExists, setMcpApiKeyExists] = useState(false);
   const [mcpApiKeyMasked, setMcpApiKeyMasked] = useState<string | null>(null);
@@ -2129,6 +2141,16 @@ export function AdminClient({
                                     {module.menuCount}
                                   </span>
                                 </div>
+                                {module.services?.length > 0 && (
+                                  <div className="flex items-center justify-between text-sm">
+                                    <span className="text-muted-foreground">
+                                      {t("Services", "サービス数")}:
+                                    </span>
+                                    <span className="font-medium">
+                                      {module.services.length}
+                                    </span>
+                                  </div>
+                                )}
                               </div>
 
                               {/* コンテナ・MCPサーバステータス（シンプル表示） */}
@@ -2694,6 +2716,84 @@ export function AdminClient({
                         </p>
                       )}
                     </div>
+
+                    {/* サービス一覧（折りたたみ） */}
+                    {selectedModule.services?.length > 0 && (
+                      <div className="mb-6">
+                        <button
+                          type="button"
+                          className="flex items-center gap-1 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors cursor-pointer mb-2"
+                          onClick={() =>
+                            setExpandedServices((prev) => ({
+                              ...prev,
+                              [selectedModule.id]:
+                                !prev[selectedModule.id],
+                            }))
+                          }
+                        >
+                          {expandedServices[selectedModule.id] ? (
+                            <ChevronDown className="h-4 w-4" />
+                          ) : (
+                            <ChevronRight className="h-4 w-4" />
+                          )}
+                          {t("Services", "サービス")} (
+                          {selectedModule.services.length})
+                        </button>
+                        {expandedServices[selectedModule.id] && (
+                          <div className="space-y-2">
+                            {selectedModule.services.map((service) => (
+                              <div
+                                key={service.id}
+                                className="p-3 bg-muted rounded-lg border border-border"
+                              >
+                                <div className="flex items-center justify-between">
+                                  <div className="flex-1">
+                                    <p className="text-sm font-medium">
+                                      {language === "ja"
+                                        ? service.nameJa
+                                        : service.name}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                      {language === "ja"
+                                        ? service.name
+                                        : service.nameJa}
+                                    </p>
+                                    {(language === "ja"
+                                      ? service.descriptionJa
+                                      : service.description) && (
+                                      <p className="text-xs text-muted-foreground/70 mt-1">
+                                        {language === "ja"
+                                          ? service.descriptionJa
+                                          : service.description}
+                                      </p>
+                                    )}
+                                  </div>
+                                  <span
+                                    className={`text-xs ${service.enabled ? "text-green-700 dark:text-green-400" : "text-muted-foreground"}`}
+                                  >
+                                    {service.enabled
+                                      ? t("Enabled", "有効")
+                                      : t("Disabled", "無効")}
+                                  </span>
+                                </div>
+                                {service.apiEndpoints.length > 0 && (
+                                  <div className="mt-2 flex flex-wrap gap-1">
+                                    {service.apiEndpoints.map((endpoint) => (
+                                      <code
+                                        key={endpoint}
+                                        className="text-xs bg-background px-1.5 py-0.5 rounded border border-border text-muted-foreground"
+                                      >
+                                        {endpoint}
+                                      </code>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
 
                     {/* コアモジュール注意事項 */}
                     {selectedModule.type === "core" && (

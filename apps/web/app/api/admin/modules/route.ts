@@ -155,6 +155,15 @@ export async function GET() {
               tabs: tabs.length > 0 ? tabs : undefined,
             };
           }),
+          services: (module.services || []).map((service) => ({
+            id: service.id,
+            name: service.name,
+            nameJa: service.nameJa,
+            description: service.description,
+            descriptionJa: service.descriptionJa,
+            apiEndpoints: service.apiEndpoints || [],
+            enabled: service.enabled,
+          })),
           containers: containersWithStatus,
           mcpServer: module.mcpServer
             ? {
