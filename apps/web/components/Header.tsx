@@ -32,7 +32,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { getPageTitle } from "@/lib/i18n/page-titles";
+import { getPageIcon, getPageTitle } from "@/lib/i18n/page-titles";
 import { useSidebarStore } from "@/lib/stores/sidebar-store";
 
 interface HeaderProps {
@@ -54,6 +54,7 @@ export function Header({
   const searchParams = useSearchParams();
   const { width, open } = useSidebarStore();
   const pageTitle = getPageTitle(pathname, language as "en" | "ja");
+  const pageIcon = getPageIcon(pathname);
 
   // ユーザーがADMINロールか判定
   const isAdminRole = session?.user?.role === "ADMIN";
@@ -291,7 +292,12 @@ export function Header({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             {session ? (
-              <h1 className="text-xl font-bold">{pageTitle}</h1>
+              <h1 className="text-xl font-bold flex items-center gap-2">
+                {pageIcon && (
+                  <span className="text-muted-foreground">{pageIcon}</span>
+                )}
+                {pageTitle}
+              </h1>
             ) : (
               <Link href="/" className="text-xl font-bold">
                 {appConfig.name}

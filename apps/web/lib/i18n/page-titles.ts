@@ -1,5 +1,6 @@
+import type { ReactNode } from "react";
 import { appConfig } from "@/lib/config/app";
-import { getMenuByPath } from "@/lib/modules/registry";
+import { getMenuByPath, getModuleById } from "@/lib/modules/registry";
 
 /**
  * Page title translations for header display
@@ -281,6 +282,18 @@ export function getPageTitle(pathname: string, language: "en" | "ja"): string {
   }
 
   return appConfig.name;
+}
+
+/**
+ * Get menu icon for current page from module registry
+ */
+export function getPageIcon(pathname: string): ReactNode | null {
+  const menu = getMenuByPath(pathname);
+  if (!menu) return null;
+  if (menu.icon) return menu.icon;
+  // Inherit module icon
+  const module = getModuleById(menu.moduleId);
+  return module?.icon ?? null;
 }
 
 export function getPageDescription(
