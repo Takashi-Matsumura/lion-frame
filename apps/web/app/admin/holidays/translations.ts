@@ -42,6 +42,10 @@ export const holidayTranslations = {
     error: "Failed to load data",
     noHolidays: "No holidays registered",
     noHolidaysDescription: "Add holidays or generate them with AI.",
+    translate: "Translate",
+    translating: "Translating...",
+    translateSuccess: "{count} holidays translated",
+    translateNoTarget: "All holidays already have English names",
   },
   ja: {
     title: "祝日管理",
@@ -86,6 +90,10 @@ export const holidayTranslations = {
     error: "データの読み込みに失敗しました",
     noHolidays: "祝日が登録されていません",
     noHolidaysDescription: "祝日を追加するか、AIで生成してください。",
+    translate: "翻訳",
+    translating: "翻訳中...",
+    translateSuccess: "{count}件を翻訳しました",
+    translateNoTarget: "すべての祝日に英語名称が設定済みです",
   },
 } as const;
 

@@ -365,6 +365,52 @@ import { BackButton } from "@/components/ui/BackButton";
 <BackButton onClick={() => setSelectedItem(null)} />
 ```
 
+## AI翻訳ボタン（日本語 → 英語フィールド）
+
+ダイアログやフォームで「名称（日本語）」と「英語名称」の入力フィールドがある場合、英語名称フィールドの横にAI翻訳ボタンを配置する。
+
+### アイコン
+
+`lucide-react` の `Languages` アイコンを使用する。
+
+```tsx
+import { Languages } from "lucide-react";
+```
+
+### 実装パターン
+
+```tsx
+<div className="space-y-2">
+  <Label htmlFor="name-en">英語名称</Label>
+  <div className="flex gap-2">
+    <Input
+      id="name-en"
+      value={form.nameEn}
+      onChange={(e) => setForm((f) => ({ ...f, nameEn: e.target.value }))}
+    />
+    <Button
+      type="button"
+      variant="outline"
+      size="icon"
+      className="shrink-0 h-9 w-9"
+      disabled={translating || !form.name.trim()}
+      onClick={handleTranslate}
+      title={t.translate}
+    >
+      <Languages className="h-4 w-4" />
+    </Button>
+  </div>
+</div>
+```
+
+### ルール
+
+- ボタンは `size="icon"` で `h-9 w-9`（Inputの高さに揃える）
+- `title` 属性でツールチップ表示（「翻訳」/「Translate」）
+- 日本語名称が未入力の場合は `disabled`
+- 翻訳中も `disabled`（二重送信防止）
+- 翻訳APIは `POST /api/calendar/holidays/translate`（`{ name: string }` → `{ nameEn: string }`）を参考に、各機能のAPIルートに配置
+
 ## チェックリスト
 
 新しいUIを作成する際:
@@ -376,3 +422,4 @@ import { BackButton } from "@/components/ui/BackButton";
 - [ ] 適切なスペーシングを適用
 - [ ] 空状態を実装
 - [ ] モバイル対応を考慮
+- [ ] 日本語→英語のフィールドペアがある場合、AI翻訳ボタンを配置

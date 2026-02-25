@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Languages } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -89,6 +90,9 @@ export function HolidayManagementClient({
   const [generateYear, setGenerateYear] = useState(String(currentYear));
   const [generating, setGenerating] = useState(false);
   const [generateResult, setGenerateResult] = useState<string | null>(null);
+
+  // Translate state
+  const [translating, setTranslating] = useState(false);
 
   const fetchHolidays = useCallback(async () => {
     setLoading(true);
@@ -220,6 +224,25 @@ export function HolidayManagementClient({
     }
   }, [generateYear, fetchHolidays, t]);
 
+  // Translate
+  const handleTranslate = useCallback(async () => {
+    if (!form.name.trim()) return;
+    setTranslating(true);
+    try {
+      const res = await fetch("/api/calendar/holidays/translate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: form.name }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setForm((f) => ({ ...f, nameEn: data.nameEn }));
+      }
+    } finally {
+      setTranslating(false);
+    }
+  }, [form.name]);
+
   const typeBadge = useCallback(
     (type: string) => {
       if (type === "national") {
@@ -234,7 +257,8 @@ export function HolidayManagementClient({
     (dateStr: string) => {
       const d = new Date(dateStr);
       if (language === "ja") {
-        return `${d.getMonth() + 1}月${d.getDate()}日`;
+        const dayOfWeek = ["日", "月", "火", "水", "木", "金", "土"][d.getDay()];
+        return `${d.getMonth() + 1}月${d.getDate()}日（${dayOfWeek}）`;
       }
       return dateStr.slice(5);
     },
@@ -305,7 +329,7 @@ export function HolidayManagementClient({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[100px]">{t.date}</TableHead>
+                <TableHead className="w-[140px]">{t.date}</TableHead>
                 <TableHead>{t.name}</TableHead>
                 <TableHead>{t.nameEn}</TableHead>
                 <TableHead className="w-[120px]">{t.type}</TableHead>
@@ -380,11 +404,24 @@ export function HolidayManagementClient({
 
             <div className="space-y-2">
               <Label htmlFor="holiday-name-en">{t.holidayNameEn}</Label>
-              <Input
-                id="holiday-name-en"
-                value={form.nameEn}
-                onChange={(e) => setForm((f) => ({ ...f, nameEn: e.target.value }))}
-              />
+              <div className="flex gap-2">
+                <Input
+                  id="holiday-name-en"
+                  value={form.nameEn}
+                  onChange={(e) => setForm((f) => ({ ...f, nameEn: e.target.value }))}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="shrink-0 h-9 w-9"
+                  disabled={translating || !form.name.trim()}
+                  onClick={handleTranslate}
+                  title={t.translate}
+                >
+                  <Languages className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
 
             <div className="space-y-2">
