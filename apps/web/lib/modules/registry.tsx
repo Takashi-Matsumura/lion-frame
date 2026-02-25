@@ -1,6 +1,7 @@
 // コアモジュール（静的インポート）
 import { aiModule } from "@/lib/core-modules/ai";
 import { organizationModule } from "@/lib/core-modules/organization";
+import { scheduleModule } from "@/lib/core-modules/schedule";
 import { systemModule } from "@/lib/core-modules/system";
 import { prisma } from "@/lib/prisma";
 import type {
@@ -111,6 +112,7 @@ export const moduleRegistry: ModuleRegistry = {
   ai: aiModule,
   system: systemModule,
   organization: organizationModule,
+  schedule: scheduleModule,
 };
 
 /**

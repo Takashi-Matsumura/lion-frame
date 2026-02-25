@@ -1,0 +1,92 @@
+export const holidayTranslations = {
+  en: {
+    title: "Holiday Management",
+    addHoliday: "Add Holiday",
+    editHoliday: "Edit Holiday",
+    deleteHoliday: "Delete Holiday",
+    deleteConfirm: "Are you sure you want to delete this holiday?",
+    generateWithAI: "AI Generate",
+    generateTitle: "Generate Holidays with AI",
+    generateDescription: "Automatically generate Japanese national holidays for the specified year using AI.",
+    generateYear: "Year",
+    generating: "Generating...",
+    generateSuccess: "{count} holidays generated",
+    generate: "Generate",
+    // Table headers
+    date: "Date",
+    name: "Name",
+    nameEn: "English Name",
+    type: "Type",
+    actions: "Actions",
+    // Form fields
+    holidayDate: "Date",
+    holidayName: "Name",
+    holidayNameEn: "English Name",
+    holidayType: "Type",
+    holidayDescription: "Description",
+    // Types
+    typeAll: "All Types",
+    typeNational: "National Holiday",
+    typeCompany: "Company Holiday",
+    // Filter
+    filterType: "Type",
+    filterYear: "Year",
+    totalCount: "Total: {count}",
+    // Actions
+    save: "Save",
+    cancel: "Cancel",
+    delete: "Delete",
+    edit: "Edit",
+    // Status
+    loading: "Loading...",
+    error: "Failed to load data",
+    noHolidays: "No holidays registered",
+    noHolidaysDescription: "Add holidays or generate them with AI.",
+  },
+  ja: {
+    title: "祝日管理",
+    addHoliday: "祝日を追加",
+    editHoliday: "祝日を編集",
+    deleteHoliday: "祝日を削除",
+    deleteConfirm: "この祝日を削除してもよろしいですか？",
+    generateWithAI: "AI生成",
+    generateTitle: "AIで祝日を生成",
+    generateDescription: "指定した年の日本の国民の祝日をAIで自動生成します。",
+    generateYear: "年",
+    generating: "生成中...",
+    generateSuccess: "{count}件の祝日を生成しました",
+    generate: "生成",
+    // Table headers
+    date: "日付",
+    name: "名称",
+    nameEn: "英語名称",
+    type: "種別",
+    actions: "操作",
+    // Form fields
+    holidayDate: "日付",
+    holidayName: "名称",
+    holidayNameEn: "英語名称",
+    holidayType: "種別",
+    holidayDescription: "説明",
+    // Types
+    typeAll: "すべて",
+    typeNational: "国民の祝日",
+    typeCompany: "会社休日",
+    // Filter
+    filterType: "種別",
+    filterYear: "年",
+    totalCount: "合計: {count}件",
+    // Actions
+    save: "保存",
+    cancel: "キャンセル",
+    delete: "削除",
+    edit: "編集",
+    // Status
+    loading: "読み込み中...",
+    error: "データの読み込みに失敗しました",
+    noHolidays: "祝日が登録されていません",
+    noHolidaysDescription: "祝日を追加するか、AIで生成してください。",
+  },
+} as const;
+
+export type Language = keyof typeof holidayTranslations;
