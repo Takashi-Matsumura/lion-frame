@@ -22,7 +22,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { Bot } from "lucide-react";
+import { Bot, ChevronLeft, ChevronRight } from "lucide-react";
 import { scheduleTranslations, type Language } from "./translations";
 import { ScheduleConcierge } from "./ScheduleConcierge";
 
@@ -58,11 +58,11 @@ interface EventFormData {
 }
 
 const CATEGORY_COLORS: Record<string, string> = {
-  personal: "bg-blue-500",
-  work: "bg-green-500",
-  meeting: "bg-purple-500",
-  visitor: "bg-orange-500",
-  trip: "bg-teal-500",
+  personal: "bg-yellow-300",
+  work: "bg-orange-300",
+  meeting: "bg-blue-300",
+  visitor: "bg-purple-300",
+  trip: "bg-pink-300",
   other: "bg-gray-500",
 };
 
@@ -364,13 +364,13 @@ export function ScheduleClient({ language }: ScheduleClientProps) {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={goToPrevMonth} aria-label={t.prevMonth}>
-            &lt;
+            <ChevronLeft className="h-4 w-4" />
           </Button>
           <h2 className="text-lg font-semibold min-w-[140px] text-center">
             {monthTitle}
           </h2>
           <Button variant="outline" size="sm" onClick={goToNextMonth} aria-label={t.nextMonth}>
-            &gt;
+            <ChevronRight className="h-4 w-4" />
           </Button>
           <Button variant="outline" size="sm" onClick={goToToday}>
             {t.today}
@@ -422,12 +422,14 @@ export function ScheduleClient({ language }: ScheduleClientProps) {
               >
                 <div className="text-left">
                   <span
-                    className={`text-sm font-medium ${
-                      isSunday || isHoliday
-                        ? "text-red-500"
-                        : isSaturday
-                          ? "text-blue-500"
-                          : ""
+                    className={`text-sm font-medium inline-flex items-center justify-center ${
+                      isToday
+                        ? "bg-gray-900 text-white rounded-full w-6 h-6 leading-none dark:bg-gray-100 dark:text-gray-900"
+                        : isSunday || isHoliday
+                          ? "text-red-500"
+                          : isSaturday
+                            ? "text-blue-500"
+                            : ""
                     }`}
                   >
                     {day}

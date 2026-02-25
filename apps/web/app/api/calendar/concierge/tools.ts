@@ -25,7 +25,7 @@ export function formatTimeJa(date: Date): string {
 }
 
 export const CATEGORY_LABELS: Record<string, string> = {
-  personal: "プライベート",
+  personal: "休暇",
   work: "仕事",
   meeting: "会議",
   visitor: "来客",

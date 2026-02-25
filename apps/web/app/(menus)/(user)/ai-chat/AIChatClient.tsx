@@ -633,10 +633,6 @@ export function AIChatClient({ language, userName }: AIChatClientProps) {
       {/* Header */}
       <div className="flex-shrink-0 flex items-center justify-between px-4 py-3 border-b">
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            <RiSparklingLine className="w-5 h-5 text-primary" />
-            <h1 className="font-semibold">{t.title}</h1>
-          </div>
           {providerInfo && (
             <div className="flex items-center gap-1.5 px-2.5 py-1 bg-muted rounded-full text-xs text-muted-foreground">
               <span className="font-medium">{providerInfo.providerName}</span>
