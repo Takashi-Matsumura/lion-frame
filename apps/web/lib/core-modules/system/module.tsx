@@ -1,10 +1,6 @@
-import {
-  FaBullhorn,
-  FaClipboardList,
-  FaInfoCircle,
-  FaUsers,
-} from "react-icons/fa";
+import { FaBullhorn, FaInfoCircle, FaUsers } from "react-icons/fa";
 import type { AppModule, AppTab } from "@/types/module";
+import { getMenuIcon } from "@/lib/modules/icons";
 
 /**
  * 管理画面のタブ定義
@@ -170,7 +166,7 @@ export const systemModule: AppModule = {
       order: 85,
       description: "View audit logs",
       descriptionJa: "監査ログを表示します",
-      icon: <FaClipboardList className="w-5 h-5" />,
+      icon: getMenuIcon("auditLogs", "system"),
       allowAccessKey: true,
     },
     {
