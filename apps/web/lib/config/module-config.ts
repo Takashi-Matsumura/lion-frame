@@ -26,6 +26,12 @@ export const moduleConfigs: Record<string, ModuleConfig> = {
     type: "core",
     dependencies: [],
   },
+  schedule: {
+    id: "schedule",
+    enabled: true,
+    type: "core",
+    dependencies: [],
+  },
 } as const;
 
 /** コアモジュールIDのSet（サイドバーアイコンのアンダーバー判定等に使用） */

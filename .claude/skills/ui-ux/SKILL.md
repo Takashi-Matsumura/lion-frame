@@ -320,7 +320,7 @@ const roleColors = {
 
 | モジュール種別 | アンダーバー | 例 |
 |--------------|------------|-----|
-| **コア** (`lib/core-modules/`) | なし | system, ai, organization |
+| **コア** (`lib/core-modules/`) | なし | system, ai, organization, schedule |
 | **アドオン** (`lib/addon-modules/`) | あり（メニューグループのカラー） | 将来の追加モジュール |
 
 ### 判定ロジック
@@ -332,7 +332,9 @@ import { CORE_MODULE_IDS } from "@/lib/config/module-config";
 const isAddonModule = !CORE_MODULE_IDS.has(menu.moduleId);
 ```
 
-`CORE_MODULE_IDS` は `lib/config/module-config.ts` の `moduleConfigs` から自動生成されます。新しいコアモジュールを追加する場合は `moduleConfigs` に `type: "core"` で登録してください。
+`CORE_MODULE_IDS` は `lib/config/module-config.ts` の `moduleConfigs` から自動生成されます。
+
+**重要:** 新しいコアモジュールを `lib/core-modules/` に追加した場合、必ず `moduleConfigs` に `type: "core"` で登録すること。登録漏れがあるとサイドバーにアンダーバーが誤表示される。
 
 ### アンダーバーのスタイル
 
