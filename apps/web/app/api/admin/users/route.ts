@@ -38,6 +38,7 @@ export async function GET(request: NextRequest) {
     const pageSize = Number.parseInt(searchParams.get("pageSize") || "20", 10);
     const search = searchParams.get("search") || "";
     const role = searchParams.get("role") as Role | null;
+    const passwordStatus = searchParams.get("passwordStatus") || "";
     const sortBy = searchParams.get("sortBy") || "createdAt";
     const sortOrder = searchParams.get("sortOrder") || "desc";
 
@@ -63,20 +64,8 @@ export async function GET(request: NextRequest) {
     }
 
     // フィルター条件を構築
-    const where: {
-      AND?: Array<{
-        OR?: Array<{
-          name?: { contains: string };
-          email?: { contains: string };
-        }>;
-        role?: Role;
-      }>;
-    } = {};
-
-    const conditions: Array<{
-      OR?: Array<{ name?: { contains: string }; email?: { contains: string } }>;
-      role?: Role;
-    }> = [];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const conditions: Array<Record<string, any>> = [];
 
     // 検索条件
     if (search) {
@@ -86,13 +75,21 @@ export async function GET(request: NextRequest) {
     }
 
     // ロールフィルター
-    if (role && ["ADMIN", "MANAGER", "USER", "GUEST"].includes(role)) {
+    if (role && ["ADMIN", "EXECUTIVE", "MANAGER", "USER", "GUEST"].includes(role)) {
       conditions.push({ role });
     }
 
-    if (conditions.length > 0) {
-      where.AND = conditions;
+    // パスワードステータスフィルター
+    if (passwordStatus === "tempPassword") {
+      conditions.push({ forcePasswordChange: true });
+    } else if (passwordStatus === "expired") {
+      conditions.push({
+        forcePasswordChange: true,
+        passwordExpiresAt: { lt: new Date() },
+      });
     }
+
+    const where = conditions.length > 0 ? { AND: conditions } : {};
 
     // 総件数を取得
     const total = await prisma.user.count({ where });
@@ -111,6 +108,8 @@ export async function GET(request: NextRequest) {
         role: true,
         createdAt: true,
         lastSignInAt: true,
+        forcePasswordChange: true,
+        passwordExpiresAt: true,
       },
     });
 

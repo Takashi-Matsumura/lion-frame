@@ -1,5 +1,6 @@
 "use client";
 
+import { signOut } from "next-auth/react";
 import { useCallback, useState } from "react";
 import {
   RiAlertLine,
@@ -21,6 +22,7 @@ interface PasswordChangeTranslations {
   confirmPassword: string;
   changeButton: string;
   success: string;
+  successLoggingOut: string;
   error: string;
   passwordMismatch: string;
   passwordTooShort: string;
@@ -85,10 +87,21 @@ export function PasswordChangeSection({
           return;
         }
 
-        setSuccess(true);
         setCurrentPassword("");
         setNewPassword("");
         setConfirmPassword("");
+
+        if (mustChangePassword) {
+          // 強制パスワード変更後は自動ログアウト
+          setSuccess(true);
+          setIsSubmitting(true); // ログアウトまでボタンを無効化
+          setTimeout(() => {
+            signOut({ callbackUrl: "/login" });
+          }, 2000);
+          return;
+        }
+
+        setSuccess(true);
         onPasswordChanged?.();
       } catch {
         setError(t.error);
@@ -148,7 +161,9 @@ export function PasswordChangeSection({
             className="mb-4 border-green-200 bg-green-50 text-green-800"
           >
             <RiCheckLine className="h-4 w-4" />
-            <AlertDescription>{t.success}</AlertDescription>
+            <AlertDescription>
+              {mustChangePassword ? t.successLoggingOut : t.success}
+            </AlertDescription>
           </Alert>
         )}
 

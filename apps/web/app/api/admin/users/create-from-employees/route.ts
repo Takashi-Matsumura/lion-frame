@@ -100,6 +100,7 @@ export async function POST(request: NextRequest) {
             password: hashedPassword,
             role: entry.role as "ADMIN" | "EXECUTIVE" | "MANAGER" | "USER" | "GUEST",
             forcePasswordChange: true,
+            passwordExpiresAt: new Date(Date.now() + 48 * 60 * 60 * 1000),
           },
         });
 

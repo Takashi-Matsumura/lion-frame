@@ -68,6 +68,24 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             return null;
           }
 
+          // 仮パスワードの有効期限チェック
+          if (
+            user.forcePasswordChange &&
+            user.passwordExpiresAt &&
+            new Date() > new Date(user.passwordExpiresAt)
+          ) {
+            await AuditService.log({
+              action: "LOGIN_FAILURE",
+              category: "AUTH",
+              details: {
+                email: credentials.email,
+                provider: "credentials",
+                reason: "Temporary password expired",
+              },
+            }).catch(() => {});
+            return null;
+          }
+
           // 最終サインイン日時を更新
           await prisma.user.update({
             where: { id: user.id },

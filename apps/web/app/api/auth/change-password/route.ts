@@ -94,6 +94,7 @@ export async function POST(request: Request) {
       data: {
         password: hashedPassword,
         forcePasswordChange: false,
+        passwordExpiresAt: null,
       },
     });
 

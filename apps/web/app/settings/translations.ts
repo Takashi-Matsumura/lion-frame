@@ -51,6 +51,8 @@ export const settingsTranslations = {
       confirmPassword: "Confirm New Password",
       changeButton: "Change Password",
       success: "Password changed successfully!",
+      successLoggingOut:
+        "Password changed successfully. Logging out... Please log in with your new password.",
       error: "Failed to change password",
       passwordMismatch: "Passwords do not match",
       passwordTooShort: "Password must be at least 8 characters",
@@ -109,6 +111,8 @@ export const settingsTranslations = {
       confirmPassword: "新しいパスワード（確認）",
       changeButton: "パスワードを変更",
       success: "パスワードを変更しました！",
+      successLoggingOut:
+        "パスワードを変更しました。ログアウトします…新しいパスワードでログインしてください。",
       error: "パスワードの変更に失敗しました",
       passwordMismatch: "パスワードが一致しません",
       passwordTooShort: "パスワードは8文字以上必要です",

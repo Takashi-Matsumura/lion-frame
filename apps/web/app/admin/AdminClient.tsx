@@ -83,6 +83,8 @@ interface User {
   role: Role;
   createdAt: string;
   lastSignInAt: string | null;
+  forcePasswordChange?: boolean;
+  passwordExpiresAt?: string | null;
 }
 
 interface PaginatedUsers {
@@ -215,6 +217,7 @@ export function AdminClient({
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("ALL");
+  const [passwordStatusFilter, setPasswordStatusFilter] = useState<string>("ALL");
   const [sortBy, setSortBy] = useState<"name" | "email" | "role" | "createdAt">(
     "createdAt",
   );
@@ -1081,6 +1084,7 @@ export function AdminClient({
         sortOrder,
         ...(searchQuery && { search: searchQuery }),
         ...(roleFilter !== "ALL" && { role: roleFilter }),
+        ...(passwordStatusFilter !== "ALL" && { passwordStatus: passwordStatusFilter }),
       });
 
       const response = await fetch(`/api/admin/users?${params}`);
@@ -1097,7 +1101,7 @@ export function AdminClient({
     } finally {
       setLoading(false);
     }
-  }, [activeTab, page, pageSize, searchQuery, roleFilter, sortBy, sortOrder]);
+  }, [activeTab, page, pageSize, searchQuery, roleFilter, passwordStatusFilter, sortBy, sortOrder]);
 
   useEffect(() => {
     fetchUsers();
@@ -1957,6 +1961,30 @@ export function AdminClient({
                         </SelectItem>
                       </SelectContent>
                     </Select>
+                    <Select
+                      value={passwordStatusFilter}
+                      onValueChange={(value) => {
+                        setPasswordStatusFilter(value);
+                        setPage(1);
+                      }}
+                    >
+                      <SelectTrigger className="w-[160px]">
+                        <SelectValue
+                          placeholder={t("Password Status", "パスワード状態")}
+                        />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="ALL">
+                          {t("All Accounts", "すべてのアカウント")}
+                        </SelectItem>
+                        <SelectItem value="tempPassword">
+                          {t("Temp Password", "仮パスワード")}
+                        </SelectItem>
+                        <SelectItem value="expired">
+                          {t("Expired", "期限切れ")}
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -2113,12 +2141,34 @@ export function AdminClient({
                                       </div>
                                     )}
                                     <div className="flex flex-col">
-                                      <span className="font-medium">
-                                        {user.name}
-                                      </span>
+                                      <div className="flex items-center gap-2">
+                                        <span className="font-medium">
+                                          {user.name}
+                                        </span>
+                                        {user.forcePasswordChange && (
+                                          user.passwordExpiresAt && new Date(user.passwordExpiresAt) <= new Date() ? (
+                                            <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
+                                              {t("Expired", "期限切れ")}
+                                            </Badge>
+                                          ) : (
+                                            <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                                              {t("Temp Password", "仮パスワード")}
+                                            </Badge>
+                                          )
+                                        )}
+                                      </div>
                                       <span className="text-sm text-muted-foreground">
                                         {user.email}
                                       </span>
+                                      {user.forcePasswordChange && user.passwordExpiresAt && (
+                                        <span className={`text-[11px] ${new Date(user.passwordExpiresAt) > new Date() ? "text-muted-foreground" : "text-destructive"}`}>
+                                          {t("Expires: ", "期限: ")}
+                                          {new Date(user.passwordExpiresAt).toLocaleString(
+                                            language === "ja" ? "ja-JP" : "en-US",
+                                            { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }
+                                          )}
+                                        </span>
+                                      )}
                                     </div>
                                   </div>
                                 </TableCell>

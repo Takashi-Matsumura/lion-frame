@@ -67,6 +67,7 @@ export async function POST(
       data: {
         password: hashedPassword,
         forcePasswordChange: true,
+        passwordExpiresAt: new Date(Date.now() + 48 * 60 * 60 * 1000),
       },
     });
 
