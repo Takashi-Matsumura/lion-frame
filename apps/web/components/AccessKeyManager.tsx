@@ -260,9 +260,9 @@ export function AccessKeyManager({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="flex-1 flex flex-col min-h-0">
       {/* Access Keys List */}
-      <Card>
+      <Card className="flex-1 flex flex-col min-h-0">
         <CardHeader className="flex flex-row items-center justify-between space-y-0">
           <CardTitle>{t("Access Keys", "アクセスキー")}</CardTitle>
           <Button onClick={() => setIsCreating(true)}>
@@ -270,7 +270,7 @@ export function AccessKeyManager({
             {t("Create", "作成")}
           </Button>
         </CardHeader>
-        <CardContent>
+        <CardContent className="flex-1 flex flex-col min-h-0">
           {accessKeys.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
               {t(
@@ -279,7 +279,7 @@ export function AccessKeyManager({
               )}
             </div>
           ) : (
-            <>
+            <div className="flex-1 flex flex-col min-h-0">
               {/* 合計表示 */}
               <div className="flex items-center justify-between mb-4">
                 <p className="text-sm text-muted-foreground">
@@ -289,9 +289,10 @@ export function AccessKeyManager({
                   </span>
                 </p>
               </div>
-              <div className="rounded-lg border overflow-hidden">
+              <div className="rounded-lg border overflow-hidden flex-1 flex flex-col min-h-0">
+                <div className="overflow-y-auto flex-1">
                 <Table>
-                  <TableHeader className="bg-muted/50">
+                  <TableHeader className="sticky top-0 bg-muted/50 z-10">
                     <TableRow>
                       <TableHead>
                         {t("Access Key Information", "アクセスキー情報")}
@@ -453,8 +454,9 @@ export function AccessKeyManager({
                     })}
                   </TableBody>
                 </Table>
+                </div>
               </div>
-            </>
+            </div>
           )}
         </CardContent>
       </Card>
