@@ -5,7 +5,11 @@ import {
   buildOrgContext,
   ORG_CONTEXT_SYSTEM_ADDITION,
 } from "@/lib/core-modules/ai/services/org-context";
+import { prisma } from "@/lib/prisma";
 import { AuditService } from "@/lib/services/audit-service";
+
+const TUTORIAL_CONTEXT_SYSTEM_ADDITION =
+  "\n\nYou have access to a tutorial document. Use it to answer the user's questions about the document's content. Reference specific sections when relevant. If the user asks something unrelated to the document, you can still answer but mention that their question is outside the document's scope.";
 
 /**
  * POST /api/ai/chat/stream
@@ -16,7 +20,7 @@ export async function POST(request: Request) {
     const session = await requireAuth();
 
     const body = await request.json();
-    const { messages, systemPrompt, useOrgContext } = body;
+    const { messages, systemPrompt, useOrgContext, tutorialDocId } = body;
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return new Response(JSON.stringify({ error: "Messages are required" }), {
@@ -66,6 +70,19 @@ export async function POST(request: Request) {
           finalSystemPrompt += ORG_CONTEXT_SYSTEM_ADDITION;
           finalSystemPrompt += `\n\n${orgContext}`;
         }
+      }
+    }
+
+    // チュートリアルドキュメントコンテキストの構築
+    if (tutorialDocId) {
+      const tutorialDoc = await prisma.tutorialDocument.findUnique({
+        where: { id: tutorialDocId, isEnabled: true },
+        select: { title: true, extractedText: true },
+      });
+
+      if (tutorialDoc) {
+        finalSystemPrompt += TUTORIAL_CONTEXT_SYSTEM_ADDITION;
+        finalSystemPrompt += `\n\n--- Tutorial Document: "${tutorialDoc.title}" ---\n${tutorialDoc.extractedText}\n--- End of Document ---`;
       }
     }
 

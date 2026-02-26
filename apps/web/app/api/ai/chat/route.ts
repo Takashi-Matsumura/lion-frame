@@ -1,6 +1,7 @@
 import { ApiError, apiHandler } from "@/lib/api";
 import { AIService } from "@/lib/core-modules/ai";
 import { isOrgContextEnabled } from "@/lib/core-modules/ai/services/org-context";
+import { prisma } from "@/lib/prisma";
 import { AuditService } from "@/lib/services/audit-service";
 
 /**
@@ -39,12 +40,19 @@ export const GET = apiHandler(async () => {
   // 組織データアクセスが有効か確認（システムレベル）
   const orgContextAvailable = await isOrgContextEnabled();
 
+  // チュートリアルドキュメントが利用可能か確認
+  const tutorialDocCount = await prisma.tutorialDocument.count({
+    where: { isEnabled: true },
+  });
+  const tutorialDocsAvailable = tutorialDocCount > 0;
+
   return {
     available,
     provider: config.provider,
     providerName,
     modelName,
     orgContextAvailable,
+    tutorialDocsAvailable,
   };
 });
 

@@ -654,3 +654,29 @@ model CompanyEvent {
   @@index([startDate])
   @@index([endDate])
 }
+
+// ========================================
+// AIチュートリアルドキュメント
+// ========================================
+
+model TutorialDocument {
+  id              String   @id @default(cuid())
+  title           String
+  titleJa         String?
+  description     String?
+  descriptionJa   String?
+  fileUrl         String
+  fileName        String
+  fileSize        Int
+  pageCount       Int      @default(0)
+  extractedText   String
+  estimatedTokens Int      @default(0)
+  suggestedPrompts Json    @default("[]")  // [{text, textJa}]
+  isEnabled       Boolean  @default(true)
+  sortOrder       Int      @default(0)
+  createdBy       String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([isEnabled, sortOrder])
+}

@@ -8,6 +8,24 @@ export interface ChatMessage {
   timestamp: Date;
   tokenCount?: number;
   orgContext?: boolean;
+  tutorialDocId?: string;
+  tutorialDocTitle?: string;
+}
+
+/**
+ * Tutorial document (user-facing, without extractedText)
+ */
+export interface TutorialDocument {
+  id: string;
+  title: string;
+  titleJa: string | null;
+  description: string | null;
+  descriptionJa: string | null;
+  fileName: string;
+  fileSize: number;
+  pageCount: number;
+  estimatedTokens: number;
+  suggestedPrompts: { text: string; textJa?: string }[];
 }
 
 /**

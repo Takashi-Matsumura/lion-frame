@@ -1,13 +1,16 @@
 "use client";
 
 import { RefObject, useState } from "react";
+import { BookOpen } from "lucide-react";
 import {
   RiRefreshLine,
   RiSendPlane2Line,
   RiStopCircleLine,
 } from "react-icons/ri";
 import { Button } from "@/components/ui/button";
+import type { TutorialDocument } from "@/types/ai-chat";
 import { aiChatTranslations } from "../translations";
+import { TutorialSelector } from "./TutorialSelector";
 
 interface ChatInputProps {
   input: string;
@@ -24,6 +27,12 @@ interface ChatInputProps {
   orgContextAvailable: boolean;
   language: "en" | "ja";
   textareaRef: RefObject<HTMLTextAreaElement>;
+  selectedTutorialDoc: TutorialDocument | null;
+  onSelectTutorialDoc: (doc: TutorialDocument | null) => void;
+  tutorialDocuments: TutorialDocument[];
+  tutorialSelectorOpen: boolean;
+  onTutorialSelectorOpenChange: (open: boolean) => void;
+  tutorialDocsAvailable: boolean;
 }
 
 function OrgIcon({ className }: { className?: string }) {
@@ -44,6 +53,11 @@ function OrgIcon({ className }: { className?: string }) {
   );
 }
 
+function formatTokenCount(tokens: number): string {
+  if (tokens >= 1000) return `${(tokens / 1000).toFixed(1)}k`;
+  return tokens.toString();
+}
+
 export function ChatInput({
   input,
   onInputChange,
@@ -59,6 +73,12 @@ export function ChatInput({
   orgContextAvailable,
   language,
   textareaRef,
+  selectedTutorialDoc,
+  onSelectTutorialDoc,
+  tutorialDocuments,
+  tutorialSelectorOpen,
+  onTutorialSelectorOpenChange,
+  tutorialDocsAvailable,
 }: ChatInputProps) {
   const t = aiChatTranslations[language];
   const [isComposing, setIsComposing] = useState(false);
@@ -120,20 +140,40 @@ export function ChatInput({
 
   return (
     <div className="flex-shrink-0 border-t px-4 py-4">
-      {/* Org context chip */}
-      {useOrgContext && (
-        <div className="flex items-center gap-2 mb-2 px-1">
-          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300">
-            <OrgIcon className="w-3 h-3" />
-            @{t.orgMention}
-            <button
-              type="button"
-              onClick={() => onSetUseOrgContext(false)}
-              className="ml-0.5 hover:text-green-900 dark:hover:text-green-100 cursor-pointer"
-            >
-              &times;
-            </button>
-          </span>
+      {/* Context chips */}
+      {(useOrgContext || selectedTutorialDoc) && (
+        <div className="flex items-center gap-2 mb-2 px-1 flex-wrap">
+          {useOrgContext && (
+            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300">
+              <OrgIcon className="w-3 h-3" />
+              @{t.orgMention}
+              <button
+                type="button"
+                onClick={() => onSetUseOrgContext(false)}
+                className="ml-0.5 hover:text-green-900 dark:hover:text-green-100 cursor-pointer"
+              >
+                &times;
+              </button>
+            </span>
+          )}
+          {selectedTutorialDoc && (
+            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300">
+              <BookOpen className="w-3 h-3" />
+              {language === "ja" && selectedTutorialDoc.titleJa
+                ? selectedTutorialDoc.titleJa
+                : selectedTutorialDoc.title}
+              <span className="text-purple-500 dark:text-purple-400">
+                ~{formatTokenCount(selectedTutorialDoc.estimatedTokens)}
+              </span>
+              <button
+                type="button"
+                onClick={() => onSelectTutorialDoc(null)}
+                className="ml-0.5 hover:text-purple-900 dark:hover:text-purple-100 cursor-pointer"
+              >
+                &times;
+              </button>
+            </span>
+          )}
         </div>
       )}
 
@@ -164,6 +204,33 @@ export function ChatInput({
           >
             <RiStopCircleLine className="w-5 h-5" />
           </Button>
+        )}
+
+        {/* Tutorial button */}
+        {tutorialDocsAvailable && (
+          <div className="relative">
+            <Button
+              variant="outline"
+              size="icon"
+              type="button"
+              onClick={() => onTutorialSelectorOpenChange(!tutorialSelectorOpen)}
+              className={`h-12 w-12 rounded-xl flex-shrink-0 ${
+                selectedTutorialDoc
+                  ? "border-purple-400 dark:border-purple-600 text-purple-600 dark:text-purple-400"
+                  : ""
+              }`}
+              title={t.tutorialButton}
+            >
+              <BookOpen className="w-5 h-5" />
+            </Button>
+            <TutorialSelector
+              open={tutorialSelectorOpen}
+              onOpenChange={onTutorialSelectorOpenChange}
+              documents={tutorialDocuments}
+              onSelect={onSelectTutorialDoc}
+              language={language}
+            />
+          </div>
         )}
 
         <div className="flex-1 relative">

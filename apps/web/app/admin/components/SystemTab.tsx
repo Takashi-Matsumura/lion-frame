@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import type { AIConfig, LocalLLMDefaults } from "@/types/admin";
+import { TutorialDocumentsManager } from "./TutorialDocumentsManager";
 
 interface SystemTabProps {
   language: "en" | "ja";
@@ -47,6 +48,7 @@ export function SystemTab({ language }: SystemTabProps) {
   // アコーディオン開閉
   const [authSettingsOpen, setAuthSettingsOpen] = useState(false);
   const [aiSettingsOpen, setAiSettingsOpen] = useState(false);
+  const [tutorialDocsOpen, setTutorialDocsOpen] = useState(false);
 
   // Google OAuth設定を取得
   const fetchGoogleOAuthSetting = useCallback(async () => {
@@ -741,6 +743,27 @@ export function SystemTab({ language }: SystemTabProps) {
                 </div>
               )}
             </>
+          )}
+        </div>
+        {/* AIチュートリアルドキュメント */}
+        <div className="mt-8">
+          <button
+            type="button"
+            onClick={() => setTutorialDocsOpen(!tutorialDocsOpen)}
+            className="flex items-center gap-2 w-full text-left cursor-pointer"
+          >
+            <ChevronDown
+              className={`h-4 w-4 text-muted-foreground transition-transform ${tutorialDocsOpen ? "" : "-rotate-90"}`}
+            />
+            <h2 className="text-base font-semibold">
+              {t("AI Tutorial Documents", "AIチュートリアルドキュメント")}
+            </h2>
+          </button>
+
+          {tutorialDocsOpen && (
+            <div className="mt-4 p-6 bg-muted rounded-lg">
+              <TutorialDocumentsManager language={language} />
+            </div>
           )}
         </div>
       </CardContent>

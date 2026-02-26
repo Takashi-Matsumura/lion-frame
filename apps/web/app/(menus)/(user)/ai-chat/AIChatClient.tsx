@@ -12,7 +12,7 @@ import {
   estimateTokens,
   getContextWindowSize,
 } from "@/lib/core-modules/ai";
-import type { ChatMessage, TokenStats } from "@/types/ai-chat";
+import type { ChatMessage, TokenStats, TutorialDocument } from "@/types/ai-chat";
 import { ChatInput } from "./components/ChatInput";
 import { ChatMessageList } from "./components/ChatMessageList";
 import { TokenStatsPanel } from "./components/TokenStatsPanel";
@@ -38,6 +38,10 @@ export function AIChatClient({ language, userName }: AIChatClientProps) {
   const [orgContextAvailable, setOrgContextAvailable] = useState(false);
   const [mentionPopupOpen, setMentionPopupOpen] = useState(false);
   const [useOrgContext, setUseOrgContext] = useState(false);
+  const [tutorialDocsAvailable, setTutorialDocsAvailable] = useState(false);
+  const [tutorialDocuments, setTutorialDocuments] = useState<TutorialDocument[]>([]);
+  const [selectedTutorialDoc, setSelectedTutorialDoc] = useState<TutorialDocument | null>(null);
+  const [tutorialSelectorOpen, setTutorialSelectorOpen] = useState(false);
   const [streamingContent, setStreamingContent] = useState("");
   const [showStats, setShowStats] = useState(true);
   const [tokenStats, setTokenStats] = useState<TokenStats>({
@@ -72,6 +76,18 @@ export function AIChatClient({ language, userName }: AIChatClientProps) {
         }
         if (data.orgContextAvailable) {
           setOrgContextAvailable(true);
+        }
+        if (data.tutorialDocsAvailable) {
+          setTutorialDocsAvailable(true);
+          // チュートリアル一覧を取得
+          fetch("/api/ai/tutorial-documents")
+            .then((res) => res.json())
+            .then((tData) => {
+              if (tData.documents) {
+                setTutorialDocuments(tData.documents);
+              }
+            })
+            .catch(() => {});
         }
       })
       .catch(() => {
@@ -109,6 +125,7 @@ export function AIChatClient({ language, userName }: AIChatClientProps) {
   const executeStreamingRequest = async (
     conversationHistory: { role: string; content: string }[],
     orgContext: boolean,
+    tutorialDocId?: string,
   ) => {
     const inputTokens = estimateMessagesTokens(conversationHistory);
     const startTime = Date.now();
@@ -142,6 +159,7 @@ export function AIChatClient({ language, userName }: AIChatClientProps) {
       body: JSON.stringify({
         messages: conversationHistory,
         useOrgContext: orgContext,
+        ...(tutorialDocId && { tutorialDocId }),
       }),
       signal: abortControllerRef.current!.signal,
     });
@@ -235,12 +253,14 @@ export function AIChatClient({ language, userName }: AIChatClientProps) {
     e?: React.FormEvent,
     suggestionText?: string,
     forceOrgContext?: boolean,
+    forceTutorialDoc?: TutorialDocument | null,
   ) => {
     e?.preventDefault();
     const text = suggestionText || input.trim();
     if (!text || isLoading) return;
 
     const orgContextForThisMessage = forceOrgContext ?? useOrgContext;
+    const tutorialDocForThisMessage = forceTutorialDoc !== undefined ? forceTutorialDoc : selectedTutorialDoc;
 
     const userMessage: ChatMessage = {
       id: crypto.randomUUID(),
@@ -249,6 +269,12 @@ export function AIChatClient({ language, userName }: AIChatClientProps) {
       timestamp: new Date(),
       tokenCount: estimateTokens(text),
       orgContext: orgContextForThisMessage,
+      tutorialDocId: tutorialDocForThisMessage?.id,
+      tutorialDocTitle: tutorialDocForThisMessage
+        ? (language === "ja" && tutorialDocForThisMessage.titleJa
+            ? tutorialDocForThisMessage.titleJa
+            : tutorialDocForThisMessage.title)
+        : undefined,
     };
 
     setMessages((prev) => [...prev, userMessage]);
@@ -272,6 +298,7 @@ export function AIChatClient({ language, userName }: AIChatClientProps) {
       await executeStreamingRequest(
         conversationHistory,
         orgContextForThisMessage,
+        tutorialDocForThisMessage?.id,
       );
     } catch (err) {
       if (err instanceof Error && err.name === "AbortError") {
@@ -336,6 +363,7 @@ export function AIChatClient({ language, userName }: AIChatClientProps) {
     const lastUserMessage = newMessages[newMessages.length - 1];
     if (lastUserMessage?.role === "user") {
       const regenerateOrgContext = lastUserMessage.orgContext ?? false;
+      const regenerateTutorialDocId = lastUserMessage.tutorialDocId;
       setIsLoading(true);
       setError(null);
       setStreamingContent("");
@@ -349,6 +377,7 @@ export function AIChatClient({ language, userName }: AIChatClientProps) {
         await executeStreamingRequest(
           conversationHistory,
           regenerateOrgContext,
+          regenerateTutorialDocId,
         );
       } catch (err) {
         if (err instanceof Error && err.name === "AbortError") {
@@ -382,6 +411,10 @@ export function AIChatClient({ language, userName }: AIChatClientProps) {
 
   const handleSuggestionClick = (text: string, useOrg: boolean) => {
     handleSubmit(undefined, text, useOrg);
+  };
+
+  const handleTutorialSuggestionClick = (text: string, doc: TutorialDocument) => {
+    handleSubmit(undefined, text, false, doc);
   };
 
   // AI disabled state
@@ -455,8 +488,10 @@ export function AIChatClient({ language, userName }: AIChatClientProps) {
         onCopy={handleCopy}
         copiedId={copiedId}
         onSuggestionClick={handleSuggestionClick}
+        onTutorialSuggestionClick={handleTutorialSuggestionClick}
         messagesEndRef={messagesEndRef as React.RefObject<HTMLDivElement>}
         orgContextAvailable={orgContextAvailable}
+        tutorialDocuments={tutorialDocuments}
         error={error}
       />
 
@@ -484,6 +519,12 @@ export function AIChatClient({ language, userName }: AIChatClientProps) {
         orgContextAvailable={orgContextAvailable}
         language={language}
         textareaRef={textareaRef as React.RefObject<HTMLTextAreaElement>}
+        selectedTutorialDoc={selectedTutorialDoc}
+        onSelectTutorialDoc={setSelectedTutorialDoc}
+        tutorialDocuments={tutorialDocuments}
+        tutorialSelectorOpen={tutorialSelectorOpen}
+        onTutorialSelectorOpenChange={setTutorialSelectorOpen}
+        tutorialDocsAvailable={tutorialDocsAvailable}
       />
     </div>
   );

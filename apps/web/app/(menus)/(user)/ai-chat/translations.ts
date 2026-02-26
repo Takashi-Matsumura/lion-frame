@@ -35,6 +35,13 @@ export const aiChatTranslations = {
     orgMention: "Org Data",
     orgMentionHint: "Type @ to reference org data",
     orgBadge: "Org Data",
+    tutorialButton: "Tutorial",
+    tutorialBadge: "Tutorial",
+    tutorialSelect: "Select a tutorial document",
+    tutorialNone: "No tutorial documents available",
+    tutorialTokens: "tokens",
+    tutorialSuggestions: "Suggested questions from tutorial:",
+    tutorialPages: "pages",
     // Stats labels
     stats: {
       contextUsage: "Context Usage",
@@ -85,6 +92,13 @@ export const aiChatTranslations = {
     orgMention: "組織データ",
     orgMentionHint: "@を入力して組織データを参照",
     orgBadge: "組織データ",
+    tutorialButton: "チュートリアル",
+    tutorialBadge: "チュートリアル",
+    tutorialSelect: "チュートリアルドキュメントを選択",
+    tutorialNone: "チュートリアルドキュメントがありません",
+    tutorialTokens: "トークン",
+    tutorialSuggestions: "チュートリアルのおすすめ質問:",
+    tutorialPages: "ページ",
     // Stats labels
     stats: {
       contextUsage: "コンテキスト使用量",

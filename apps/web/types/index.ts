@@ -43,6 +43,7 @@ export type {
   AccessKeyWithTargetUser,
   AdminClientProps,
   AdminTabType,
+  AdminTutorialDocument,
   AdminUser,
   AIConfig,
   Announcement,
@@ -57,6 +58,7 @@ export type {
   OrganizationOption,
   PaginatedUsers,
   RetiredAccount,
+  TutorialDocumentFormState,
 } from "./admin";
 // 組織型
 export type {
@@ -81,4 +83,5 @@ export type {
   AIChatClientProps,
   ChatMessage,
   TokenStats,
+  TutorialDocument,
 } from "./ai-chat";

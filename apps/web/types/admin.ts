@@ -252,3 +252,37 @@ export interface AnnouncementFormState {
   endAt: string;
   notifyUsers: boolean;
 }
+
+/**
+ * Admin tutorial document (full fields including extractedText)
+ */
+export interface AdminTutorialDocument {
+  id: string;
+  title: string;
+  titleJa: string | null;
+  description: string | null;
+  descriptionJa: string | null;
+  fileUrl: string;
+  fileName: string;
+  fileSize: number;
+  pageCount: number;
+  extractedText: string;
+  estimatedTokens: number;
+  suggestedPrompts: { text: string; textJa?: string }[];
+  isEnabled: boolean;
+  sortOrder: number;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * Tutorial document form state
+ */
+export interface TutorialDocumentFormState {
+  title: string;
+  titleJa: string;
+  description: string;
+  descriptionJa: string;
+  suggestedPrompts: { text: string; textJa: string }[];
+}

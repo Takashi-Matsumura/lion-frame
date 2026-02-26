@@ -9,7 +9,7 @@ import {
 } from "react-icons/ri";
 import ReactMarkdown from "react-markdown";
 import { Button } from "@/components/ui/button";
-import type { ChatMessage } from "@/types/ai-chat";
+import type { ChatMessage, TutorialDocument } from "@/types/ai-chat";
 import { aiChatTranslations } from "../translations";
 
 interface ChatMessageListProps {
@@ -21,8 +21,10 @@ interface ChatMessageListProps {
   onCopy: (id: string, content: string) => void;
   copiedId: string | null;
   onSuggestionClick: (text: string, useOrg: boolean) => void;
+  onTutorialSuggestionClick?: (text: string, doc: TutorialDocument) => void;
   messagesEndRef: RefObject<HTMLDivElement>;
   orgContextAvailable: boolean;
+  tutorialDocuments?: TutorialDocument[];
   error: string | null;
 }
 
@@ -85,8 +87,10 @@ export function ChatMessageList({
   onCopy,
   copiedId,
   onSuggestionClick,
+  onTutorialSuggestionClick,
   messagesEndRef,
   orgContextAvailable,
+  tutorialDocuments,
   error,
 }: ChatMessageListProps) {
   const t = aiChatTranslations[language];
@@ -122,6 +126,28 @@ export function ChatMessageList({
                   {suggestion}
                 </button>
               ))}
+            {tutorialDocuments &&
+              tutorialDocuments.length > 0 &&
+              onTutorialSuggestionClick &&
+              tutorialDocuments.flatMap((doc) => {
+                const prompts = doc.suggestedPrompts || [];
+                return prompts.map((prompt, index) => {
+                  const text =
+                    language === "ja" && prompt.textJa
+                      ? prompt.textJa
+                      : prompt.text;
+                  if (!text) return null;
+                  return (
+                    <button
+                      key={`tutorial-${doc.id}-${index}`}
+                      onClick={() => onTutorialSuggestionClick(text, doc)}
+                      className="px-4 py-2 text-sm border border-purple-300 dark:border-purple-700 text-purple-700 dark:text-purple-300 rounded-full hover:bg-purple-50 dark:hover:bg-purple-950 transition-colors"
+                    >
+                      {text}
+                    </button>
+                  );
+                });
+              })}
           </div>
         </div>
       </div>
@@ -159,6 +185,11 @@ export function ChatMessageList({
                     <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300">
                       <OrgBadgeIcon />
                       {t.orgBadge}
+                    </span>
+                  )}
+                  {message.tutorialDocTitle && (
+                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300">
+                      {t.tutorialBadge}
                     </span>
                   )}
                   <span className="text-xs text-muted-foreground">
