@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import {
@@ -74,6 +74,13 @@ export function EventFormDialog({
     },
     [form, onFormChange],
   );
+
+  // New event cannot start in the past
+  const isPastStart = useMemo(() => {
+    if (editingEvent) return false;
+    if (!form.startTime) return false;
+    return new Date(form.startTime) < new Date();
+  }, [editingEvent, form.startTime]);
 
   return (
     <>
@@ -230,6 +237,11 @@ export function EventFormDialog({
               </Button>
             )}
             <div className="flex-1" />
+            {isPastStart && (
+              <p className="text-sm text-destructive self-center">
+                {t.pastEventError}
+              </p>
+            )}
             <Button
               variant="outline"
               onClick={() => onOpenChange(false)}
@@ -237,7 +249,7 @@ export function EventFormDialog({
             >
               {t.cancel}
             </Button>
-            <Button onClick={onSave} disabled={saving || !form.title.trim()}>
+            <Button onClick={onSave} disabled={saving || !form.title.trim() || isPastStart}>
               {t.save}
             </Button>
           </DialogFooter>

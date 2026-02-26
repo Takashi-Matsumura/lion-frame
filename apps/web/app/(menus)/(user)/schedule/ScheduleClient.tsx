@@ -217,6 +217,19 @@ export function ScheduleClient({ language }: ScheduleClientProps) {
     setDialogOpen(true);
   }, [selectedDay, selectedMonth, year, month, nextYear, nextMonthNum]);
 
+  const openAddDialogWithTime = useCallback(
+    (startTime: string, endTime: string) => {
+      setEditingEvent(null);
+      setForm({
+        ...INITIAL_FORM,
+        startTime: toLocalDatetimeValue(new Date(startTime)),
+        endTime: toLocalDatetimeValue(new Date(endTime)),
+      });
+      setDialogOpen(true);
+    },
+    [],
+  );
+
   const openEditDialog = useCallback((event: CalendarEvent) => {
     setEditingEvent(event);
     setForm({
@@ -314,15 +327,18 @@ export function ScheduleClient({ language }: ScheduleClientProps) {
         onSelectDay={handleSelectDay}
       />
 
-      {selectedDay && (
+      {selectedDay && selectedDateKey && (
         <DayDetailPanel
           dayLabel={selectedDayLabel}
           holidays={selectedHolidays}
           events={selectedEvents}
           language={language}
           translations={t}
+          selectedDateKey={selectedDateKey}
+          todayKey={todayKey}
           onAddEvent={openAddDialog}
           onEditEvent={openEditDialog}
+          onAddEventWithTime={openAddDialogWithTime}
         />
       )}
 

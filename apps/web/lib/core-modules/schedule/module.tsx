@@ -4,7 +4,7 @@
  * カレンダーとスケジュール管理を提供するモジュール
  */
 
-import { FaCalendarCheck, FaCog, FaTags } from "react-icons/fa";
+import { FaBuilding, FaCalendarCheck, FaCog } from "react-icons/fa";
 import { getMenuIcon, getModuleIcon } from "@/lib/modules/icons";
 import type { AppModule, AppTab } from "@/types/module";
 
@@ -17,10 +17,10 @@ const calendarManagementTabs: AppTab[] = [
     order: 1,
   },
   {
-    id: "categories",
-    name: "Event Categories",
-    nameJa: "イベントカテゴリ",
-    icon: <FaTags className="w-5 h-5" />,
+    id: "company-events",
+    name: "Company Events",
+    nameJa: "会社イベント",
+    icon: <FaBuilding className="w-5 h-5" />,
     order: 2,
   },
   {
@@ -70,9 +70,9 @@ export const scheduleModule: AppModule = {
       order: 75,
       icon: getMenuIcon("calendarManagement", "schedule"),
       description:
-        "Manage holidays, event categories, and calendar settings",
+        "Manage holidays, company events, and calendar settings",
       descriptionJa:
-        "祝日、イベントカテゴリ、カレンダー設定の管理",
+        "祝日、会社イベント、カレンダー設定の管理",
       isImplemented: true,
       tabs: calendarManagementTabs,
     },
@@ -88,6 +88,19 @@ export const scheduleModule: AppModule = {
       apiEndpoints: [
         "/api/calendar/app-events",
         "/api/calendar/app-events/[id]",
+      ],
+      enabled: true,
+    },
+    {
+      id: "companyEvents",
+      moduleId: "schedule",
+      name: "Company Events",
+      nameJa: "会社イベント",
+      description: "CRUD operations for company events",
+      descriptionJa: "会社イベントのCRUD操作",
+      apiEndpoints: [
+        "/api/calendar/company-events",
+        "/api/calendar/company-events/[id]",
       ],
       enabled: true,
     },

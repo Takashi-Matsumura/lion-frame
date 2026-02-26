@@ -4,7 +4,7 @@ import { useSearchParams } from "next/navigation";
 import { useSidebar } from "@/components/ui/sidebar";
 import { useSidebarStore } from "@/lib/stores/sidebar-store";
 import { HolidayManagementClient } from "@/app/admin/holidays/HolidayManagementClient";
-import { EventCategoriesTab } from "./components/EventCategoriesTab";
+import { CompanyEventsTab } from "./components/CompanyEventsTab";
 import { CalendarSettingsTab } from "./components/CalendarSettingsTab";
 
 interface CalendarManagementClientProps {
@@ -34,8 +34,8 @@ export function CalendarManagementClient({
         {tab === "holidays" && (
           <HolidayManagementClient language={language} />
         )}
-        {tab === "categories" && (
-          <EventCategoriesTab language={language} />
+        {tab === "company-events" && (
+          <CompanyEventsTab language={language} />
         )}
         {tab === "settings" && (
           <CalendarSettingsTab language={language} />

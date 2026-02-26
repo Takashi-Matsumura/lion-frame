@@ -206,14 +206,13 @@ export function EventCategoriesTab({ language }: EventCategoriesTabProps) {
 
   if (loading && categories.length === 0) {
     return (
-      <PageSkeleton contentHeight="h-[300px]" className="max-w-5xl mx-auto" />
+      <PageSkeleton contentHeight="h-[300px]" />
     );
   }
 
   return (
-    <div className="max-w-5xl mx-auto p-6 h-full flex flex-col gap-4">
-      <div className="flex items-center justify-between shrink-0">
-        <p className="text-sm text-muted-foreground">{t.description}</p>
+    <div className="flex flex-col gap-4">
+      <div className="flex justify-end shrink-0">
         <Button size="sm" onClick={openAddDialog}>
           {t.addCategory}
         </Button>

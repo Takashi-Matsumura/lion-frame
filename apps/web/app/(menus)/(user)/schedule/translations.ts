@@ -59,6 +59,10 @@ export const scheduleTranslations = {
       "Any visitors this week?",
       "Any scheduling conflicts?",
     ],
+    // Timeline
+    dragToCreate: "Drag to create event",
+    timelineAllDay: "All day",
+    pastEventError: "Cannot create events in the past",
   },
   ja: {
     title: "カレンダー",
@@ -120,6 +124,10 @@ export const scheduleTranslations = {
       "今週の来客は？",
       "スケジュールに不備はない？",
     ],
+    // Timeline
+    dragToCreate: "ドラッグしてイベントを作成",
+    timelineAllDay: "終日",
+    pastEventError: "過去の予定は作成できません",
   },
 } as const;
 

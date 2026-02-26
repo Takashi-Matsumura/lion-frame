@@ -625,3 +625,23 @@ model Holiday {
   @@index([date])
   @@index([type])
 }
+
+// ========================================
+// 会社イベント
+// ========================================
+
+model CompanyEvent {
+  id          String   @id @default(cuid())
+  title       String
+  titleEn     String?
+  startDate   DateTime @db.Date
+  endDate     DateTime @db.Date
+  category    String   @default("event") // event, deadline, period
+  description String?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([startDate])
+  @@index([endDate])
+}

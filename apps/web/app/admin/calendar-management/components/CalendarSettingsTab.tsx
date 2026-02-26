@@ -2,6 +2,13 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import {
+  CollapsiblePanel,
+  CollapsiblePanelContent,
+  CollapsiblePanelDescription,
+  CollapsiblePanelHeader,
+  CollapsiblePanelTitle,
+} from "@/components/ui/collapsible-panel";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -14,6 +21,7 @@ import {
 import { LoadingSpinner } from "@/components/ui/Icons";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { calendarManagementTranslations } from "../translations";
+import { EventCategoriesTab } from "./EventCategoriesTab";
 
 interface CalendarSettings {
   calendar_week_start: "sunday" | "monday";
@@ -82,110 +90,130 @@ export function CalendarSettingsTab({ language }: CalendarSettingsTabProps) {
 
   if (loading) {
     return (
-      <PageSkeleton contentHeight="h-[300px]" className="max-w-3xl mx-auto" />
+      <PageSkeleton contentHeight="h-[300px]" className="max-w-5xl mx-auto" />
     );
   }
 
+  const tc = calendarManagementTranslations[language].categories;
+
   return (
-    <div className="max-w-3xl mx-auto p-6 h-full flex flex-col gap-6">
-      <p className="text-sm text-muted-foreground shrink-0">{t.description}</p>
+    <div className="max-w-5xl mx-auto p-6 h-full overflow-y-auto space-y-4">
+      {/* カレンダー表示設定パネル */}
+      <CollapsiblePanel defaultOpen>
+        <CollapsiblePanelHeader>
+          <CollapsiblePanelTitle>{t.title}</CollapsiblePanelTitle>
+          <CollapsiblePanelDescription>{t.description}</CollapsiblePanelDescription>
+        </CollapsiblePanelHeader>
+        <CollapsiblePanelContent>
+          <div className="space-y-6">
+            {/* 週の開始曜日 */}
+            <div className="space-y-2">
+              <Label>{t.weekStart}</Label>
+              <Select
+                value={settings.calendar_week_start}
+                onValueChange={(val) =>
+                  setSettings((s) => ({
+                    ...s,
+                    calendar_week_start: val as "sunday" | "monday",
+                  }))
+                }
+              >
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="sunday">{t.sunday}</SelectItem>
+                  <SelectItem value="monday">{t.monday}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-      <div className="space-y-6 flex-1">
-        {/* 週の開始曜日 */}
-        <div className="space-y-2">
-          <Label>{t.weekStart}</Label>
-          <Select
-            value={settings.calendar_week_start}
-            onValueChange={(val) =>
-              setSettings((s) => ({
-                ...s,
-                calendar_week_start: val as "sunday" | "monday",
-              }))
-            }
-          >
-            <SelectTrigger className="w-[200px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="sunday">{t.sunday}</SelectItem>
-              <SelectItem value="monday">{t.monday}</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+            {/* デフォルト表示 */}
+            <div className="space-y-2">
+              <Label>{t.defaultView}</Label>
+              <Select
+                value={settings.calendar_default_view}
+                onValueChange={(val) =>
+                  setSettings((s) => ({
+                    ...s,
+                    calendar_default_view: val as "single" | "dual",
+                  }))
+                }
+              >
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="single">{t.singleMonth}</SelectItem>
+                  <SelectItem value="dual">{t.dualMonth}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-        {/* デフォルト表示 */}
-        <div className="space-y-2">
-          <Label>{t.defaultView}</Label>
-          <Select
-            value={settings.calendar_default_view}
-            onValueChange={(val) =>
-              setSettings((s) => ({
-                ...s,
-                calendar_default_view: val as "single" | "dual",
-              }))
-            }
-          >
-            <SelectTrigger className="w-[200px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="single">{t.singleMonth}</SelectItem>
-              <SelectItem value="dual">{t.dualMonth}</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+            {/* 営業時間 */}
+            <div className="flex gap-6">
+              <div className="space-y-2">
+                <Label>{t.workingHoursStart}</Label>
+                <Input
+                  type="time"
+                  value={settings.calendar_working_hours_start}
+                  onChange={(e) =>
+                    setSettings((s) => ({
+                      ...s,
+                      calendar_working_hours_start: e.target.value,
+                    }))
+                  }
+                  className="w-[160px]"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>{t.workingHoursEnd}</Label>
+                <Input
+                  type="time"
+                  value={settings.calendar_working_hours_end}
+                  onChange={(e) =>
+                    setSettings((s) => ({
+                      ...s,
+                      calendar_working_hours_end: e.target.value,
+                    }))
+                  }
+                  className="w-[160px]"
+                />
+              </div>
+            </div>
 
-        {/* 営業時間 */}
-        <div className="flex gap-6">
-          <div className="space-y-2">
-            <Label>{t.workingHoursStart}</Label>
-            <Input
-              type="time"
-              value={settings.calendar_working_hours_start}
-              onChange={(e) =>
-                setSettings((s) => ({
-                  ...s,
-                  calendar_working_hours_start: e.target.value,
-                }))
-              }
-              className="w-[160px]"
-            />
+            {/* 保存ボタン */}
+            <div className="flex items-center gap-3">
+              <Button onClick={handleSave} disabled={saving}>
+                {saving && <LoadingSpinner className="w-4 h-4 mr-1" />}
+                {saving ? t.saving : t.save}
+              </Button>
+              {message && (
+                <span
+                  className={`text-sm font-medium ${
+                    message.type === "success"
+                      ? "text-green-600 dark:text-green-400"
+                      : "text-destructive"
+                  }`}
+                >
+                  {message.text}
+                </span>
+              )}
+            </div>
           </div>
-          <div className="space-y-2">
-            <Label>{t.workingHoursEnd}</Label>
-            <Input
-              type="time"
-              value={settings.calendar_working_hours_end}
-              onChange={(e) =>
-                setSettings((s) => ({
-                  ...s,
-                  calendar_working_hours_end: e.target.value,
-                }))
-              }
-              className="w-[160px]"
-            />
-          </div>
-        </div>
-      </div>
+        </CollapsiblePanelContent>
+      </CollapsiblePanel>
 
-      {/* 保存ボタン */}
-      <div className="flex items-center gap-3 shrink-0">
-        <Button onClick={handleSave} disabled={saving}>
-          {saving && <LoadingSpinner className="w-4 h-4 mr-1" />}
-          {saving ? t.saving : t.save}
-        </Button>
-        {message && (
-          <span
-            className={`text-sm font-medium ${
-              message.type === "success"
-                ? "text-green-600 dark:text-green-400"
-                : "text-destructive"
-            }`}
-          >
-            {message.text}
-          </span>
-        )}
-      </div>
+      {/* イベントカテゴリパネル */}
+      <CollapsiblePanel defaultOpen>
+        <CollapsiblePanelHeader>
+          <CollapsiblePanelTitle>{tc.title}</CollapsiblePanelTitle>
+          <CollapsiblePanelDescription>{tc.description}</CollapsiblePanelDescription>
+        </CollapsiblePanelHeader>
+        <CollapsiblePanelContent>
+          <EventCategoriesTab language={language} />
+        </CollapsiblePanelContent>
+      </CollapsiblePanel>
     </div>
   );
 }
