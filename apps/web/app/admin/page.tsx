@@ -25,11 +25,6 @@ export default async function AdminPage() {
 
   const language = await getLanguage();
 
-  // 統計情報を取得
-  const totalUsers = await prisma.user.count();
-  const adminCount = await prisma.user.count({ where: { role: "ADMIN" } });
-  const userCount = await prisma.user.count({ where: { role: "USER" } });
-
   // アクセスキー関連のデータを取得
   const accessKeys = await prisma.accessKey.findMany({
     include: {
@@ -82,11 +77,6 @@ export default async function AdminPage() {
     <AdminClient
       language={language}
       currentUserId={session.user.id}
-      initialStats={{
-        totalUsers,
-        adminCount,
-        userCount,
-      }}
       accessKeys={accessKeys}
       users={users}
       menus={menus}

@@ -104,11 +104,6 @@ type AccessKeyWithTargetUser = AccessKey & {
 interface AdminClientProps {
   language: "en" | "ja";
   currentUserId: string;
-  initialStats: {
-    totalUsers: number;
-    adminCount: number;
-    userCount: number;
-  };
   accessKeys: AccessKeyWithTargetUser[];
   users: Array<{
     id: string;
@@ -198,7 +193,6 @@ interface ModulesData {
 export function AdminClient({
   language,
   currentUserId,
-  initialStats,
   accessKeys,
   users,
   menus,
@@ -323,6 +317,8 @@ export function AdminClient({
     message: string;
   } | null>(null);
   const [aiSaving, setAiSaving] = useState(false);
+  const [authSettingsOpen, setAuthSettingsOpen] = useState(false);
+  const [aiSettingsOpen, setAiSettingsOpen] = useState(false);
 
   // アナウンス用AI翻訳
   const [aiTranslationAvailable, setAiTranslationAvailable] = useState(false);
@@ -1162,43 +1158,9 @@ export function AdminClient({
           {activeTab === "system" && (
             <Card>
               <CardContent className="p-8">
-                {/* 統計カード */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
-                  <Card>
-                    <CardContent className="py-2 px-4 flex items-center justify-between">
-                      <span className="text-sm font-medium text-muted-foreground">
-                        {t("Total Users", "総ユーザ数")}
-                      </span>
-                      <span className="text-2xl font-bold">
-                        {initialStats.totalUsers}
-                      </span>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardContent className="py-2 px-4 flex items-center justify-between">
-                      <span className="text-sm font-medium text-muted-foreground">
-                        {t("Regular Users", "一般ユーザ")}
-                      </span>
-                      <span className="text-2xl font-bold">
-                        {initialStats.userCount}
-                      </span>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardContent className="py-2 px-4 flex items-center justify-between">
-                      <span className="text-sm font-medium text-muted-foreground">
-                        {t("Administrators", "管理者")}
-                      </span>
-                      <span className="text-2xl font-bold">
-                        {initialStats.adminCount}
-                      </span>
-                    </CardContent>
-                  </Card>
-                </div>
-
                 {/* システム情報 */}
                 <div className="space-y-4">
-                  <h2 className="text-2xl font-semibold">
+                  <h2 className="text-base font-semibold">
                     {t("System Information", "システム情報")}
                   </h2>
 
@@ -1245,88 +1207,112 @@ export function AdminClient({
                 </div>
 
                 {/* 認証設定 */}
-                <div className="space-y-4 mt-8">
-                  <h2 className="text-2xl font-semibold">
-                    {t("Authentication Settings", "認証設定")}
-                  </h2>
+                <div className="mt-8">
+                  <button
+                    type="button"
+                    onClick={() => setAuthSettingsOpen(!authSettingsOpen)}
+                    className="flex items-center gap-2 w-full text-left cursor-pointer"
+                  >
+                    <ChevronDown
+                      className={`h-4 w-4 text-muted-foreground transition-transform ${authSettingsOpen ? "" : "-rotate-90"}`}
+                    />
+                    <h2 className="text-base font-semibold">
+                      {t("Authentication Settings", "認証設定")}
+                    </h2>
+                  </button>
 
-                  <div className="p-6 bg-muted rounded-lg">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="font-medium text-foreground">
-                          Google OAuth
-                        </h3>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          {t(
-                            "Enable Google OAuth login on the login page",
-                            "ログイン画面でGoogle OAuthログインを有効にする",
-                          )}
-                        </p>
-                      </div>
-                      <Switch
-                        checked={googleOAuthEnabled}
-                        onCheckedChange={handleGoogleOAuthToggle}
-                        disabled={googleOAuthLoading}
-                      />
-                    </div>
-                    {!googleOAuthEnabled && (
-                      <p className="text-sm text-amber-600 dark:text-amber-400 mt-3">
-                        {t(
-                          "To enable Google OAuth, configure GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in the environment variables.",
-                          "Google OAuthを有効にするには、環境変数にGOOGLE_CLIENT_IDとGOOGLE_CLIENT_SECRETを設定してください。",
+                  {authSettingsOpen && (
+                    <div className="space-y-4 mt-4">
+                      <div className="p-6 bg-muted rounded-lg">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h3 className="font-medium text-foreground">
+                              Google OAuth
+                            </h3>
+                            <p className="text-sm text-muted-foreground mt-1">
+                              {t(
+                                "Enable Google OAuth login on the login page",
+                                "ログイン画面でGoogle OAuthログインを有効にする",
+                              )}
+                            </p>
+                          </div>
+                          <Switch
+                            checked={googleOAuthEnabled}
+                            onCheckedChange={handleGoogleOAuthToggle}
+                            disabled={googleOAuthLoading}
+                          />
+                        </div>
+                        {!googleOAuthEnabled && (
+                          <p className="text-sm text-amber-600 dark:text-amber-400 mt-3">
+                            {t(
+                              "To enable Google OAuth, configure GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in the environment variables.",
+                              "Google OAuthを有効にするには、環境変数にGOOGLE_CLIENT_IDとGOOGLE_CLIENT_SECRETを設定してください。",
+                            )}
+                          </p>
                         )}
-                      </p>
-                    )}
-                  </div>
+                      </div>
 
-                  {/* GitHub OAuth */}
-                  <div className="p-6 bg-muted rounded-lg">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="font-medium text-foreground">
-                          GitHub OAuth
-                        </h3>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          {t(
-                            "Enable GitHub OAuth login on the login page",
-                            "ログイン画面でGitHub OAuthログインを有効にする",
-                          )}
-                        </p>
-                      </div>
-                      <Switch
-                        checked={gitHubOAuthEnabled}
-                        onCheckedChange={handleGitHubOAuthToggle}
-                        disabled={gitHubOAuthLoading}
-                      />
-                    </div>
-                    {!gitHubOAuthEnabled && (
-                      <p className="text-sm text-amber-600 dark:text-amber-400 mt-3">
-                        {t(
-                          "To enable GitHub OAuth, configure GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET in the environment variables.",
-                          "GitHub OAuthを有効にするには、環境変数にGITHUB_CLIENT_IDとGITHUB_CLIENT_SECRETを設定してください。",
+                      {/* GitHub OAuth */}
+                      <div className="p-6 bg-muted rounded-lg">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h3 className="font-medium text-foreground">
+                              GitHub OAuth
+                            </h3>
+                            <p className="text-sm text-muted-foreground mt-1">
+                              {t(
+                                "Enable GitHub OAuth login on the login page",
+                                "ログイン画面でGitHub OAuthログインを有効にする",
+                              )}
+                            </p>
+                          </div>
+                          <Switch
+                            checked={gitHubOAuthEnabled}
+                            onCheckedChange={handleGitHubOAuthToggle}
+                            disabled={gitHubOAuthLoading}
+                          />
+                        </div>
+                        {!gitHubOAuthEnabled && (
+                          <p className="text-sm text-amber-600 dark:text-amber-400 mt-3">
+                            {t(
+                              "To enable GitHub OAuth, configure GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET in the environment variables.",
+                              "GitHub OAuthを有効にするには、環境変数にGITHUB_CLIENT_IDとGITHUB_CLIENT_SECRETを設定してください。",
+                            )}
+                          </p>
                         )}
-                      </p>
-                    )}
-                  </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* AI設定 */}
-                <div className="space-y-4 mt-8">
-                  <h2 className="text-2xl font-semibold">
-                    {t("AI Settings", "AI設定")}
-                  </h2>
+                <div className="mt-8">
+                  <button
+                    type="button"
+                    onClick={() => setAiSettingsOpen(!aiSettingsOpen)}
+                    className="flex items-center gap-2 w-full text-left cursor-pointer"
+                  >
+                    <ChevronDown
+                      className={`h-4 w-4 text-muted-foreground transition-transform ${aiSettingsOpen ? "" : "-rotate-90"}`}
+                    />
+                    <h2 className="text-base font-semibold">
+                      {t("AI Settings", "AI設定")}
+                    </h2>
+                  </button>
 
-                  {aiConfigLoading && (
-                    <div className="text-center py-8">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto" />
-                      <p className="mt-2 text-sm text-muted-foreground">
-                        {t("Loading...", "読み込み中...")}
-                      </p>
-                    </div>
-                  )}
+                  {aiSettingsOpen && (
+                    <>
+                      {aiConfigLoading && (
+                        <div className="text-center py-8">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto" />
+                          <p className="mt-2 text-sm text-muted-foreground">
+                            {t("Loading...", "読み込み中...")}
+                          </p>
+                        </div>
+                      )}
 
-                  {!aiConfigLoading && aiConfig && (
-                    <div className="space-y-4">
+                      {!aiConfigLoading && aiConfig && (
+                        <div className="space-y-4 mt-4">
                       {/* 有効/無効 */}
                       <div className="p-6 bg-muted rounded-lg">
                         <div className="flex items-center justify-between">
@@ -1714,7 +1700,9 @@ export function AdminClient({
                           </span>
                         </div>
                       </div>
-                    </div>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               </CardContent>

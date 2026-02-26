@@ -14,6 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useSidebar } from "@/components/ui/sidebar";
 import {
   Table,
   TableBody,
@@ -22,6 +23,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useSidebarStore } from "@/lib/stores/sidebar-store";
 import { auditLogsTranslations } from "./translations";
 
 interface AuditLog {
@@ -50,6 +52,8 @@ const PAGE_SIZE = 25;
 
 export function AuditLogsClient({ language }: AuditLogsClientProps) {
   const t = auditLogsTranslations[language];
+  const { open } = useSidebar();
+  const { width } = useSidebarStore();
 
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState(false);
@@ -189,9 +193,17 @@ export function AuditLogsClient({ language }: AuditLogsClientProps) {
   };
 
   return (
-    <div className="max-w-7xl mx-auto mt-8">
-      <Card>
-        <CardContent className="p-6">
+    <div
+      className="fixed inset-0 flex flex-col transition-all duration-300"
+      style={{
+        top: "4.5rem",
+        left: open ? `${width}px` : "4rem",
+      }}
+    >
+      <div className="flex-1 overflow-hidden">
+        <div className="max-w-7xl mx-auto p-6 h-full flex flex-col">
+          <Card className="flex-1 flex flex-col min-h-0">
+            <CardContent className="p-6 flex-1 flex flex-col min-h-0">
           {/* フィルター + 診断ボタン */}
           <div className="flex flex-wrap items-center gap-4 mb-6">
             <div className="flex items-center gap-2">
@@ -352,7 +364,7 @@ export function AuditLogsClient({ language }: AuditLogsClientProps) {
 
           {/* ログテーブル */}
           {!loading && logs.length > 0 && (
-            <>
+            <div className="flex-1 flex flex-col min-h-0">
               {/* ページネーション（上部） */}
               <div className="flex items-center justify-between mb-4">
                 <p className="text-sm text-muted-foreground">
@@ -393,8 +405,8 @@ export function AuditLogsClient({ language }: AuditLogsClientProps) {
               </div>
 
               {/* テーブル */}
-              <div className="rounded-lg border overflow-hidden">
-                <div className="overflow-y-auto max-h-[calc(100vh-28rem)]">
+              <div className="rounded-lg border overflow-hidden flex-1 flex flex-col min-h-0">
+                <div className="overflow-y-auto flex-1">
                   <Table>
                     <TableHeader className="sticky top-0 bg-muted/50 z-10">
                       <TableRow>
@@ -495,7 +507,7 @@ export function AuditLogsClient({ language }: AuditLogsClientProps) {
                   </Table>
                 </div>
               </div>
-            </>
+            </div>
           )}
 
           {/* データなし */}
@@ -505,8 +517,10 @@ export function AuditLogsClient({ language }: AuditLogsClientProps) {
               <p className="text-muted-foreground">{t.noAuditLogs}</p>
             </div>
           )}
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 }
