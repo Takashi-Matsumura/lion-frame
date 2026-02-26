@@ -18,7 +18,7 @@ export async function PUT(
 
   const { id } = await params;
   const body = await request.json();
-  const { title, titleEn, startDate, endDate, category, description } = body;
+  const { title, titleEn, startDate, endDate, category, description, departmentId } = body;
 
   const existing = await prisma.companyEvent.findUnique({ where: { id } });
   if (!existing) {
@@ -40,7 +40,11 @@ export async function PUT(
         ...(description !== undefined && {
           description: description || null,
         }),
+        ...(departmentId !== undefined && {
+          departmentId: departmentId || null,
+        }),
       },
+      include: { department: { select: { id: true, name: true } } },
     });
 
     return NextResponse.json({
@@ -52,6 +56,8 @@ export async function PUT(
         endDate: event.endDate.toISOString().split("T")[0],
         category: event.category,
         description: event.description,
+        departmentId: event.departmentId,
+        departmentName: event.department?.name ?? null,
       },
     });
   } catch (error) {

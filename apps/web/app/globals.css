@@ -135,16 +135,16 @@
    */
 
   /* Background & Foreground - Dark base */
-  --background: oklch(0.14 0.005 260);
-  --foreground: oklch(0.93 0 0);
+  --background: oklch(0.18 0.005 260);
+  --foreground: oklch(0.97 0 0);
 
   /* Card - Elevated, clearly visible */
   --card: oklch(0.22 0.005 260);
-  --card-foreground: oklch(0.93 0 0);
+  --card-foreground: oklch(0.97 0 0);
 
   /* Popover - Slightly elevated above cards */
   --popover: oklch(0.24 0.005 260);
-  --popover-foreground: oklch(0.93 0 0);
+  --popover-foreground: oklch(0.97 0 0);
 
   /* Primary - Main accent color */
   --primary: oklch(0.7 0.08 260);
@@ -152,21 +152,21 @@
 
   /* Secondary - Subtle elevation */
   --secondary: oklch(0.26 0.005 260);
-  --secondary-foreground: oklch(0.93 0 0);
+  --secondary-foreground: oklch(0.97 0 0);
 
   /* Muted - For subtle backgrounds */
   --muted: oklch(0.20 0.005 260);
-  --muted-foreground: oklch(0.60 0 0);
+  --muted-foreground: oklch(0.70 0 0);
 
   /* Accent - Interactive elements */
   --accent: oklch(0.28 0.01 260);
-  --accent-foreground: oklch(0.93 0 0);
+  --accent-foreground: oklch(0.97 0 0);
 
   /* Destructive */
   --destructive: oklch(0.6 0.2 25);
 
   /* Border & Input - Visible but subtle */
-  --border: oklch(0.32 0.01 260);
+  --border: oklch(0.36 0.01 260);
   --input: oklch(0.18 0.005 260);
   --input-background: oklch(0.16 0.005 260);
   --ring: oklch(0.7 0.08 260);
@@ -180,11 +180,11 @@
 
   /* Sidebar - Slightly different from main background */
   --sidebar: oklch(0.16 0.005 260);
-  --sidebar-foreground: oklch(0.93 0 0);
+  --sidebar-foreground: oklch(0.97 0 0);
   --sidebar-primary: oklch(0.7 0.08 260);
   --sidebar-primary-foreground: oklch(0.12 0 0);
   --sidebar-accent: oklch(0.24 0.01 260);
-  --sidebar-accent-foreground: oklch(0.93 0 0);
+  --sidebar-accent-foreground: oklch(0.97 0 0);
   --sidebar-border: oklch(0.28 0.01 260);
   --sidebar-ring: oklch(0.7 0.08 260);
 }

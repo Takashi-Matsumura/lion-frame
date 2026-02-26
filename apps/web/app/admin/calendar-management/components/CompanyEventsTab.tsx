@@ -41,6 +41,13 @@ interface CompanyEvent {
   endDate: string;
   category: string;
   description: string | null;
+  departmentId: string | null;
+  departmentName: string | null;
+}
+
+interface DepartmentOption {
+  id: string;
+  name: string;
 }
 
 interface CompanyEventFormData {
@@ -50,6 +57,7 @@ interface CompanyEventFormData {
   endDate: string;
   category: string;
   description: string;
+  departmentId: string;
 }
 
 const INITIAL_FORM: CompanyEventFormData = {
@@ -59,6 +67,7 @@ const INITIAL_FORM: CompanyEventFormData = {
   endDate: "",
   category: "event",
   description: "",
+  departmentId: "",
 };
 
 interface CompanyEventsTabProps {
@@ -70,6 +79,7 @@ export function CompanyEventsTab({ language }: CompanyEventsTabProps) {
 
   const currentYear = new Date().getFullYear();
   const [events, setEvents] = useState<CompanyEvent[]>([]);
+  const [departments, setDepartments] = useState<DepartmentOption[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Filters
@@ -111,6 +121,22 @@ export function CompanyEventsTab({ language }: CompanyEventsTabProps) {
     fetchEvents();
   }, [fetchEvents]);
 
+  useEffect(() => {
+    fetch("/api/organization")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.departments) {
+          setDepartments(
+            data.departments.map((d: { id: string; name: string }) => ({
+              id: d.id,
+              name: d.name,
+            })),
+          );
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   const yearOptions = useMemo(() => {
     const years: string[] = [];
     for (let y = currentYear - 2; y <= currentYear + 3; y++) {
@@ -135,6 +161,7 @@ export function CompanyEventsTab({ language }: CompanyEventsTabProps) {
       endDate: event.endDate,
       category: event.category,
       description: event.description ?? "",
+      departmentId: event.departmentId ?? "",
     });
     setDialogOpen(true);
   }, []);
@@ -150,6 +177,7 @@ export function CompanyEventsTab({ language }: CompanyEventsTabProps) {
       endDate: form.endDate,
       category: form.category,
       description: form.description || null,
+      departmentId: form.departmentId || null,
     };
 
     try {
@@ -285,6 +313,7 @@ export function CompanyEventsTab({ language }: CompanyEventsTabProps) {
                   <TableHead className="w-[140px]">{t.startDate}</TableHead>
                   <TableHead className="w-[140px]">{t.endDate}</TableHead>
                   <TableHead>{t.titleLabel}</TableHead>
+                  <TableHead className="w-[120px]">{t.department}</TableHead>
                   <TableHead className="w-[120px]">{t.category}</TableHead>
                   <TableHead className="w-[100px] text-right">
                     {t.actions}
@@ -297,10 +326,15 @@ export function CompanyEventsTab({ language }: CompanyEventsTabProps) {
                     <TableCell className="font-mono text-sm">
                       {formatDisplayDate(event.startDate)}
                     </TableCell>
-                    <TableCell className="font-mono text-sm">
-                      {formatDisplayDate(event.endDate)}
+                    <TableCell className="font-mono text-sm text-muted-foreground">
+                      {event.category === "deadline" || event.startDate === event.endDate
+                        ? "—"
+                        : formatDisplayDate(event.endDate)}
                     </TableCell>
                     <TableCell>{event.title}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {event.departmentName ?? "—"}
+                    </TableCell>
                     <TableCell>{categoryBadge(event.category)}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
@@ -403,6 +437,31 @@ export function CompanyEventsTab({ language }: CompanyEventsTabProps) {
                     {t.categoryDeadline}
                   </SelectItem>
                   <SelectItem value="period">{t.categoryPeriod}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>{t.department}</Label>
+              <Select
+                value={form.departmentId || "__none__"}
+                onValueChange={(val) =>
+                  setForm((f) => ({
+                    ...f,
+                    departmentId: val === "__none__" ? "" : val,
+                  }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">{t.departmentNone}</SelectItem>
+                  {departments.map((dept) => (
+                    <SelectItem key={dept.id} value={dept.id}>
+                      {dept.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

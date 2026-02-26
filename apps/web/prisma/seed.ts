@@ -54,10 +54,50 @@ async function main() {
     });
   }
 
+  // Seed sample company events
+  const currentYear = new Date().getFullYear();
+  const companyEvents = [
+    { title: "入社式", titleEn: "Entrance Ceremony", startDate: `${currentYear}-04-01`, endDate: `${currentYear}-04-01`, category: "event" },
+    { title: "新人研修", titleEn: "New Employee Training", startDate: `${currentYear}-04-01`, endDate: `${currentYear}-04-14`, category: "period" },
+    { title: "安全衛生委員会", titleEn: "Safety & Health Committee", startDate: `${currentYear}-04-15`, endDate: `${currentYear}-04-15`, category: "event" },
+    { title: "第1四半期決算締め", titleEn: "Q1 Closing", startDate: `${currentYear}-06-30`, endDate: `${currentYear}-06-30`, category: "deadline" },
+    { title: "株主総会", titleEn: "General Shareholders Meeting", startDate: `${currentYear}-06-25`, endDate: `${currentYear}-06-25`, category: "event" },
+    { title: "夏季休暇", titleEn: "Summer Holiday", startDate: `${currentYear}-08-13`, endDate: `${currentYear}-08-16`, category: "period" },
+    { title: "上期人事考課提出", titleEn: "1H Performance Review Deadline", startDate: `${currentYear}-09-30`, endDate: `${currentYear}-09-30`, category: "deadline" },
+    { title: "第2四半期決算締め", titleEn: "Q2 Closing", startDate: `${currentYear}-09-30`, endDate: `${currentYear}-09-30`, category: "deadline" },
+    { title: "防災訓練", titleEn: "Disaster Drill", startDate: `${currentYear}-09-01`, endDate: `${currentYear}-09-01`, category: "event" },
+    { title: "社員旅行", titleEn: "Company Trip", startDate: `${currentYear}-10-10`, endDate: `${currentYear}-10-11`, category: "event" },
+    { title: "第3四半期決算締め", titleEn: "Q3 Closing", startDate: `${currentYear}-12-31`, endDate: `${currentYear}-12-31`, category: "deadline" },
+    { title: "年末年始休暇", titleEn: "Year-End / New Year Holiday", startDate: `${currentYear}-12-28`, endDate: `${currentYear + 1}-01-05`, category: "period" },
+    { title: "下期人事考課提出", titleEn: "2H Performance Review Deadline", startDate: `${currentYear + 1}-03-15`, endDate: `${currentYear + 1}-03-15`, category: "deadline" },
+    { title: "期末決算締め", titleEn: "Year-End Closing", startDate: `${currentYear + 1}-03-31`, endDate: `${currentYear + 1}-03-31`, category: "deadline" },
+    { title: "創立記念日", titleEn: "Foundation Day", startDate: `${currentYear}-11-01`, endDate: `${currentYear}-11-01`, category: "event" },
+  ];
+
+  let companyEventCount = 0;
+  for (const ev of companyEvents) {
+    const existing = await prisma.companyEvent.findFirst({
+      where: { title: ev.title, startDate: new Date(ev.startDate) },
+    });
+    if (!existing) {
+      await prisma.companyEvent.create({
+        data: {
+          title: ev.title,
+          titleEn: ev.titleEn,
+          startDate: new Date(ev.startDate),
+          endDate: new Date(ev.endDate),
+          category: ev.category,
+        },
+      });
+      companyEventCount++;
+    }
+  }
+
   console.log("✅ Database seeded successfully!");
   console.log("Created admin user:");
   console.log(`  - ${admin.email} (${admin.role})`);
   console.log(`Seeded ${defaultPositions.length} position master records`);
+  console.log(`Seeded ${companyEventCount} company events`);
   console.log("\nCredentials login:");
   console.log("  - Email: admin@lionframe.local");
   console.log("  - Password: admin");

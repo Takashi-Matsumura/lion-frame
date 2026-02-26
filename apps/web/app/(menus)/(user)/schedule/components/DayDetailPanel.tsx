@@ -3,9 +3,11 @@ import { Button } from "@/components/ui/button";
 import type { Language } from "../translations";
 import {
   type CalendarEvent,
+  type CompanyEvent,
   type Holiday,
   type Translations,
   CATEGORY_COLORS,
+  COMPANY_EVENT_COLORS,
   formatTime,
 } from "./calendar-types";
 import { TimelineView } from "./TimelineView";
@@ -13,6 +15,7 @@ import { TimelineView } from "./TimelineView";
 interface DayDetailPanelProps {
   dayLabel: string;
   holidays: Holiday[];
+  companyEvents: CompanyEvent[];
   events: CalendarEvent[];
   language: Language;
   translations: Translations;
@@ -26,6 +29,7 @@ interface DayDetailPanelProps {
 export function DayDetailPanel({
   dayLabel,
   holidays,
+  companyEvents,
   events,
   language,
   translations: t,
@@ -50,6 +54,18 @@ export function DayDetailPanel({
     [t],
   );
 
+  const companyCategoryLabel = useCallback(
+    (cat: string) => {
+      const map: Record<string, string> = {
+        event: t.companyCategoryEvent,
+        deadline: t.companyCategoryDeadline,
+        period: t.companyCategoryPeriod,
+      };
+      return map[cat] ?? cat;
+    },
+    [t],
+  );
+
   const isPastDate = selectedDateKey < todayKey;
 
   return (
@@ -68,7 +84,7 @@ export function DayDetailPanel({
       <div className="flex flex-1 min-h-0">
         {/* Left: Holiday/Event list */}
         <div className="flex-1 min-w-0 overflow-y-auto border-r p-3">
-          {holidays.length === 0 && events.length === 0 && (
+          {holidays.length === 0 && companyEvents.length === 0 && events.length === 0 && (
             <p className="text-sm text-muted-foreground">{t.noEvents}</p>
           )}
 
@@ -86,6 +102,27 @@ export function DayDetailPanel({
                 <span className="text-muted-foreground text-xs">
                   ({t.holiday})
                 </span>
+              </div>
+            ))}
+
+            {/* Company Events (read-only) */}
+            {companyEvents.map((ev) => (
+              <div
+                key={ev.id}
+                className="flex items-center gap-2 text-sm py-2 px-3 rounded bg-teal-50 dark:bg-teal-950/20"
+              >
+                <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${COMPANY_EVENT_COLORS[ev.category] ?? "bg-teal-400"}`} />
+                <span className="text-teal-700 dark:text-teal-400 font-medium truncate">
+                  {language === "ja" ? ev.title : (ev.titleEn ?? ev.title)}
+                </span>
+                <span className="text-muted-foreground text-xs whitespace-nowrap">
+                  ({companyCategoryLabel(ev.category)})
+                </span>
+                {ev.departmentName && (
+                  <span className="text-muted-foreground text-xs whitespace-nowrap">
+                    [{ev.departmentName}]
+                  </span>
+                )}
               </div>
             ))}
 

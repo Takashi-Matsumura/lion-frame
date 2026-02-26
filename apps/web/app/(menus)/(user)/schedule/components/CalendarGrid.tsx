@@ -2,8 +2,10 @@ import { useMemo } from "react";
 import type { Language } from "../translations";
 import {
   type CalendarEvent,
+  type CompanyEvent,
   type Holiday,
   CATEGORY_COLORS,
+  COMPANY_EVENT_COLORS,
   formatDateKey,
   getCalendarDays,
   getDualMonthGrid,
@@ -18,6 +20,7 @@ interface CalendarGridProps {
   selectedMonth: "current" | "next";
   eventsByDate: Record<string, CalendarEvent[]>;
   holidaysByDate: Record<string, Holiday[]>;
+  companyEventsByDate: Record<string, CompanyEvent[]>;
   todayKey: string;
   weekdays: string[];
   onSelectDay: (day: number, which: "current" | "next") => void;
@@ -32,6 +35,7 @@ export function CalendarGrid({
   selectedMonth,
   eventsByDate,
   holidaysByDate,
+  companyEventsByDate,
   todayKey,
   weekdays,
   onSelectDay,
@@ -76,6 +80,7 @@ export function CalendarGrid({
                 selectedMonth={selectedMonth}
                 eventsByDate={eventsByDate}
                 holidaysByDate={holidaysByDate}
+                companyEventsByDate={companyEventsByDate}
                 todayKey={todayKey}
                 onSelectDay={onSelectDay}
               />
@@ -90,6 +95,7 @@ export function CalendarGrid({
                 selectedMonth={selectedMonth}
                 eventsByDate={eventsByDate}
                 holidaysByDate={holidaysByDate}
+                companyEventsByDate={companyEventsByDate}
                 todayKey={todayKey}
                 onSelectDay={onSelectDay}
               />
@@ -111,6 +117,7 @@ interface SingleDayCellProps {
   selectedMonth: "current" | "next";
   eventsByDate: Record<string, CalendarEvent[]>;
   holidaysByDate: Record<string, Holiday[]>;
+  companyEventsByDate: Record<string, CompanyEvent[]>;
   todayKey: string;
   onSelectDay: (day: number, which: "current" | "next") => void;
 }
@@ -125,6 +132,7 @@ function SingleDayCell({
   selectedMonth,
   eventsByDate,
   holidaysByDate,
+  companyEventsByDate,
   todayKey,
   onSelectDay,
 }: SingleDayCellProps) {
@@ -140,9 +148,15 @@ function SingleDayCell({
   const isSelected = selectedMonth === "current" && day === selectedDay;
   const dayHolidays = holidaysByDate[dateKey] ?? [];
   const dayEvents = eventsByDate[dateKey] ?? [];
+  const dayCompanyEvents = companyEventsByDate[dateKey] ?? [];
   const isHoliday = dayHolidays.length > 0;
   const isSunday = dayOfWeek === 0;
   const isSaturday = dayOfWeek === 6;
+
+  const allDots = [
+    ...dayEvents.map((ev) => ({ id: ev.id, color: CATEGORY_COLORS[ev.category] ?? CATEGORY_COLORS.other })),
+    ...dayCompanyEvents.map((ev) => ({ id: `ce-${ev.id}`, color: COMPANY_EVENT_COLORS[ev.category] ?? "bg-teal-400" })),
+  ];
 
   return (
     <button
@@ -167,15 +181,15 @@ function SingleDayCell({
           >
             {day}
           </span>
-          {dayEvents.slice(0, 3).map((ev) => (
+          {allDots.slice(0, 3).map((dot) => (
             <span
-              key={ev.id}
-              className={`w-1.5 h-1.5 rounded-full ${CATEGORY_COLORS[ev.category] ?? CATEGORY_COLORS.other}`}
+              key={dot.id}
+              className={`w-1.5 h-1.5 rounded-full ${dot.color}`}
             />
           ))}
-          {dayEvents.length > 3 && (
+          {allDots.length > 3 && (
             <span className="text-[8px] text-muted-foreground">
-              +{dayEvents.length - 3}
+              +{allDots.length - 3}
             </span>
           )}
         </div>
@@ -202,6 +216,7 @@ interface DualDayCellProps {
   selectedMonth: "current" | "next";
   eventsByDate: Record<string, CalendarEvent[]>;
   holidaysByDate: Record<string, Holiday[]>;
+  companyEventsByDate: Record<string, CompanyEvent[]>;
   todayKey: string;
   onSelectDay: (day: number, which: "current" | "next") => void;
 }
@@ -214,6 +229,7 @@ function DualDayCell({
   selectedMonth,
   eventsByDate,
   holidaysByDate,
+  companyEventsByDate,
   todayKey,
   onSelectDay,
 }: DualDayCellProps) {
@@ -233,12 +249,27 @@ function DualDayCell({
   const nextEvents = cell.nextDateKey
     ? (eventsByDate[cell.nextDateKey] ?? [])
     : [];
+  const currentCompanyEvents = cell.currentDateKey
+    ? (companyEventsByDate[cell.currentDateKey] ?? [])
+    : [];
+  const nextCompanyEvents = cell.nextDateKey
+    ? (companyEventsByDate[cell.nextDateKey] ?? [])
+    : [];
   const currentHolidays = cell.currentDateKey
     ? (holidaysByDate[cell.currentDateKey] ?? [])
     : [];
   const nextHolidays = cell.nextDateKey
     ? (holidaysByDate[cell.nextDateKey] ?? [])
     : [];
+
+  const currentDots = [
+    ...currentEvents.map((ev) => ({ id: ev.id, color: CATEGORY_COLORS[ev.category] ?? CATEGORY_COLORS.other })),
+    ...currentCompanyEvents.map((ev) => ({ id: `ce-${ev.id}`, color: COMPANY_EVENT_COLORS[ev.category] ?? "bg-teal-400" })),
+  ];
+  const nextDots = [
+    ...nextEvents.map((ev) => ({ id: ev.id, color: CATEGORY_COLORS[ev.category] ?? CATEGORY_COLORS.other })),
+    ...nextCompanyEvents.map((ev) => ({ id: `ce-${ev.id}`, color: COMPANY_EVENT_COLORS[ev.category] ?? "bg-teal-400" })),
+  ];
 
   const isTodayCurrent = cell.currentDateKey === todayKey;
   const isTodayNext = cell.nextDateKey === todayKey;
@@ -275,15 +306,15 @@ function DualDayCell({
             >
               {cell.currentDay}
             </span>
-            {currentEvents.slice(0, 2).map((ev) => (
+            {currentDots.slice(0, 2).map((dot) => (
               <span
-                key={ev.id}
-                className={`w-1.5 h-1.5 rounded-full ${CATEGORY_COLORS[ev.category] ?? CATEGORY_COLORS.other}`}
+                key={dot.id}
+                className={`w-1.5 h-1.5 rounded-full ${dot.color}`}
               />
             ))}
-            {currentEvents.length > 2 && (
+            {currentDots.length > 2 && (
               <span className="text-[8px] text-muted-foreground">
-                +{currentEvents.length - 2}
+                +{currentDots.length - 2}
               </span>
             )}
           </div>
@@ -318,15 +349,15 @@ function DualDayCell({
             </span>
           ))}
           <div className="flex items-center gap-0.5">
-            {nextEvents.slice(0, 2).map((ev) => (
+            {nextDots.slice(0, 2).map((dot) => (
               <span
-                key={ev.id}
-                className={`w-1.5 h-1.5 rounded-full ${CATEGORY_COLORS[ev.category] ?? CATEGORY_COLORS.other}`}
+                key={dot.id}
+                className={`w-1.5 h-1.5 rounded-full ${dot.color}`}
               />
             ))}
-            {nextEvents.length > 2 && (
+            {nextDots.length > 2 && (
               <span className="text-[8px] text-muted-foreground">
-                +{nextEvents.length - 2}
+                +{nextDots.length - 2}
               </span>
             )}
             <span

@@ -21,6 +21,17 @@ export interface Holiday {
   type: string;
 }
 
+export interface CompanyEvent {
+  id: string;
+  title: string;
+  titleEn: string | null;
+  startDate: string; // YYYY-MM-DD
+  endDate: string; // YYYY-MM-DD
+  category: string; // event | deadline | period
+  description: string | null;
+  departmentName: string | null;
+}
+
 export interface EventFormData {
   title: string;
   description: string;
@@ -49,6 +60,12 @@ export const CATEGORY_COLORS: Record<string, string> = {
   visitor: "bg-purple-300",
   trip: "bg-pink-300",
   other: "bg-gray-500",
+};
+
+export const COMPANY_EVENT_COLORS: Record<string, string> = {
+  event: "bg-teal-400",
+  deadline: "bg-red-400",
+  period: "bg-emerald-400",
 };
 
 export const INITIAL_FORM: EventFormData = {

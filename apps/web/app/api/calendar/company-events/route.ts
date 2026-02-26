@@ -31,6 +31,7 @@ export async function GET(request: NextRequest) {
 
   const events = await prisma.companyEvent.findMany({
     where,
+    include: { department: { select: { id: true, name: true } } },
     orderBy: { startDate: "asc" },
   });
 
@@ -42,6 +43,8 @@ export async function GET(request: NextRequest) {
     endDate: e.endDate.toISOString().split("T")[0],
     category: e.category,
     description: e.description,
+    departmentId: e.departmentId,
+    departmentName: e.department?.name ?? null,
   }));
 
   return NextResponse.json({ events: formattedEvents });
@@ -59,7 +62,7 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json();
-  const { title, titleEn, startDate, endDate, category, description } = body;
+  const { title, titleEn, startDate, endDate, category, description, departmentId } = body;
 
   if (!title || !startDate || !endDate) {
     return NextResponse.json(
@@ -77,7 +80,9 @@ export async function POST(request: NextRequest) {
         endDate: new Date(endDate),
         category: category || "event",
         description: description || null,
+        departmentId: departmentId || null,
       },
+      include: { department: { select: { id: true, name: true } } },
     });
 
     return NextResponse.json({
@@ -89,6 +94,8 @@ export async function POST(request: NextRequest) {
         endDate: event.endDate.toISOString().split("T")[0],
         category: event.category,
         description: event.description,
+        departmentId: event.departmentId,
+        departmentName: event.department?.name ?? null,
       },
     });
   } catch (error) {

@@ -59,6 +59,11 @@ export const scheduleTranslations = {
       "Any visitors this week?",
       "Any scheduling conflicts?",
     ],
+    // Company events
+    companyEvent: "Company",
+    companyCategoryEvent: "Event",
+    companyCategoryDeadline: "Deadline",
+    companyCategoryPeriod: "Period",
     // Timeline
     dragToCreate: "Drag to create event",
     timelineAllDay: "All day",
@@ -124,6 +129,11 @@ export const scheduleTranslations = {
       "今週の来客は？",
       "スケジュールに不備はない？",
     ],
+    // Company events
+    companyEvent: "会社",
+    companyCategoryEvent: "イベント",
+    companyCategoryDeadline: "締め切り",
+    companyCategoryPeriod: "期間",
     // Timeline
     dragToCreate: "ドラッグしてイベントを作成",
     timelineAllDay: "終日",

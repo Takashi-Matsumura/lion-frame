@@ -8,6 +8,7 @@ import { scheduleTranslations, type Language } from "./translations";
 import { ScheduleConcierge } from "./ScheduleConcierge";
 import {
   type CalendarEvent,
+  type CompanyEvent,
   type EventFormData,
   type Holiday,
   INITIAL_FORM,
@@ -36,6 +37,7 @@ export function ScheduleClient({ language }: ScheduleClientProps) {
   const [viewMode, setViewMode] = useState<"single" | "dual">("dual");
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [holidays, setHolidays] = useState<Holiday[]>([]);
+  const [companyEvents, setCompanyEvents] = useState<CompanyEvent[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Concierge panel state
@@ -72,12 +74,15 @@ export function ScheduleClient({ language }: ScheduleClientProps) {
     const endDate = `${nextYear}-${String(nextMonthNum + 1).padStart(2, "0")}-${String(lastDayNext).padStart(2, "0")}`;
 
     try {
-      const [eventsRes, holidaysRes] = await Promise.all([
+      const [eventsRes, holidaysRes, companyEventsRes] = await Promise.all([
         fetch(
           `/api/calendar/app-events?startDate=${startDate}&endDate=${endDate}`,
         ),
         fetch(
           `/api/calendar/holidays?startDate=${startDate}&endDate=${endDate}&type=all`,
+        ),
+        fetch(
+          `/api/calendar/company-events?startDate=${startDate}&endDate=${endDate}`,
         ),
       ]);
 
@@ -88,6 +93,10 @@ export function ScheduleClient({ language }: ScheduleClientProps) {
       if (holidaysRes.ok) {
         const data = await holidaysRes.json();
         setHolidays(data.holidays ?? []);
+      }
+      if (companyEventsRes.ok) {
+        const data = await companyEventsRes.json();
+        setCompanyEvents(data.events ?? []);
       }
     } finally {
       setLoading(false);
@@ -118,6 +127,20 @@ export function ScheduleClient({ language }: ScheduleClientProps) {
     return map;
   }, [holidays]);
 
+  const companyEventsByDate = useMemo(() => {
+    const map: Record<string, CompanyEvent[]> = {};
+    for (const ev of companyEvents) {
+      const start = new Date(ev.startDate);
+      const end = new Date(ev.endDate);
+      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+        const key = d.toISOString().split("T")[0];
+        if (!map[key]) map[key] = [];
+        map[key].push(ev);
+      }
+    }
+    return map;
+  }, [companyEvents]);
+
   const selectedDateKey = useMemo(() => {
     if (!selectedDay) return null;
     if (selectedMonth === "next") {
@@ -131,6 +154,9 @@ export function ScheduleClient({ language }: ScheduleClientProps) {
     : [];
   const selectedHolidays = selectedDateKey
     ? (holidaysByDate[selectedDateKey] ?? [])
+    : [];
+  const selectedCompanyEvents = selectedDateKey
+    ? (companyEventsByDate[selectedDateKey] ?? [])
     : [];
 
   const selectedDayLabel = useMemo(() => {
@@ -322,6 +348,7 @@ export function ScheduleClient({ language }: ScheduleClientProps) {
         selectedMonth={selectedMonth}
         eventsByDate={eventsByDate}
         holidaysByDate={holidaysByDate}
+        companyEventsByDate={companyEventsByDate}
         todayKey={todayKey}
         weekdays={weekdays}
         onSelectDay={handleSelectDay}
@@ -331,6 +358,7 @@ export function ScheduleClient({ language }: ScheduleClientProps) {
         <DayDetailPanel
           dayLabel={selectedDayLabel}
           holidays={selectedHolidays}
+          companyEvents={selectedCompanyEvents}
           events={selectedEvents}
           language={language}
           translations={t}

@@ -320,6 +320,7 @@ model Department {
   manager        Employee?    @relation("DepartmentManager", fields: [managerId], references: [id])
   employees      Employee[]   @relation("DepartmentEmployees")
   sections       Section[]
+  companyEvents  CompanyEvent[]
 
   @@unique([organizationId, name])
 }
@@ -631,16 +632,18 @@ model Holiday {
 // ========================================
 
 model CompanyEvent {
-  id          String   @id @default(cuid())
-  title       String
-  titleEn     String?
-  startDate   DateTime @db.Date
-  endDate     DateTime @db.Date
-  category    String   @default("event") // event, deadline, period
-  description String?
+  id           String      @id @default(cuid())
+  title        String
+  titleEn      String?
+  startDate    DateTime    @db.Date
+  endDate      DateTime    @db.Date
+  category     String      @default("event") // event, deadline, period
+  description  String?
+  departmentId String?
+  department   Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
 
   @@index([startDate])
   @@index([endDate])
