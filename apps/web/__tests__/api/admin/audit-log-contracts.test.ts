@@ -303,7 +303,7 @@ describe("監査ログ契約テスト", () => {
         }),
       );
 
-      expect(response.status).toBe(403);
+      expect(response.status).toBe(401);
       expect(mockAuditLog).not.toHaveBeenCalled();
     });
 

@@ -1,15 +1,9 @@
-import { type NextRequest, NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { apiHandler, ApiError } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 
 // GET /api/calendar/app-events - イベント一覧取得
-export async function GET(request: NextRequest) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const searchParams = request.nextUrl.searchParams;
+export const GET = apiHandler(async (request, session) => {
+  const { searchParams } = new URL(request.url);
   const startDate = searchParams.get("startDate");
   const endDate = searchParams.get("endDate");
 
@@ -36,16 +30,11 @@ export async function GET(request: NextRequest) {
     orderBy: { startTime: "asc" },
   });
 
-  return NextResponse.json({ events });
-}
+  return { events };
+});
 
 // POST /api/calendar/app-events - イベント作成
-export async function POST(request: NextRequest) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export const POST = apiHandler(async (request, session) => {
   const body = await request.json();
   const {
     title,
@@ -59,10 +48,7 @@ export async function POST(request: NextRequest) {
   } = body;
 
   if (!title || !startTime || !endTime) {
-    return NextResponse.json(
-      { error: "title, startTime, endTime are required" },
-      { status: 400 },
-    );
+    throw ApiError.badRequest("title, startTime, endTime are required");
   }
 
   const event = await prisma.calendarEvent.create({
@@ -79,5 +65,5 @@ export async function POST(request: NextRequest) {
     },
   });
 
-  return NextResponse.json({ event }, { status: 201 });
-}
+  return { event };
+}, { successStatus: 201 });

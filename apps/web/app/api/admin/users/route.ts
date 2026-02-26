@@ -1,6 +1,5 @@
 import type { Role } from "@prisma/client";
-import { type NextRequest, NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { ApiError, apiHandler, parsePagination } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 
 /**
@@ -25,108 +24,83 @@ import { prisma } from "@/lib/prisma";
  *   pageSize: number;
  * }
  */
-export async function GET(request: NextRequest) {
-  try {
-    const session = await auth();
+export const GET = apiHandler(async (request) => {
+  const { page, pageSize, skip } = parsePagination(request);
 
-    if (!session || session.user.role !== "ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+  const url = new URL(request.url);
+  const search = url.searchParams.get("search") || "";
+  const role = url.searchParams.get("role") as Role | null;
+  const passwordStatus = url.searchParams.get("passwordStatus") || "";
+  const sortBy = url.searchParams.get("sortBy") || "createdAt";
+  const sortOrder = url.searchParams.get("sortOrder") || "desc";
 
-    const searchParams = request.nextUrl.searchParams;
-    const page = Number.parseInt(searchParams.get("page") || "1", 10);
-    const pageSize = Number.parseInt(searchParams.get("pageSize") || "20", 10);
-    const search = searchParams.get("search") || "";
-    const role = searchParams.get("role") as Role | null;
-    const passwordStatus = searchParams.get("passwordStatus") || "";
-    const sortBy = searchParams.get("sortBy") || "createdAt";
-    const sortOrder = searchParams.get("sortOrder") || "desc";
-
-    // バリデーション
-    if (page < 1 || pageSize < 1 || pageSize > 100) {
-      return NextResponse.json(
-        { error: "Invalid parameters" },
-        { status: 400 },
-      );
-    }
-
-    // ソートパラメータのバリデーション
-    const validSortFields = ["name", "email", "role", "createdAt"];
-    const validSortOrders = ["asc", "desc"];
-    if (
-      !validSortFields.includes(sortBy) ||
-      !validSortOrders.includes(sortOrder)
-    ) {
-      return NextResponse.json(
-        { error: "Invalid sort parameters" },
-        { status: 400 },
-      );
-    }
-
-    // フィルター条件を構築
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const conditions: Array<Record<string, any>> = [];
-
-    // 検索条件
-    if (search) {
-      conditions.push({
-        OR: [{ name: { contains: search } }, { email: { contains: search } }],
-      });
-    }
-
-    // ロールフィルター
-    if (role && ["ADMIN", "EXECUTIVE", "MANAGER", "USER", "GUEST"].includes(role)) {
-      conditions.push({ role });
-    }
-
-    // パスワードステータスフィルター
-    if (passwordStatus === "tempPassword") {
-      conditions.push({ forcePasswordChange: true });
-    } else if (passwordStatus === "expired") {
-      conditions.push({
-        forcePasswordChange: true,
-        passwordExpiresAt: { lt: new Date() },
-      });
-    }
-
-    const where = conditions.length > 0 ? { AND: conditions } : {};
-
-    // 総件数を取得
-    const total = await prisma.user.count({ where });
-
-    // ページネーション付きでユーザを取得（組織データも含める）
-    const users = await prisma.user.findMany({
-      where,
-      orderBy: { [sortBy]: sortOrder },
-      skip: (page - 1) * pageSize,
-      take: pageSize,
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        image: true,
-        role: true,
-        createdAt: true,
-        lastSignInAt: true,
-        forcePasswordChange: true,
-        passwordExpiresAt: true,
-      },
-    });
-
-    const totalPages = Math.ceil(total / pageSize);
-
-    return NextResponse.json({
-      users,
-      total,
-      page,
-      totalPages,
-      pageSize,
-    });
-  } catch (error) {
-    console.error("Error fetching users:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch users" },
-      { status: 500 },
-    );
+  // ソートパラメータのバリデーション
+  const validSortFields = ["name", "email", "role", "createdAt"];
+  const validSortOrders = ["asc", "desc"];
+  if (
+    !validSortFields.includes(sortBy) ||
+    !validSortOrders.includes(sortOrder)
+  ) {
+    throw ApiError.badRequest("Invalid sort parameters");
   }
-}
+
+  // フィルター条件を構築
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const conditions: Array<Record<string, any>> = [];
+
+  // 検索条件
+  if (search) {
+    conditions.push({
+      OR: [{ name: { contains: search } }, { email: { contains: search } }],
+    });
+  }
+
+  // ロールフィルター
+  if (role && ["ADMIN", "EXECUTIVE", "MANAGER", "USER", "GUEST"].includes(role)) {
+    conditions.push({ role });
+  }
+
+  // パスワードステータスフィルター
+  if (passwordStatus === "tempPassword") {
+    conditions.push({ forcePasswordChange: true });
+  } else if (passwordStatus === "expired") {
+    conditions.push({
+      forcePasswordChange: true,
+      passwordExpiresAt: { lt: new Date() },
+    });
+  }
+
+  const where = conditions.length > 0 ? { AND: conditions } : {};
+
+  // 総件数を取得
+  const total = await prisma.user.count({ where });
+
+  // ページネーション付きでユーザを取得（組織データも含める）
+  const users = await prisma.user.findMany({
+    where,
+    orderBy: { [sortBy]: sortOrder },
+    skip,
+    take: pageSize,
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      image: true,
+      role: true,
+      createdAt: true,
+      lastSignInAt: true,
+      forcePasswordChange: true,
+      passwordExpiresAt: true,
+    },
+  });
+
+  const totalPages = Math.ceil(total / pageSize);
+
+  return {
+    users,
+    total,
+    page,
+    totalPages,
+    pageSize,
+  };
+}, { admin: true });

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { ApiError, requireAuth } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 
 /**
@@ -10,26 +10,33 @@ export async function POST(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  try {
+    const session = await requireAuth();
+    const { id } = await params;
 
-  const { id } = await params;
-
-  await prisma.announcementDismissal.upsert({
-    where: {
-      announcementId_userId: {
+    await prisma.announcementDismissal.upsert({
+      where: {
+        announcementId_userId: {
+          announcementId: id,
+          userId: session.user.id,
+        },
+      },
+      update: {},
+      create: {
         announcementId: id,
         userId: session.user.id,
       },
-    },
-    update: {},
-    create: {
-      announcementId: id,
-      userId: session.user.id,
-    },
-  });
+    });
 
-  return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    if (error instanceof ApiError) {
+      return NextResponse.json(error.toJSON(), { status: error.status });
+    }
+    console.error("Failed to dismiss announcement:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 },
+    );
+  }
 }

@@ -292,27 +292,3 @@ export interface MenuGroup {
  */
 export type ModuleRegistry = Record<string, AppModule>;
 
-/**
- * ============================================
- * 旧型定義（後方互換性のため一時的に残す）
- * @deprecated 新しいAppModule/AppMenu型を使用してください
- * ============================================
- */
-
-/**
- * @deprecated Use AppMenu instead
- */
-export interface LegacyAppModule {
-  id: string;
-  name: string;
-  nameJa: string;
-  icon: ReactNode;
-  path: string;
-  menuGroup: MenuGroupId;
-  requiredRoles?: Role[];
-  requiredPermissions?: string[];
-  requiredPositions?: string[];
-  order: number;
-  description?: string;
-  enabled: boolean;
-}

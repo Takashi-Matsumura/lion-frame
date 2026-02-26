@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { ApiError, requireAdmin } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { AuditService } from "@/lib/services/audit-service";
 
@@ -12,12 +12,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const session = await auth();
-
-    if (!session || session.user.role !== "ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
+    const session = await requireAdmin();
     const { id } = await params;
 
     const announcement = await prisma.announcement.findUnique({
@@ -34,14 +29,14 @@ export async function GET(
     });
 
     if (!announcement) {
-      return NextResponse.json(
-        { error: "Announcement not found" },
-        { status: 404 },
-      );
+      throw ApiError.notFound("Announcement not found", "アナウンスが見つかりません");
     }
 
     return NextResponse.json({ announcement });
   } catch (error) {
+    if (error instanceof ApiError) {
+      return NextResponse.json(error.toJSON(), { status: error.status });
+    }
     console.error("Error fetching announcement:", error);
     return NextResponse.json(
       { error: "Failed to fetch announcement" },
@@ -59,12 +54,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const session = await auth();
-
-    if (!session || session.user.role !== "ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
+    const session = await requireAdmin();
     const { id } = await params;
     const body = await request.json();
     const {
@@ -104,6 +94,9 @@ export async function PATCH(
 
     return NextResponse.json({ success: true, announcement });
   } catch (error) {
+    if (error instanceof ApiError) {
+      return NextResponse.json(error.toJSON(), { status: error.status });
+    }
     console.error("Error updating announcement:", error);
     return NextResponse.json(
       { error: "Failed to update announcement" },
@@ -121,12 +114,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const session = await auth();
-
-    if (!session || session.user.role !== "ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
+    const session = await requireAdmin();
     const { id } = await params;
 
     const announcement = await prisma.announcement.findUnique({
@@ -134,10 +122,7 @@ export async function DELETE(
     });
 
     if (!announcement) {
-      return NextResponse.json(
-        { error: "Announcement not found" },
-        { status: 404 },
-      );
+      throw ApiError.notFound("Announcement not found", "アナウンスが見つかりません");
     }
 
     await prisma.announcement.delete({
@@ -156,6 +141,9 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
+    if (error instanceof ApiError) {
+      return NextResponse.json(error.toJSON(), { status: error.status });
+    }
     console.error("Error deleting announcement:", error);
     return NextResponse.json(
       { error: "Failed to delete announcement" },

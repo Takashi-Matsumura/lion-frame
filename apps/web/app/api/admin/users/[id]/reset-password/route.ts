@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import bcrypt from "bcryptjs";
-import { type NextRequest, NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { NextResponse } from "next/server";
+import { ApiError, requireAdmin } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { AuditService } from "@/lib/services/audit-service";
 
@@ -16,26 +16,18 @@ import { AuditService } from "@/lib/services/audit-service";
  * - 自分自身のリセットは不可
  */
 export async function POST(
-  _request: NextRequest,
+  _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const session = await auth();
-
-    if (!session || session.user.role !== "ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
+    const session = await requireAdmin();
     const { id } = await params;
 
     // 自分自身のリセットは禁止
     if (id === session.user.id) {
-      return NextResponse.json(
-        {
-          error: "Cannot reset your own password",
-          errorJa: "自分自身のパスワードはリセットできません",
-        },
-        { status: 400 },
+      throw ApiError.badRequest(
+        "Cannot reset your own password",
+        "自分自身のパスワードはリセットできません",
       );
     }
 
@@ -46,10 +38,7 @@ export async function POST(
     });
 
     if (!user) {
-      return NextResponse.json(
-        { error: "User not found", errorJa: "ユーザが見つかりません" },
-        { status: 404 },
-      );
+      throw ApiError.notFound("User not found", "ユーザが見つかりません");
     }
 
     // 8文字のランダム仮パスワードを生成（英数字）
@@ -90,12 +79,12 @@ export async function POST(
       temporaryPassword,
     });
   } catch (error) {
+    if (error instanceof ApiError) {
+      return NextResponse.json(error.toJSON(), { status: error.status });
+    }
     console.error("Error resetting password:", error);
     return NextResponse.json(
-      {
-        error: "Failed to reset password",
-        errorJa: "パスワードのリセットに失敗しました",
-      },
+      { error: "Internal server error" },
       { status: 500 },
     );
   }

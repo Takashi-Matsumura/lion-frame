@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { ApiError, requireAdmin } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 
 /**
@@ -11,11 +11,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const session = await auth();
-
-    if (!session || session.user.role !== "ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    await requireAdmin();
 
     const { id } = await params;
     const body = await request.json();
@@ -26,10 +22,7 @@ export async function PATCH(
     });
 
     if (!existing) {
-      return NextResponse.json(
-        { error: "Position not found" },
-        { status: 404 },
-      );
+      throw ApiError.notFound("Position not found");
     }
 
     // コード変更時の重複チェック
@@ -38,10 +31,7 @@ export async function PATCH(
         where: { code },
       });
       if (duplicate) {
-        return NextResponse.json(
-          { error: "Position code already exists" },
-          { status: 409 },
-        );
+        throw ApiError.conflict("Position code already exists");
       }
     }
 
@@ -61,11 +51,11 @@ export async function PATCH(
 
     return NextResponse.json({ position });
   } catch (error) {
+    if (error instanceof ApiError) {
+      return NextResponse.json(error.toJSON(), { status: error.status });
+    }
     console.error("Error updating position:", error);
-    return NextResponse.json(
-      { error: "Failed to update position" },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
 
@@ -78,11 +68,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const session = await auth();
-
-    if (!session || session.user.role !== "ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    await requireAdmin();
 
     const { id } = await params;
 
@@ -91,10 +77,7 @@ export async function DELETE(
     });
 
     if (!existing) {
-      return NextResponse.json(
-        { error: "Position not found" },
-        { status: 404 },
-      );
+      throw ApiError.notFound("Position not found");
     }
 
     // 使用中チェック: この役職コードを持つ社員がいるか
@@ -104,10 +87,7 @@ export async function DELETE(
 
     if (employeeCount > 0) {
       return NextResponse.json(
-        {
-          error: "Position is in use",
-          employeeCount,
-        },
+        { error: "Position is in use", employeeCount },
         { status: 409 },
       );
     }
@@ -118,10 +98,10 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
+    if (error instanceof ApiError) {
+      return NextResponse.json(error.toJSON(), { status: error.status });
+    }
     console.error("Error deleting position:", error);
-    return NextResponse.json(
-      { error: "Failed to delete position" },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

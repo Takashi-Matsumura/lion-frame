@@ -1,5 +1,4 @@
-import { NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { apiHandler, ApiError } from "@/lib/api";
 import { parseXlsxBuffer } from "@/lib/importers/organization/xlsx-parser";
 import { processEmployeeDataWithDeduplication } from "@/lib/importers/organization/parser";
 import type {
@@ -16,248 +15,217 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
  *
  * XLSXファイルをアップロードしてインポートプレビュー（差分確認）を取得
  */
-export async function POST(request: Request) {
-  try {
-    const session = await auth();
+export const POST = apiHandler(async (request) => {
+  // FormDataからファイルと組織IDを取得
+  const formData = await request.formData();
+  const file = formData.get("file") as File | null;
+  const organizationId = formData.get("organizationId") as string | null;
 
-    if (!session || session.user.role !== "ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+  if (!file || !(file instanceof File)) {
+    throw ApiError.badRequest("ファイルがアップロードされていません");
+  }
 
-    // FormDataからファイルと組織IDを取得
-    const formData = await request.formData();
-    const file = formData.get("file") as File | null;
-    const organizationId = formData.get("organizationId") as string | null;
+  if (!file.name.endsWith(".xlsx")) {
+    throw ApiError.badRequest("XLSXファイルのみ対応しています");
+  }
 
-    if (!file || !(file instanceof File)) {
-      return NextResponse.json(
-        { error: "ファイルがアップロードされていません" },
-        { status: 400 },
-      );
-    }
+  if (file.size > MAX_FILE_SIZE) {
+    throw ApiError.badRequest("ファイルサイズが大きすぎます（最大: 10MB）");
+  }
 
-    if (!file.name.endsWith(".xlsx")) {
-      return NextResponse.json(
-        { error: "XLSXファイルのみ対応しています" },
-        { status: 400 },
-      );
-    }
+  if (!organizationId) {
+    throw ApiError.badRequest("Organization ID is required");
+  }
 
-    if (file.size > MAX_FILE_SIZE) {
-      return NextResponse.json(
-        { error: "ファイルサイズが大きすぎます（最大: 10MB）" },
-        { status: 400 },
-      );
-    }
+  // ファイルのマジックバイト検証（XLSX = PKZIPヘッダー）
+  const arrayBuffer = await file.arrayBuffer();
+  const bytes = new Uint8Array(arrayBuffer);
+  if (
+    bytes.length < 4 ||
+    bytes[0] !== 0x50 ||
+    bytes[1] !== 0x4b ||
+    bytes[2] !== 0x03 ||
+    bytes[3] !== 0x04
+  ) {
+    throw ApiError.badRequest("不正なXLSXファイルです");
+  }
 
-    if (!organizationId) {
-      return NextResponse.json(
-        { error: "Organization ID is required" },
-        { status: 400 },
-      );
-    }
+  // 組織の存在確認
+  const organization = await prisma.organization.findUnique({
+    where: { id: organizationId },
+  });
 
-    // ファイルのマジックバイト検証（XLSX = PKZIPヘッダー）
-    const arrayBuffer = await file.arrayBuffer();
-    const bytes = new Uint8Array(arrayBuffer);
-    if (
-      bytes.length < 4 ||
-      bytes[0] !== 0x50 ||
-      bytes[1] !== 0x4b ||
-      bytes[2] !== 0x03 ||
-      bytes[3] !== 0x04
-    ) {
-      return NextResponse.json(
-        { error: "不正なXLSXファイルです" },
-        { status: 400 },
-      );
-    }
+  if (!organization) {
+    throw ApiError.notFound("Organization not found");
+  }
 
-    // 組織の存在確認
-    const organization = await prisma.organization.findUnique({
-      where: { id: organizationId },
-    });
+  // XLSXをサーバーサイドでパース
+  const { rows, warnings } = await parseXlsxBuffer(
+    Buffer.from(arrayBuffer),
+  );
 
-    if (!organization) {
-      return NextResponse.json(
-        { error: "Organization not found" },
-        { status: 404 },
-      );
-    }
+  // データを処理（重複除去を含む）
+  const { employees: processedData, excludedDuplicates } =
+    processEmployeeDataWithDeduplication(rows);
 
-    // XLSXをサーバーサイドでパース
-    const { rows, warnings } = await parseXlsxBuffer(
-      Buffer.from(arrayBuffer),
-    );
+  // 除外された重複社員の情報を変換
+  const excludedDuplicateInfos: ExcludedDuplicateInfo[] =
+    excludedDuplicates.map((dup) => ({
+      employeeId: dup.employee.employeeId,
+      name: dup.employee.name,
+      position: dup.employee.position,
+      reason: dup.reason,
+      keptEmployeeId: dup.keptEmployeeId,
+    }));
 
-    // データを処理（重複除去を含む）
-    const { employees: processedData, excludedDuplicates } =
-      processEmployeeDataWithDeduplication(rows);
+  // 既存社員を取得
+  const existingEmployees = await prisma.employee.findMany({
+    where: { organizationId },
+    include: {
+      department: true,
+      section: true,
+      course: true,
+    },
+  });
 
-    // 除外された重複社員の情報を変換
-    const excludedDuplicateInfos: ExcludedDuplicateInfo[] =
-      excludedDuplicates.map((dup) => ({
-        employeeId: dup.employee.employeeId,
-        name: dup.employee.name,
-        position: dup.employee.position,
-        reason: dup.reason,
-        keptEmployeeId: dup.keptEmployeeId,
-      }));
+  const existingMap = new Map(
+    existingEmployees.map((emp) => [emp.employeeId, emp]),
+  );
+  const importedIds = new Set(processedData.map((p) => p.employeeId));
 
-    // 既存社員を取得
-    const existingEmployees = await prisma.employee.findMany({
-      where: { organizationId },
-      include: {
-        department: true,
-        section: true,
-        course: true,
-      },
-    });
+  // プレビュー結果を構築
+  const preview: PreviewResult = {
+    totalRecords: processedData.length,
+    newEmployees: [],
+    updatedEmployees: [],
+    transferredEmployees: [],
+    retiredEmployees: [],
+    excludedDuplicates: excludedDuplicateInfos,
+    errors: [],
+  };
 
-    const existingMap = new Map(
-      existingEmployees.map((emp) => [emp.employeeId, emp]),
-    );
-    const importedIds = new Set(processedData.map((p) => p.employeeId));
+  for (const processed of processedData) {
+    const existing = existingMap.get(processed.employeeId);
 
-    // プレビュー結果を構築
-    const preview: PreviewResult = {
-      totalRecords: processedData.length,
-      newEmployees: [],
-      updatedEmployees: [],
-      transferredEmployees: [],
-      retiredEmployees: [],
-      excludedDuplicates: excludedDuplicateInfos,
-      errors: [],
-    };
+    if (!existing) {
+      preview.newEmployees.push(processed);
+    } else {
+      // 既存社員 - 変更を検出
+      const changes: FieldChange[] = [];
 
-    for (const processed of processedData) {
-      const existing = existingMap.get(processed.employeeId);
+      const fieldMappings: {
+        field: keyof typeof processed;
+        fieldJa: string;
+        existingField: keyof typeof existing;
+      }[] = [
+        { field: "name", fieldJa: "氏名", existingField: "name" },
+        {
+          field: "nameKana",
+          fieldJa: "氏名カナ",
+          existingField: "nameKana",
+        },
+        { field: "email", fieldJa: "メールアドレス", existingField: "email" },
+        { field: "phone", fieldJa: "電話番号", existingField: "phone" },
+        { field: "position", fieldJa: "役職", existingField: "position" },
+        {
+          field: "positionCode",
+          fieldJa: "役職コード",
+          existingField: "positionCode",
+        },
+        {
+          field: "qualificationGrade",
+          fieldJa: "資格等級",
+          existingField: "qualificationGrade",
+        },
+        {
+          field: "qualificationGradeCode",
+          fieldJa: "資格等級コード",
+          existingField: "qualificationGradeCode",
+        },
+        {
+          field: "employmentType",
+          fieldJa: "雇用区分",
+          existingField: "employmentType",
+        },
+        {
+          field: "employmentTypeCode",
+          fieldJa: "雇用区分コード",
+          existingField: "employmentTypeCode",
+        },
+      ];
 
-      if (!existing) {
-        preview.newEmployees.push(processed);
-      } else {
-        // 既存社員 - 変更を検出
-        const changes: FieldChange[] = [];
-
-        const fieldMappings: {
-          field: keyof typeof processed;
-          fieldJa: string;
-          existingField: keyof typeof existing;
-        }[] = [
-          { field: "name", fieldJa: "氏名", existingField: "name" },
-          {
-            field: "nameKana",
-            fieldJa: "氏名カナ",
-            existingField: "nameKana",
-          },
-          { field: "email", fieldJa: "メールアドレス", existingField: "email" },
-          { field: "phone", fieldJa: "電話番号", existingField: "phone" },
-          { field: "position", fieldJa: "役職", existingField: "position" },
-          {
-            field: "positionCode",
-            fieldJa: "役職コード",
-            existingField: "positionCode",
-          },
-          {
-            field: "qualificationGrade",
-            fieldJa: "資格等級",
-            existingField: "qualificationGrade",
-          },
-          {
-            field: "qualificationGradeCode",
-            fieldJa: "資格等級コード",
-            existingField: "qualificationGradeCode",
-          },
-          {
-            field: "employmentType",
-            fieldJa: "雇用区分",
-            existingField: "employmentType",
-          },
-          {
-            field: "employmentTypeCode",
-            fieldJa: "雇用区分コード",
-            existingField: "employmentTypeCode",
-          },
-        ];
-
-        for (const mapping of fieldMappings) {
-          const oldValue = existing[mapping.existingField] ?? "";
-          const newValue = processed[mapping.field] ?? "";
-          if (String(oldValue) !== String(newValue)) {
-            changes.push({
-              fieldName: mapping.field,
-              fieldNameJa: mapping.fieldJa,
-              oldValue: String(oldValue),
-              newValue: String(newValue),
-            });
-          }
-        }
-
-        // 所属変更の検出
-        const oldDepartment = existing.department?.name || "";
-        const newDepartment = processed.department || "";
-        const oldSection = existing.section?.name || "";
-        const newSection = processed.section || "";
-        const oldCourse = existing.course?.name || "";
-        const newCourse = processed.course || "";
-
-        if (oldDepartment !== newDepartment) {
-          preview.transferredEmployees.push({
-            employee: processed,
-            oldDepartment,
-            newDepartment,
-          });
-        } else if (oldSection !== newSection || oldCourse !== newCourse) {
-          preview.transferredEmployees.push({
-            employee: processed,
-            oldDepartment:
-              `${oldDepartment}/${oldSection}/${oldCourse}`.replace(
-                /\/+$/,
-                "",
-              ),
-            newDepartment:
-              `${newDepartment}/${newSection}/${newCourse}`.replace(
-                /\/+$/,
-                "",
-              ),
-          });
-        }
-
-        if (changes.length > 0) {
-          preview.updatedEmployees.push({
-            employee: processed,
-            changes,
+      for (const mapping of fieldMappings) {
+        const oldValue = existing[mapping.existingField] ?? "";
+        const newValue = processed[mapping.field] ?? "";
+        if (String(oldValue) !== String(newValue)) {
+          changes.push({
+            fieldName: mapping.field,
+            fieldNameJa: mapping.fieldJa,
+            oldValue: String(oldValue),
+            newValue: String(newValue),
           });
         }
       }
-    }
 
-    // 退職社員の検出
-    for (const existing of existingEmployees) {
-      if (existing.isActive && !importedIds.has(existing.employeeId)) {
-        preview.retiredEmployees.push({
-          employeeId: existing.employeeId,
-          name: existing.name,
-          department: existing.department?.name || "",
+      // 所属変更の検出
+      const oldDepartment = existing.department?.name || "";
+      const newDepartment = processed.department || "";
+      const oldSection = existing.section?.name || "";
+      const newSection = processed.section || "";
+      const oldCourse = existing.course?.name || "";
+      const newCourse = processed.course || "";
+
+      if (oldDepartment !== newDepartment) {
+        preview.transferredEmployees.push({
+          employee: processed,
+          oldDepartment,
+          newDepartment,
+        });
+      } else if (oldSection !== newSection || oldCourse !== newCourse) {
+        preview.transferredEmployees.push({
+          employee: processed,
+          oldDepartment:
+            `${oldDepartment}/${oldSection}/${oldCourse}`.replace(
+              /\/+$/,
+              "",
+            ),
+          newDepartment:
+            `${newDepartment}/${newSection}/${newCourse}`.replace(
+              /\/+$/,
+              "",
+            ),
+        });
+      }
+
+      if (changes.length > 0) {
+        preview.updatedEmployees.push({
+          employee: processed,
+          changes,
         });
       }
     }
-
-    return NextResponse.json({
-      preview,
-      warnings,
-      summary: {
-        new: preview.newEmployees.length,
-        updated: preview.updatedEmployees.length,
-        transferred: preview.transferredEmployees.length,
-        retired: preview.retiredEmployees.length,
-        errors: preview.errors.length,
-      },
-    });
-  } catch (error) {
-    console.error("Error generating preview:", error);
-    const message =
-      error instanceof Error ? error.message : "Failed to generate preview";
-    return NextResponse.json({ error: message }, { status: 500 });
   }
-}
+
+  // 退職社員の検出
+  for (const existing of existingEmployees) {
+    if (existing.isActive && !importedIds.has(existing.employeeId)) {
+      preview.retiredEmployees.push({
+        employeeId: existing.employeeId,
+        name: existing.name,
+        department: existing.department?.name || "",
+      });
+    }
+  }
+
+  return {
+    preview,
+    warnings,
+    summary: {
+      new: preview.newEmployees.length,
+      updated: preview.updatedEmployees.length,
+      transferred: preview.transferredEmployees.length,
+      retired: preview.retiredEmployees.length,
+      errors: preview.errors.length,
+    },
+  };
+}, { admin: true });

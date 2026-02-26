@@ -1,6 +1,5 @@
 import type { ChangeType } from "@prisma/client";
-import { type NextRequest, NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { apiHandler, ApiError } from "@/lib/api";
 import { HistoryRecorder } from "@/lib/history";
 
 /**
@@ -17,112 +16,81 @@ import { HistoryRecorder } from "@/lib/history";
  * - batchId: バッチID
  * - limit: 取得件数（デフォルト: 50）
  */
-export async function GET(request: NextRequest) {
-  try {
-    const session = await auth();
+export const GET = apiHandler(async (request) => {
+  const { searchParams } = new URL(request.url);
+  const entityType = searchParams.get("entityType");
+  const entityId = searchParams.get("entityId");
+  const changeType = searchParams.get("changeType") as ChangeType | null;
+  const startDate = searchParams.get("startDate");
+  const endDate = searchParams.get("endDate");
+  const batchId = searchParams.get("batchId");
+  const limit = Number.parseInt(searchParams.get("limit") || "50", 10);
 
-    if (!session || session.user.role !== "ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const searchParams = request.nextUrl.searchParams;
-    const entityType = searchParams.get("entityType");
-    const entityId = searchParams.get("entityId");
-    const changeType = searchParams.get("changeType") as ChangeType | null;
-    const startDate = searchParams.get("startDate");
-    const endDate = searchParams.get("endDate");
-    const batchId = searchParams.get("batchId");
-    const limit = Number.parseInt(searchParams.get("limit") || "50", 10);
-
-    // バリデーション
-    if (limit < 1 || limit > 500) {
-      return NextResponse.json(
-        { error: "Invalid limit parameter" },
-        { status: 400 },
-      );
-    }
-
-    let logs: Awaited<ReturnType<typeof HistoryRecorder.getRecentChangeLogs>>;
-
-    if (batchId) {
-      // バッチIDで検索
-      logs = await HistoryRecorder.getChangeLogsByBatchId(batchId);
-    } else if (entityType && entityId) {
-      // エンティティ指定で検索
-      logs = await HistoryRecorder.getEntityHistory(
-        entityType as
-          | "Employee"
-          | "Department"
-          | "Section"
-          | "Course"
-          | "Organization",
-        entityId,
-        limit,
-      );
-    } else if (startDate && endDate) {
-      // 期間指定で検索
-      logs = await HistoryRecorder.getChangeLogsByDateRange(
-        new Date(startDate),
-        new Date(endDate),
-        entityType as
-          | "Employee"
-          | "Department"
-          | "Section"
-          | "Course"
-          | "Organization"
-          | undefined,
-      );
-    } else if (changeType) {
-      // 変更タイプで検索
-      logs = await HistoryRecorder.getChangeLogsByType(changeType, limit);
-    } else {
-      // 最新の履歴を取得
-      logs = await HistoryRecorder.getRecentChangeLogs(limit);
-    }
-
-    return NextResponse.json({
-      logs,
-      count: logs.length,
-    });
-  } catch (error) {
-    console.error("Error fetching history:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch history" },
-      { status: 500 },
-    );
+  // バリデーション
+  if (limit < 1 || limit > 500) {
+    throw ApiError.badRequest("Invalid limit parameter");
   }
-}
+
+  let logs: Awaited<ReturnType<typeof HistoryRecorder.getRecentChangeLogs>>;
+
+  if (batchId) {
+    // バッチIDで検索
+    logs = await HistoryRecorder.getChangeLogsByBatchId(batchId);
+  } else if (entityType && entityId) {
+    // エンティティ指定で検索
+    logs = await HistoryRecorder.getEntityHistory(
+      entityType as
+        | "Employee"
+        | "Department"
+        | "Section"
+        | "Course"
+        | "Organization",
+      entityId,
+      limit,
+    );
+  } else if (startDate && endDate) {
+    // 期間指定で検索
+    logs = await HistoryRecorder.getChangeLogsByDateRange(
+      new Date(startDate),
+      new Date(endDate),
+      entityType as
+        | "Employee"
+        | "Department"
+        | "Section"
+        | "Course"
+        | "Organization"
+        | undefined,
+    );
+  } else if (changeType) {
+    // 変更タイプで検索
+    logs = await HistoryRecorder.getChangeLogsByType(changeType, limit);
+  } else {
+    // 最新の履歴を取得
+    logs = await HistoryRecorder.getRecentChangeLogs(limit);
+  }
+
+  return {
+    logs,
+    count: logs.length,
+  };
+}, { admin: true });
 
 /**
- * GET /api/admin/organization/history/statistics
+ * POST /api/admin/organization/history
  *
  * 変更統計を取得
  */
-export async function POST(request: Request) {
-  try {
-    const session = await auth();
+export const POST = apiHandler(async (request) => {
+  const body = await request.json();
+  const { startDate, endDate } = body as {
+    startDate?: string;
+    endDate?: string;
+  };
 
-    if (!session || session.user.role !== "ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+  const statistics = await HistoryRecorder.getChangeStatistics(
+    startDate ? new Date(startDate) : undefined,
+    endDate ? new Date(endDate) : undefined,
+  );
 
-    const body = await request.json();
-    const { startDate, endDate } = body as {
-      startDate?: string;
-      endDate?: string;
-    };
-
-    const statistics = await HistoryRecorder.getChangeStatistics(
-      startDate ? new Date(startDate) : undefined,
-      endDate ? new Date(endDate) : undefined,
-    );
-
-    return NextResponse.json({ statistics });
-  } catch (error) {
-    console.error("Error fetching statistics:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch statistics" },
-      { status: 500 },
-    );
-  }
-}
+  return { statistics };
+}, { admin: true });

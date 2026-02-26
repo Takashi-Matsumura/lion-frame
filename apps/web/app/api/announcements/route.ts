@@ -1,23 +1,16 @@
-import { NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { apiHandler } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 
 /**
  * GET /api/announcements
  * アクティブなアナウンスを取得（認証不要、ログイン済みなら非表示分を除外）
  */
-export async function GET() {
-  try {
+export const GET = apiHandler(
+  async (_request, session) => {
     const now = new Date();
 
-    // セッションを取得（未認証でもエラーにしない）
-    let userId: string | null = null;
-    try {
-      const session = await auth();
-      userId = session?.user?.id ?? null;
-    } catch {
-      // 未認証でも続行
-    }
+    // セッションからユーザーIDを取得（publicなのでsessionはnullの可能性あり）
+    const userId = session?.user?.id ?? null;
 
     // 非表示にしたアナウンスIDを取得
     let dismissedIds: string[] = [];
@@ -54,12 +47,7 @@ export async function GET() {
       },
     });
 
-    return NextResponse.json({ announcements });
-  } catch (error) {
-    console.error("Error fetching announcements:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch announcements" },
-      { status: 500 },
-    );
-  }
-}
+    return { announcements };
+  },
+  { public: true },
+);

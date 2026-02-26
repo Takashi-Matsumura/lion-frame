@@ -1,8 +1,7 @@
 import { access, mkdir } from "node:fs/promises";
 import { constants } from "node:fs";
 import { join } from "node:path";
-import { NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { apiHandler } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { AuditService } from "@/lib/services/audit-service";
 import { NotificationService } from "@/lib/services/notification-service";
@@ -57,13 +56,7 @@ async function runDiagnostic(
  *
  * 各診断項目を個別の監査ログエントリとして記録する。
  */
-export async function POST() {
-  const session = await auth();
-
-  if (!session || session.user.role !== "ADMIN") {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export const POST = apiHandler(async (_request, session) => {
   const results: DiagnosticResult[] = [];
 
   // 1. DB Connection
@@ -265,9 +258,9 @@ export async function POST() {
     totalDurationMs: results.reduce((sum, r) => sum + r.durationMs, 0),
   };
 
-  return NextResponse.json({
+  return {
     results,
     summary,
     timestamp: new Date().toISOString(),
-  });
-}
+  };
+}, { admin: true });

@@ -220,7 +220,7 @@ describe("POST /api/ai/services/extract", () => {
 
       expect(response.status).toBe(500);
       const json = await response.json();
-      expect(json.error).toBe("Extraction failed");
+      expect(json.error).toBe("Internal server error");
     });
   });
 });

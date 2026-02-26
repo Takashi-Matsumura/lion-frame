@@ -148,7 +148,7 @@ describe("POST /api/ai/services/summarize", () => {
 
       expect(response.status).toBe(500);
       const json = await response.json();
-      expect(json.error).toBe("Summarization failed");
+      expect(json.error).toBe("Internal server error");
     });
   });
 });

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { ApiError, requireAuth } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 
 /**
@@ -12,12 +12,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const session = await auth();
-
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
+    await requireAuth();
     const { id } = await params;
 
     const employee = await prisma.employee.findUnique({
@@ -60,10 +55,7 @@ export async function GET(
     });
 
     if (!employee) {
-      return NextResponse.json(
-        { error: "Employee not found" },
-        { status: 404 },
-      );
+      throw ApiError.notFound("Employee not found");
     }
 
     // PositionMasterからcolorを取得
@@ -103,10 +95,10 @@ export async function GET(
       },
     });
   } catch (error) {
+    if (error instanceof ApiError) {
+      return NextResponse.json(error.toJSON(), { status: error.status });
+    }
     console.error("Error fetching employee:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch employee" },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

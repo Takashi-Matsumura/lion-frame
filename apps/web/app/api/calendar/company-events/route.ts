@@ -1,21 +1,15 @@
-import { type NextRequest, NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { apiHandler, ApiError } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 
 // GET /api/calendar/company-events - 会社イベント一覧取得
-export async function GET(request: NextRequest) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export const GET = apiHandler(async (request) => {
   const { searchParams } = new URL(request.url);
   const startDate = searchParams.get("startDate");
   const endDate = searchParams.get("endDate");
   const category = searchParams.get("category");
 
   const where: {
-    startDate?: { gte?: Date; lte?: Date };
+    startDate?: { lte?: Date };
     endDate?: { gte?: Date };
     category?: string;
   } = {};
@@ -47,62 +41,42 @@ export async function GET(request: NextRequest) {
     departmentName: e.department?.name ?? null,
   }));
 
-  return NextResponse.json({ events: formattedEvents });
-}
+  return { events: formattedEvents };
+});
 
 // POST /api/calendar/company-events - 会社イベント作成
-export async function POST(request: NextRequest) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  if (session.user.role !== "ADMIN") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
+export const POST = apiHandler(async (request) => {
   const body = await request.json();
   const { title, titleEn, startDate, endDate, category, description, departmentId } = body;
 
   if (!title || !startDate || !endDate) {
-    return NextResponse.json(
-      { error: "Title, startDate and endDate are required" },
-      { status: 400 },
-    );
+    throw ApiError.badRequest("Title, startDate and endDate are required");
   }
 
-  try {
-    const event = await prisma.companyEvent.create({
-      data: {
-        title,
-        titleEn: titleEn || null,
-        startDate: new Date(startDate),
-        endDate: new Date(endDate),
-        category: category || "event",
-        description: description || null,
-        departmentId: departmentId || null,
-      },
-      include: { department: { select: { id: true, name: true } } },
-    });
+  const event = await prisma.companyEvent.create({
+    data: {
+      title,
+      titleEn: titleEn || null,
+      startDate: new Date(startDate),
+      endDate: new Date(endDate),
+      category: category || "event",
+      description: description || null,
+      departmentId: departmentId || null,
+    },
+    include: { department: { select: { id: true, name: true } } },
+  });
 
-    return NextResponse.json({
-      event: {
-        id: event.id,
-        title: event.title,
-        titleEn: event.titleEn,
-        startDate: event.startDate.toISOString().split("T")[0],
-        endDate: event.endDate.toISOString().split("T")[0],
-        category: event.category,
-        description: event.description,
-        departmentId: event.departmentId,
-        departmentName: event.department?.name ?? null,
-      },
-    });
-  } catch (error) {
-    console.error("Failed to create company event:", error);
-    return NextResponse.json(
-      { error: "Failed to create company event" },
-      { status: 500 },
-    );
-  }
-}
+  return {
+    event: {
+      id: event.id,
+      title: event.title,
+      titleEn: event.titleEn,
+      startDate: event.startDate.toISOString().split("T")[0],
+      endDate: event.endDate.toISOString().split("T")[0],
+      category: event.category,
+      description: event.description,
+      departmentId: event.departmentId,
+      departmentName: event.department?.name ?? null,
+    },
+  };
+}, { admin: true });

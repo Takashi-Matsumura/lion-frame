@@ -1,5 +1,4 @@
-import { NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { ApiError, apiHandler } from "@/lib/api";
 import { AIService, type ExtractField } from "@/lib/core-modules/ai";
 
 /**
@@ -38,75 +37,50 @@ import { AIService, type ExtractField } from "@/lib/core-modules/ai";
  * }
  * ```
  */
-export async function POST(request: Request) {
-  try {
-    const session = await auth();
+export const POST = apiHandler(async (request) => {
+  const body = await request.json();
+  const { text, schema, language } = body;
 
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const body = await request.json();
-    const { text, schema, language } = body;
-
-    // バリデーション
-    if (!text || typeof text !== "string") {
-      return NextResponse.json(
-        { error: "text is required and must be a string" },
-        { status: 400 },
-      );
-    }
-
-    if (!schema || !Array.isArray(schema) || schema.length === 0) {
-      return NextResponse.json(
-        { error: "schema is required and must be a non-empty array" },
-        { status: 400 },
-      );
-    }
-
-    // スキーマフィールドのバリデーション
-    const validTypes = ["string", "number", "boolean", "array"];
-    for (const field of schema as ExtractField[]) {
-      if (!field.name || typeof field.name !== "string") {
-        return NextResponse.json(
-          { error: "Each schema field must have a 'name' string" },
-          { status: 400 },
-        );
-      }
-      if (!field.description || typeof field.description !== "string") {
-        return NextResponse.json(
-          { error: "Each schema field must have a 'description' string" },
-          { status: 400 },
-        );
-      }
-      if (!field.type || !validTypes.includes(field.type)) {
-        return NextResponse.json(
-          {
-            error: `Each schema field must have a 'type' of: ${validTypes.join(", ")}`,
-          },
-          { status: 400 },
-        );
-      }
-    }
-
-    if (language !== undefined && !["ja", "en"].includes(language)) {
-      return NextResponse.json(
-        { error: "language must be 'ja' or 'en'" },
-        { status: 400 },
-      );
-    }
-
-    const response = await AIService.extract({
-      text,
-      schema,
-      language,
-    });
-
-    return NextResponse.json(response);
-  } catch (error) {
-    console.error("Error in AI extract:", error);
-    const message =
-      error instanceof Error ? error.message : "Failed to extract data";
-    return NextResponse.json({ error: message }, { status: 500 });
+  // バリデーション
+  if (!text || typeof text !== "string") {
+    throw ApiError.badRequest("text is required and must be a string");
   }
-}
+
+  if (!schema || !Array.isArray(schema) || schema.length === 0) {
+    throw ApiError.badRequest(
+      "schema is required and must be a non-empty array",
+    );
+  }
+
+  // スキーマフィールドのバリデーション
+  const validTypes = ["string", "number", "boolean", "array"];
+  for (const field of schema as ExtractField[]) {
+    if (!field.name || typeof field.name !== "string") {
+      throw ApiError.badRequest(
+        "Each schema field must have a 'name' string",
+      );
+    }
+    if (!field.description || typeof field.description !== "string") {
+      throw ApiError.badRequest(
+        "Each schema field must have a 'description' string",
+      );
+    }
+    if (!field.type || !validTypes.includes(field.type)) {
+      throw ApiError.badRequest(
+        `Each schema field must have a 'type' of: ${validTypes.join(", ")}`,
+      );
+    }
+  }
+
+  if (language !== undefined && !["ja", "en"].includes(language)) {
+    throw ApiError.badRequest("language must be 'ja' or 'en'");
+  }
+
+  const response = await AIService.extract({
+    text,
+    schema,
+    language,
+  });
+
+  return response;
+});

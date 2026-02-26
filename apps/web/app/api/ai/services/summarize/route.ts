@@ -1,5 +1,4 @@
-import { NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { ApiError, apiHandler } from "@/lib/api";
 import { AIService } from "@/lib/core-modules/ai";
 
 /**
@@ -27,50 +26,28 @@ import { AIService } from "@/lib/core-modules/ai";
  * }
  * ```
  */
-export async function POST(request: Request) {
-  try {
-    const session = await auth();
+export const POST = apiHandler(async (request) => {
+  const body = await request.json();
+  const { text, length, language } = body;
 
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const body = await request.json();
-    const { text, length, language } = body;
-
-    // バリデーション
-    if (!text || typeof text !== "string") {
-      return NextResponse.json(
-        { error: "text is required and must be a string" },
-        { status: 400 },
-      );
-    }
-
-    if (length !== undefined && !["short", "medium", "long"].includes(length)) {
-      return NextResponse.json(
-        { error: "length must be 'short', 'medium', or 'long'" },
-        { status: 400 },
-      );
-    }
-
-    if (language !== undefined && !["ja", "en"].includes(language)) {
-      return NextResponse.json(
-        { error: "language must be 'ja' or 'en'" },
-        { status: 400 },
-      );
-    }
-
-    const response = await AIService.summarize({
-      text,
-      length,
-      language,
-    });
-
-    return NextResponse.json(response);
-  } catch (error) {
-    console.error("Error in AI summarize:", error);
-    const message =
-      error instanceof Error ? error.message : "Failed to summarize text";
-    return NextResponse.json({ error: message }, { status: 500 });
+  // バリデーション
+  if (!text || typeof text !== "string") {
+    throw ApiError.badRequest("text is required and must be a string");
   }
-}
+
+  if (length !== undefined && !["short", "medium", "long"].includes(length)) {
+    throw ApiError.badRequest("length must be 'short', 'medium', or 'long'");
+  }
+
+  if (language !== undefined && !["ja", "en"].includes(language)) {
+    throw ApiError.badRequest("language must be 'ja' or 'en'");
+  }
+
+  const response = await AIService.summarize({
+    text,
+    length,
+    language,
+  });
+
+  return response;
+});

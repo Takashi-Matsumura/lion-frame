@@ -1,6 +1,4 @@
-import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
-import { auth } from "@/auth";
+import { apiHandler, ApiError } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 
 const SETTING_KEYS = [
@@ -18,12 +16,7 @@ const DEFAULTS: Record<string, string> = {
 };
 
 // GET /api/calendar/settings - カレンダー設定取得
-export async function GET() {
-  const session = await auth();
-  if (!session?.user?.id || session.user.role !== "ADMIN") {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export const GET = apiHandler(async () => {
   const rows = await prisma.systemSetting.findMany({
     where: { key: { in: [...SETTING_KEYS] } },
   });
@@ -33,21 +26,16 @@ export async function GET() {
     settings[row.key] = row.value;
   }
 
-  return NextResponse.json({ settings });
-}
+  return { settings };
+}, { admin: true });
 
 // PUT /api/calendar/settings - カレンダー設定更新
-export async function PUT(request: NextRequest) {
-  const session = await auth();
-  if (!session?.user?.id || session.user.role !== "ADMIN") {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export const PUT = apiHandler(async (request) => {
   const body = await request.json();
   const { settings } = body;
 
   if (!settings || typeof settings !== "object") {
-    return NextResponse.json({ error: "Invalid body" }, { status: 400 });
+    throw ApiError.badRequest("Invalid body");
   }
 
   for (const key of SETTING_KEYS) {
@@ -60,5 +48,5 @@ export async function PUT(request: NextRequest) {
     }
   }
 
-  return NextResponse.json({ success: true });
-}
+  return { success: true };
+}, { admin: true });

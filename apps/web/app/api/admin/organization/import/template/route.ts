@@ -1,6 +1,6 @@
 import ExcelJS from "exceljs";
 import { NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { ApiError, requireAdmin } from "@/lib/api";
 import { TEMPLATE_COLUMNS } from "@/lib/importers/organization/column-mapping";
 
 /**
@@ -10,11 +10,7 @@ import { TEMPLATE_COLUMNS } from "@/lib/importers/organization/column-mapping";
  */
 export async function GET() {
   try {
-    const session = await auth();
-
-    if (!session || session.user.role !== "ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    await requireAdmin();
 
     const workbook = new ExcelJS.Workbook();
     workbook.creator = "LionFrame";
@@ -74,6 +70,9 @@ export async function GET() {
       },
     });
   } catch (error) {
+    if (error instanceof ApiError) {
+      return NextResponse.json(error.toJSON(), { status: error.status });
+    }
     console.error("Error generating template:", error);
     return NextResponse.json(
       { error: "Failed to generate template" },

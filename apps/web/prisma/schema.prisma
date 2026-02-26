@@ -325,6 +325,7 @@ model Department {
   companyEvents  CompanyEvent[]
 
   @@unique([organizationId, name])
+  @@index([managerId])
 }
 
 // 部（Section）
@@ -343,6 +344,7 @@ model Section {
   courses      Course[]
 
   @@unique([departmentId, name])
+  @@index([managerId])
 }
 
 // 課（Course）
@@ -395,6 +397,8 @@ model Employee {
   managedSections    Section[]         @relation("SectionManager")
   managedCourses     Course[]          @relation("CourseManager")
   histories          EmployeeHistory[] @relation("EmployeeHistories")
+
+  @@index([positionCode])
 }
 
 // ========================================

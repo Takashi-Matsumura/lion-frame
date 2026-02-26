@@ -1,5 +1,4 @@
-import { NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { ApiError, apiHandler } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { AuditService } from "@/lib/services/audit-service";
 import { NotificationService } from "@/lib/services/notification-service";
@@ -9,32 +8,22 @@ import { verifyTotp } from "@/lib/totp";
  * POST /api/user/two-factor/disable
  * Disable 2FA after verifying the TOTP code
  */
-export async function POST(request: Request) {
-  const session = await auth();
-
-  if (!session?.user?.email) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export const POST = apiHandler(async (request, session) => {
   const body = await request.json();
   const { code } = body;
 
   if (!code) {
-    return NextResponse.json(
-      { error: "Verification code is required" },
-      { status: 400 },
-    );
+    throw ApiError.badRequest("Verification code is required");
   }
 
   const user = await prisma.user.findUnique({
-    where: { email: session.user.email },
+    where: { email: session.user.email! },
     select: { twoFactorEnabled: true, twoFactorSecret: true },
   });
 
   if (!user?.twoFactorEnabled || !user?.twoFactorSecret) {
-    return NextResponse.json(
-      { error: "Two-factor authentication is not enabled" },
-      { status: 400 },
+    throw ApiError.badRequest(
+      "Two-factor authentication is not enabled",
     );
   }
 
@@ -42,15 +31,12 @@ export async function POST(request: Request) {
   const isValid = verifyTotp(code, user.twoFactorSecret);
 
   if (!isValid) {
-    return NextResponse.json(
-      { error: "Invalid verification code" },
-      { status: 400 },
-    );
+    throw ApiError.badRequest("Invalid verification code");
   }
 
   // Disable 2FA
   const updatedUser = await prisma.user.update({
-    where: { email: session.user.email },
+    where: { email: session.user.email! },
     data: {
       twoFactorEnabled: false,
       twoFactorSecret: null,
@@ -77,5 +63,5 @@ export async function POST(request: Request) {
     console.error("[2FA] Failed to create notification:", err);
   });
 
-  return NextResponse.json({ success: true });
-}
+  return { success: true };
+});

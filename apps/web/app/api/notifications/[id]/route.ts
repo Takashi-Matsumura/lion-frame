@@ -1,5 +1,5 @@
-import { type NextRequest, NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { NextResponse } from "next/server";
+import { ApiError, requireAuth } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 
 /**
@@ -7,43 +7,45 @@ import { prisma } from "@/lib/prisma";
  * 通知の詳細を取得
  */
 export async function GET(
-  _request: NextRequest,
+  _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const session = await auth();
-  if (!session?.user?.email) {
+  try {
+    const session = await requireAuth();
+
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email! },
+      select: { id: true },
+    });
+
+    if (!user) {
+      throw ApiError.notFound("User not found", "ユーザーが見つかりません");
+    }
+
+    const { id } = await params;
+
+    const notification = await prisma.notification.findFirst({
+      where: { id, userId: user.id },
+    });
+
+    if (!notification) {
+      throw ApiError.notFound(
+        "Notification not found",
+        "通知が見つかりません",
+      );
+    }
+
+    return NextResponse.json({ notification });
+  } catch (error) {
+    if (error instanceof ApiError) {
+      return NextResponse.json(error.toJSON(), { status: error.status });
+    }
+    console.error("Failed to get notification:", error);
     return NextResponse.json(
-      { error: "Unauthorized", errorJa: "認証が必要です" },
-      { status: 401 },
+      { error: "Internal server error" },
+      { status: 500 },
     );
   }
-
-  const user = await prisma.user.findUnique({
-    where: { email: session.user.email },
-    select: { id: true },
-  });
-
-  if (!user) {
-    return NextResponse.json(
-      { error: "User not found", errorJa: "ユーザーが見つかりません" },
-      { status: 404 },
-    );
-  }
-
-  const { id } = await params;
-
-  const notification = await prisma.notification.findFirst({
-    where: { id, userId: user.id },
-  });
-
-  if (!notification) {
-    return NextResponse.json(
-      { error: "Notification not found", errorJa: "通知が見つかりません" },
-      { status: 404 },
-    );
-  }
-
-  return NextResponse.json({ notification });
 }
 
 /**
@@ -51,44 +53,35 @@ export async function GET(
  * 通知を更新（既読状態の変更）
  */
 export async function PATCH(
-  request: NextRequest,
+  request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const session = await auth();
-  if (!session?.user?.email) {
-    return NextResponse.json(
-      { error: "Unauthorized", errorJa: "認証が必要です" },
-      { status: 401 },
-    );
-  }
-
-  const user = await prisma.user.findUnique({
-    where: { email: session.user.email },
-    select: { id: true },
-  });
-
-  if (!user) {
-    return NextResponse.json(
-      { error: "User not found", errorJa: "ユーザーが見つかりません" },
-      { status: 404 },
-    );
-  }
-
-  const { id } = await params;
-
-  // 所有者確認
-  const existing = await prisma.notification.findFirst({
-    where: { id, userId: user.id },
-  });
-
-  if (!existing) {
-    return NextResponse.json(
-      { error: "Notification not found", errorJa: "通知が見つかりません" },
-      { status: 404 },
-    );
-  }
-
   try {
+    const session = await requireAuth();
+
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email! },
+      select: { id: true },
+    });
+
+    if (!user) {
+      throw ApiError.notFound("User not found", "ユーザーが見つかりません");
+    }
+
+    const { id } = await params;
+
+    // 所有者確認
+    const existing = await prisma.notification.findFirst({
+      where: { id, userId: user.id },
+    });
+
+    if (!existing) {
+      throw ApiError.notFound(
+        "Notification not found",
+        "通知が見つかりません",
+      );
+    }
+
     const body = await request.json();
     const { isRead } = body;
 
@@ -102,12 +95,12 @@ export async function PATCH(
 
     return NextResponse.json({ success: true, notification });
   } catch (error) {
+    if (error instanceof ApiError) {
+      return NextResponse.json(error.toJSON(), { status: error.status });
+    }
     console.error("Failed to update notification:", error);
     return NextResponse.json(
-      {
-        error: "Failed to update notification",
-        errorJa: "通知の更新に失敗しました",
-      },
+      { error: "Internal server error" },
       { status: 500 },
     );
   }
@@ -118,53 +111,44 @@ export async function PATCH(
  * 通知を削除
  */
 export async function DELETE(
-  _request: NextRequest,
+  _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const session = await auth();
-  if (!session?.user?.email) {
-    return NextResponse.json(
-      { error: "Unauthorized", errorJa: "認証が必要です" },
-      { status: 401 },
-    );
-  }
-
-  const user = await prisma.user.findUnique({
-    where: { email: session.user.email },
-    select: { id: true },
-  });
-
-  if (!user) {
-    return NextResponse.json(
-      { error: "User not found", errorJa: "ユーザーが見つかりません" },
-      { status: 404 },
-    );
-  }
-
-  const { id } = await params;
-
-  // 所有者確認
-  const existing = await prisma.notification.findFirst({
-    where: { id, userId: user.id },
-  });
-
-  if (!existing) {
-    return NextResponse.json(
-      { error: "Notification not found", errorJa: "通知が見つかりません" },
-      { status: 404 },
-    );
-  }
-
   try {
+    const session = await requireAuth();
+
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email! },
+      select: { id: true },
+    });
+
+    if (!user) {
+      throw ApiError.notFound("User not found", "ユーザーが見つかりません");
+    }
+
+    const { id } = await params;
+
+    // 所有者確認
+    const existing = await prisma.notification.findFirst({
+      where: { id, userId: user.id },
+    });
+
+    if (!existing) {
+      throw ApiError.notFound(
+        "Notification not found",
+        "通知が見つかりません",
+      );
+    }
+
     await prisma.notification.delete({ where: { id } });
     return NextResponse.json({ success: true });
   } catch (error) {
+    if (error instanceof ApiError) {
+      return NextResponse.json(error.toJSON(), { status: error.status });
+    }
     console.error("Failed to delete notification:", error);
     return NextResponse.json(
-      {
-        error: "Failed to delete notification",
-        errorJa: "通知の削除に失敗しました",
-      },
+      { error: "Internal server error" },
       { status: 500 },
     );
   }

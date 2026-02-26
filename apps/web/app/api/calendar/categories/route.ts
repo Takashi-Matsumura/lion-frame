@@ -1,6 +1,4 @@
-import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
-import { auth } from "@/auth";
+import { apiHandler, ApiError } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 
 const SETTING_KEY = "calendar_categories";
@@ -15,12 +13,7 @@ const DEFAULT_CATEGORIES = [
 ];
 
 // GET /api/calendar/categories - カテゴリ一覧取得
-export async function GET() {
-  const session = await auth();
-  if (!session?.user?.id || session.user.role !== "ADMIN") {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export const GET = apiHandler(async () => {
   const row = await prisma.systemSetting.findUnique({
     where: { key: SETTING_KEY },
   });
@@ -28,27 +21,22 @@ export async function GET() {
   if (row) {
     try {
       const categories = JSON.parse(row.value);
-      return NextResponse.json({ categories });
+      return { categories };
     } catch {
       // fallback to defaults
     }
   }
 
-  return NextResponse.json({ categories: DEFAULT_CATEGORIES });
-}
+  return { categories: DEFAULT_CATEGORIES };
+}, { admin: true });
 
 // PUT /api/calendar/categories - カテゴリ一覧更新
-export async function PUT(request: NextRequest) {
-  const session = await auth();
-  if (!session?.user?.id || session.user.role !== "ADMIN") {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export const PUT = apiHandler(async (request) => {
   const body = await request.json();
   const { categories } = body;
 
   if (!Array.isArray(categories)) {
-    return NextResponse.json({ error: "Invalid body" }, { status: 400 });
+    throw ApiError.badRequest("Invalid body");
   }
 
   await prisma.systemSetting.upsert({
@@ -57,5 +45,5 @@ export async function PUT(request: NextRequest) {
     create: { key: SETTING_KEY, value: JSON.stringify(categories) },
   });
 
-  return NextResponse.json({ success: true });
-}
+  return { success: true };
+}, { admin: true });

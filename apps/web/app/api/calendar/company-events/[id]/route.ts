@@ -1,34 +1,24 @@
-import { type NextRequest, NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { NextResponse } from "next/server";
+import { ApiError, requireAdmin } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 
 // PUT /api/calendar/company-events/[id] - 会社イベント更新
 export async function PUT(
-  request: NextRequest,
+  request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  if (session.user.role !== "ADMIN") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
-  const { id } = await params;
-  const body = await request.json();
-  const { title, titleEn, startDate, endDate, category, description, departmentId } = body;
-
-  const existing = await prisma.companyEvent.findUnique({ where: { id } });
-  if (!existing) {
-    return NextResponse.json(
-      { error: "Company event not found" },
-      { status: 404 },
-    );
-  }
-
   try {
+    await requireAdmin();
+
+    const { id } = await params;
+    const body = await request.json();
+    const { title, titleEn, startDate, endDate, category, description, departmentId } = body;
+
+    const existing = await prisma.companyEvent.findUnique({ where: { id } });
+    if (!existing) {
+      throw ApiError.notFound("Company event not found");
+    }
+
     const event = await prisma.companyEvent.update({
       where: { id },
       data: {
@@ -61,46 +51,36 @@ export async function PUT(
       },
     });
   } catch (error) {
-    console.error("Failed to update company event:", error);
-    return NextResponse.json(
-      { error: "Failed to update company event" },
-      { status: 500 },
-    );
+    if (error instanceof ApiError) {
+      return NextResponse.json(error.toJSON(), { status: error.status });
+    }
+    console.error("Error updating company event:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
 
 // DELETE /api/calendar/company-events/[id] - 会社イベント削除
 export async function DELETE(
-  _request: NextRequest,
+  _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  if (session.user.role !== "ADMIN") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
-  const { id } = await params;
-
-  const existing = await prisma.companyEvent.findUnique({ where: { id } });
-  if (!existing) {
-    return NextResponse.json(
-      { error: "Company event not found" },
-      { status: 404 },
-    );
-  }
-
   try {
+    await requireAdmin();
+
+    const { id } = await params;
+
+    const existing = await prisma.companyEvent.findUnique({ where: { id } });
+    if (!existing) {
+      throw ApiError.notFound("Company event not found");
+    }
+
     await prisma.companyEvent.delete({ where: { id } });
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Failed to delete company event:", error);
-    return NextResponse.json(
-      { error: "Failed to delete company event" },
-      { status: 500 },
-    );
+    if (error instanceof ApiError) {
+      return NextResponse.json(error.toJSON(), { status: error.status });
+    }
+    console.error("Error deleting company event:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { ApiError, apiHandler } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { verifyTotp } from "@/lib/totp";
 
@@ -6,15 +6,12 @@ import { verifyTotp } from "@/lib/totp";
  * POST /api/user/two-factor/verify
  * Verify TOTP code during login (called from login flow)
  */
-export async function POST(request: Request) {
+export const POST = apiHandler(async (request) => {
   const body = await request.json();
   const { email, code } = body;
 
   if (!email || !code) {
-    return NextResponse.json(
-      { error: "Email and code are required" },
-      { status: 400 },
-    );
+    throw ApiError.badRequest("Email and code are required");
   }
 
   const user = await prisma.user.findUnique({
@@ -23,9 +20,8 @@ export async function POST(request: Request) {
   });
 
   if (!user?.twoFactorEnabled || !user?.twoFactorSecret) {
-    return NextResponse.json(
-      { error: "Two-factor authentication is not enabled for this user" },
-      { status: 400 },
+    throw ApiError.badRequest(
+      "Two-factor authentication is not enabled for this user",
     );
   }
 
@@ -33,11 +29,8 @@ export async function POST(request: Request) {
   const isValid = verifyTotp(code, user.twoFactorSecret);
 
   if (!isValid) {
-    return NextResponse.json(
-      { error: "Invalid verification code" },
-      { status: 400 },
-    );
+    throw ApiError.badRequest("Invalid verification code");
   }
 
-  return NextResponse.json({ success: true });
-}
+  return { success: true };
+}, { public: true });

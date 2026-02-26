@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { ApiError, requireAuth } from "@/lib/api";
 import { changeTypeMapping } from "@/lib/history/types";
 import { prisma } from "@/lib/prisma";
 
@@ -16,11 +16,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const session = await auth();
-
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    await requireAuth();
 
     const { id } = await params;
     const { searchParams } = new URL(request.url);
@@ -38,10 +34,7 @@ export async function GET(
     });
 
     if (!employee) {
-      return NextResponse.json(
-        { error: "Employee not found" },
-        { status: 404 },
-      );
+      throw ApiError.notFound("Employee not found");
     }
 
     // 履歴を取得（時系列昇順）
@@ -117,10 +110,10 @@ export async function GET(
       total: histories.length,
     });
   } catch (error) {
+    if (error instanceof ApiError) {
+      return NextResponse.json(error.toJSON(), { status: error.status });
+    }
     console.error("Error fetching employee history:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch employee history" },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

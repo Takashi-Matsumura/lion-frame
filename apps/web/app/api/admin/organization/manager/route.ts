@@ -1,5 +1,4 @@
-import { NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { apiHandler, ApiError } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { AuditService } from "@/lib/services/audit-service";
 
@@ -8,99 +7,74 @@ import { AuditService } from "@/lib/services/audit-service";
  *
  * 部署の責任者を更新
  */
-export async function PATCH(request: Request) {
-  try {
-    const session = await auth();
+export const PATCH = apiHandler(async (request, session) => {
+  const body = await request.json();
+  const { type, id, managerId } = body;
 
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+  if (!type || !id) {
+    throw ApiError.badRequest("Type and ID are required");
+  }
 
-    // Check if user is admin
-    if (session.user?.role !== "ADMIN") {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
+  if (!["department", "section", "course"].includes(type)) {
+    throw ApiError.badRequest("Invalid type. Must be department, section, or course");
+  }
 
-    const body = await request.json();
-    const { type, id, managerId } = body;
+  // Update the manager based on type
+  let result:
+    | {
+        manager: { id: string; name: string; position: string | null } | null;
+      }
+    | undefined;
 
-    if (!type || !id) {
-      return NextResponse.json(
-        { error: "Type and ID are required" },
-        { status: 400 },
-      );
-    }
-
-    if (!["department", "section", "course"].includes(type)) {
-      return NextResponse.json(
-        { error: "Invalid type. Must be department, section, or course" },
-        { status: 400 },
-      );
-    }
-
-    // Update the manager based on type
-    let result:
-      | {
-          manager: { id: string; name: string; position: string | null } | null;
-        }
-      | undefined;
-
-    if (type === "department") {
-      result = await prisma.department.update({
-        where: { id },
-        data: { managerId: managerId || null },
-        include: {
-          manager: {
-            select: { id: true, name: true, position: true },
-          },
+  if (type === "department") {
+    result = await prisma.department.update({
+      where: { id },
+      data: { managerId: managerId || null },
+      include: {
+        manager: {
+          select: { id: true, name: true, position: true },
         },
-      });
-    } else if (type === "section") {
-      result = await prisma.section.update({
-        where: { id },
-        data: { managerId: managerId || null },
-        include: {
-          manager: {
-            select: { id: true, name: true, position: true },
-          },
-        },
-      });
-    } else if (type === "course") {
-      result = await prisma.course.update({
-        where: { id },
-        data: { managerId: managerId || null },
-        include: {
-          manager: {
-            select: { id: true, name: true, position: true },
-          },
-        },
-      });
-    }
-
-    await AuditService.log({
-      action: "MANAGER_ASSIGN",
-      category: "SYSTEM_SETTING",
-      userId: session.user?.id,
-      targetId: id,
-      targetType: type,
-      details: {
-        type,
-        managerId: managerId || null,
-        managerName: result?.manager?.name || null,
       },
     });
-
-    return NextResponse.json({
-      success: true,
-      type,
-      id,
-      manager: result?.manager || null,
+  } else if (type === "section") {
+    result = await prisma.section.update({
+      where: { id },
+      data: { managerId: managerId || null },
+      include: {
+        manager: {
+          select: { id: true, name: true, position: true },
+        },
+      },
     });
-  } catch (error) {
-    console.error("Error updating manager:", error);
-    return NextResponse.json(
-      { error: "Failed to update manager" },
-      { status: 500 },
-    );
+  } else if (type === "course") {
+    result = await prisma.course.update({
+      where: { id },
+      data: { managerId: managerId || null },
+      include: {
+        manager: {
+          select: { id: true, name: true, position: true },
+        },
+      },
+    });
   }
-}
+
+  await AuditService.log({
+    action: "MANAGER_ASSIGN",
+    category: "SYSTEM_SETTING",
+    userId: session.user?.id,
+    targetId: id,
+    targetType: type,
+    details: {
+      type,
+      managerId: managerId || null,
+      managerName: result?.manager?.name || null,
+    },
+  });
+
+  return {
+    success: true,
+    type,
+    id,
+    manager: result?.manager || null,
+  };
+}, { admin: true });

@@ -35,8 +35,50 @@ export type {
 export type {
   AppMenu,
   AppModule,
-  // レガシー型（非推奨）
-  LegacyAppModule,
   MenuGroup,
   ModuleRegistry,
 } from "./module";
+// 管理画面型
+export type {
+  AccessKeyWithTargetUser,
+  AdminClientProps,
+  AdminTabType,
+  AdminUser,
+  AIConfig,
+  Announcement,
+  AnnouncementFormState,
+  BulkCreateResult,
+  ContainerStatus,
+  EmployeeCandidate,
+  LocalLLMDefaults,
+  McpServerInfo,
+  ModuleInfo,
+  ModulesData,
+  OrganizationOption,
+  PaginatedUsers,
+  RetiredAccount,
+} from "./admin";
+// 組織型
+export type {
+  AutoAssignResult,
+  AutoAssignSkipped,
+  ManagerCandidate,
+  OrgCourse,
+  OrgDepartment,
+  OrgEmployeeData,
+  OrgManager,
+  OrgSection,
+  OrgSummary,
+  OrganizationData,
+  OrganizationStatus,
+  OrganizeTabProps,
+  PublishSettings,
+  SelectedUnit,
+  UnitType,
+} from "./organization";
+// AIチャット型
+export type {
+  AIChatClientProps,
+  ChatMessage,
+  TokenStats,
+} from "./ai-chat";

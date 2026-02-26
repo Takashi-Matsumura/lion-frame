@@ -1,5 +1,4 @@
-import { NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { ApiError, apiHandler } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { AuditService } from "@/lib/services/audit-service";
 
@@ -9,65 +8,40 @@ const SETTING_KEY = "github_oauth_enabled";
  * GET /api/admin/github-oauth
  * GitHub OAuthの有効/無効状態を取得
  */
-export async function GET() {
-  try {
-    const setting = await prisma.systemSetting.findUnique({
-      where: { key: SETTING_KEY },
-    });
+export const GET = apiHandler(async () => {
+  const setting = await prisma.systemSetting.findUnique({
+    where: { key: SETTING_KEY },
+  });
 
-    // デフォルトは無効
-    const enabled = setting?.value === "true";
+  // デフォルトは無効
+  const enabled = setting?.value === "true";
 
-    return NextResponse.json({ enabled });
-  } catch (error) {
-    console.error("Error fetching GitHub OAuth setting:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch setting" },
-      { status: 500 },
-    );
-  }
-}
+  return { enabled };
+}, { public: true });
 
 /**
  * POST /api/admin/github-oauth
  * GitHub OAuthの有効/無効を切り替え（ADMIN専用）
  */
-export async function POST(request: Request) {
-  try {
-    const session = await auth();
+export const POST = apiHandler(async (request, session) => {
+  const { enabled } = await request.json();
 
-    if (!session || session.user.role !== "ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const { enabled } = await request.json();
-
-    if (typeof enabled !== "boolean") {
-      return NextResponse.json(
-        { error: "Invalid request body" },
-        { status: 400 },
-      );
-    }
-
-    await prisma.systemSetting.upsert({
-      where: { key: SETTING_KEY },
-      update: { value: String(enabled) },
-      create: { key: SETTING_KEY, value: String(enabled) },
-    });
-
-    await AuditService.log({
-      action: "OAUTH_TOGGLE",
-      category: "SYSTEM_SETTING",
-      userId: session.user.id,
-      details: { provider: "github", enabled },
-    });
-
-    return NextResponse.json({ success: true, enabled });
-  } catch (error) {
-    console.error("Error updating GitHub OAuth setting:", error);
-    return NextResponse.json(
-      { error: "Failed to update setting" },
-      { status: 500 },
-    );
+  if (typeof enabled !== "boolean") {
+    throw ApiError.badRequest("Invalid request body");
   }
-}
+
+  await prisma.systemSetting.upsert({
+    where: { key: SETTING_KEY },
+    update: { value: String(enabled) },
+    create: { key: SETTING_KEY, value: String(enabled) },
+  });
+
+  await AuditService.log({
+    action: "OAUTH_TOGGLE",
+    category: "SYSTEM_SETTING",
+    userId: session.user.id,
+    details: { provider: "github", enabled },
+  });
+
+  return { success: true, enabled };
+}, { admin: true });

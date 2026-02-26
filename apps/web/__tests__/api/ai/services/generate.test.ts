@@ -159,7 +159,7 @@ describe("POST /api/ai/services/generate", () => {
 
       expect(response.status).toBe(500);
       const json = await response.json();
-      expect(json.error).toBe("AI service error");
+      expect(json.error).toBe("Internal server error");
     });
   });
 });

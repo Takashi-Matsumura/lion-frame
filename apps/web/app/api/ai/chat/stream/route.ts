@@ -1,4 +1,5 @@
-import { auth } from "@/auth";
+import { NextResponse } from "next/server";
+import { ApiError, requireAuth } from "@/lib/api";
 import { AIService, type ChatMessage } from "@/lib/core-modules/ai";
 import {
   buildOrgContext,
@@ -12,14 +13,7 @@ import { AuditService } from "@/lib/services/audit-service";
  */
 export async function POST(request: Request) {
   try {
-    const session = await auth();
-
-    if (!session) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
+    const session = await requireAuth();
 
     const body = await request.json();
     const { messages, systemPrompt, useOrgContext } = body;
@@ -116,6 +110,9 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
+    if (error instanceof ApiError) {
+      return NextResponse.json(error.toJSON(), { status: error.status });
+    }
     console.error("Error in AI chat stream:", error);
     const message =
       error instanceof Error ? error.message : "Failed to stream AI response";

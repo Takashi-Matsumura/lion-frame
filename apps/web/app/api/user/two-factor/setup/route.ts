@@ -1,5 +1,4 @@
-import { NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { ApiError, apiHandler } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import {
   generateQrCodeDataUrl,
@@ -11,22 +10,15 @@ import {
  * POST /api/user/two-factor/setup
  * Generate a new TOTP secret and QR code for 2FA setup
  */
-export async function POST() {
-  const session = await auth();
-
-  if (!session?.user?.email) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export const POST = apiHandler(async (_request, session) => {
   const user = await prisma.user.findUnique({
-    where: { email: session.user.email },
+    where: { email: session.user.email! },
     select: { twoFactorEnabled: true },
   });
 
   if (user?.twoFactorEnabled) {
-    return NextResponse.json(
-      { error: "Two-factor authentication is already enabled" },
-      { status: 400 },
+    throw ApiError.badRequest(
+      "Two-factor authentication is already enabled",
     );
   }
 
@@ -34,11 +26,11 @@ export async function POST() {
   const secret = generateTotpSecret();
 
   // Generate QR code
-  const otpUri = generateTotpUri(session.user.email, secret);
+  const otpUri = generateTotpUri(session.user.email!, secret);
   const qrCodeDataUrl = await generateQrCodeDataUrl(otpUri);
 
-  return NextResponse.json({
+  return {
     secret,
     qrCodeDataUrl,
-  });
-}
+  };
+});

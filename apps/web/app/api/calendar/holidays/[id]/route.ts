@@ -1,33 +1,25 @@
-import { type NextRequest, NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { NextResponse } from "next/server";
+import { ApiError, requireAdmin } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 
 // PUT /api/calendar/holidays/[id] - 祝日更新
 export async function PUT(
-  request: NextRequest,
+  request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  // Admin only
-  if (session.user.role !== "ADMIN") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
-  const { id } = await params;
-  const body = await request.json();
-  const { date, name, nameEn, type, description } = body;
-
-  // Check if holiday exists
-  const existing = await prisma.holiday.findUnique({ where: { id } });
-  if (!existing) {
-    return NextResponse.json({ error: "Holiday not found" }, { status: 404 });
-  }
-
   try {
+    await requireAdmin();
+
+    const { id } = await params;
+    const body = await request.json();
+    const { date, name, nameEn, type, description } = body;
+
+    // Check if holiday exists
+    const existing = await prisma.holiday.findUnique({ where: { id } });
+    if (!existing) {
+      throw ApiError.notFound("Holiday not found");
+    }
+
     const holiday = await prisma.holiday.update({
       where: { id },
       data: {
@@ -50,45 +42,37 @@ export async function PUT(
       },
     });
   } catch (error) {
-    console.error("Failed to update holiday:", error);
-    return NextResponse.json(
-      { error: "Failed to update holiday" },
-      { status: 500 },
-    );
+    if (error instanceof ApiError) {
+      return NextResponse.json(error.toJSON(), { status: error.status });
+    }
+    console.error("Error updating holiday:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
 
 // DELETE /api/calendar/holidays/[id] - 祝日削除
 export async function DELETE(
-  _request: NextRequest,
+  _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  // Admin only
-  if (session.user.role !== "ADMIN") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
-  const { id } = await params;
-
-  // Check if holiday exists
-  const existing = await prisma.holiday.findUnique({ where: { id } });
-  if (!existing) {
-    return NextResponse.json({ error: "Holiday not found" }, { status: 404 });
-  }
-
   try {
+    await requireAdmin();
+
+    const { id } = await params;
+
+    // Check if holiday exists
+    const existing = await prisma.holiday.findUnique({ where: { id } });
+    if (!existing) {
+      throw ApiError.notFound("Holiday not found");
+    }
+
     await prisma.holiday.delete({ where: { id } });
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Failed to delete holiday:", error);
-    return NextResponse.json(
-      { error: "Failed to delete holiday" },
-      { status: 500 },
-    );
+    if (error instanceof ApiError) {
+      return NextResponse.json(error.toJSON(), { status: error.status });
+    }
+    console.error("Error deleting holiday:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

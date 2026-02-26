@@ -1,5 +1,5 @@
-import { type NextRequest, NextResponse } from "next/server";
-import { auth } from "@/auth";
+import { NextResponse } from "next/server";
+import { ApiError, requireAdmin } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { AuditService } from "@/lib/services/audit-service";
 import { NotificationService } from "@/lib/services/notification-service";
@@ -14,24 +14,16 @@ import { NotificationService } from "@/lib/services/notification-service";
  * - ADMIN権限が必要
  */
 export async function DELETE(
-  _request: NextRequest,
+  _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const session = await auth();
-
-    if (!session || session.user.role !== "ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
+    const session = await requireAdmin();
     const { id } = await params;
 
     // 自分自身を削除しようとしていないか確認
     if (id === session.user.id) {
-      return NextResponse.json(
-        { error: "Cannot delete your own account" },
-        { status: 400 },
-      );
+      throw ApiError.badRequest("Cannot delete your own account");
     }
 
     // ユーザが存在するか確認
@@ -40,7 +32,7 @@ export async function DELETE(
     });
 
     if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+      throw ApiError.notFound("User not found");
     }
 
     // 削除前にユーザ情報を記録
@@ -88,9 +80,12 @@ export async function DELETE(
       message: "User deleted successfully",
     });
   } catch (error) {
+    if (error instanceof ApiError) {
+      return NextResponse.json(error.toJSON(), { status: error.status });
+    }
     console.error("Error deleting user:", error);
     return NextResponse.json(
-      { error: "Failed to delete user" },
+      { error: "Internal server error" },
       { status: 500 },
     );
   }

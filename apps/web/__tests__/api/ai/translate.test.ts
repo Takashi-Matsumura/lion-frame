@@ -40,7 +40,7 @@ const mockSession = {
 };
 
 // リクエスト作成ヘルパー
-const _createGetRequest = () =>
+const createGetRequest = () =>
   new Request("http://localhost:3000/api/ai/translate", { method: "GET" });
 
 const createPostRequest = (body: unknown) =>
@@ -60,7 +60,7 @@ describe("/api/ai/translate", () => {
     it("認証なしの場合 401 エラー", async () => {
       mockAuth.mockResolvedValue(null as never);
 
-      const response = await GET();
+      const response = await GET(createGetRequest());
 
       expect(response.status).toBe(401);
     });
@@ -68,7 +68,7 @@ describe("/api/ai/translate", () => {
     it("AI が利用可能な場合 available: true を返す", async () => {
       mockIsAvailable.mockResolvedValue(true);
 
-      const response = await GET();
+      const response = await GET(createGetRequest());
 
       expect(response.status).toBe(200);
       const json = await response.json();
@@ -78,7 +78,7 @@ describe("/api/ai/translate", () => {
     it("AI が利用不可の場合 available: false を返す", async () => {
       mockIsAvailable.mockResolvedValue(false);
 
-      const response = await GET();
+      const response = await GET(createGetRequest());
 
       expect(response.status).toBe(200);
       const json = await response.json();
@@ -253,7 +253,7 @@ describe("/api/ai/translate", () => {
 
         expect(response.status).toBe(500);
         const json = await response.json();
-        expect(json.error).toBe("Translation failed");
+        expect(json.error).toBe("Internal server error");
       });
     });
   });
