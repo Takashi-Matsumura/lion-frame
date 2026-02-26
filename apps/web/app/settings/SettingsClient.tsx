@@ -19,7 +19,6 @@ interface SettingsClientProps {
   language: "en" | "ja";
   translations: SettingsTranslations;
   twoFactorEnabled: boolean;
-  isLdapUser: boolean;
   mustChangePassword: boolean;
 }
 
@@ -27,7 +26,6 @@ export function SettingsClient({
   language,
   translations: t,
   twoFactorEnabled: initialTwoFactorEnabled,
-  isLdapUser,
   mustChangePassword: initialMustChangePassword,
 }: SettingsClientProps) {
   const { open } = useSidebar();
@@ -72,18 +70,16 @@ export function SettingsClient({
           <div className="max-w-4xl mx-auto">
             {activeTab === "basic" && (
               <div className="space-y-6">
-                {/* Password Change Section (LDAP users only) */}
-                {isLdapUser && (
-                  <Card>
-                    <CardContent className="pt-6">
-                      <PasswordChangeSection
-                        translations={t.passwordChange}
-                        mustChangePassword={mustChangePassword || passwordReset}
-                        onPasswordChanged={handlePasswordChanged}
-                      />
-                    </CardContent>
-                  </Card>
-                )}
+                {/* Password Change Section */}
+                <Card>
+                  <CardContent className="pt-6">
+                    <PasswordChangeSection
+                      translations={t.passwordChange}
+                      mustChangePassword={mustChangePassword || passwordReset}
+                      onPasswordChanged={handlePasswordChanged}
+                    />
+                  </CardContent>
+                </Card>
 
                 {/* Language Settings */}
                 <Card>

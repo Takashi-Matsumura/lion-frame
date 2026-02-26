@@ -45,7 +45,7 @@ export const settingsTranslations = {
     },
     passwordChange: {
       title: "Password",
-      description: "Change your OpenLDAP account password",
+      description: "Change your password",
       currentPassword: "Current Password",
       newPassword: "New Password",
       confirmPassword: "Confirm New Password",
@@ -103,7 +103,7 @@ export const settingsTranslations = {
     },
     passwordChange: {
       title: "パスワード",
-      description: "OpenLDAPアカウントのパスワードを変更します",
+      description: "パスワードを変更します",
       currentPassword: "現在のパスワード",
       newPassword: "新しいパスワード",
       confirmPassword: "新しいパスワード（確認）",

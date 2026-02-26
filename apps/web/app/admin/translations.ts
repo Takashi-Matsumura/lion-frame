@@ -4,7 +4,7 @@ export const adminTranslations = {
     totalUsers: "Total Users",
     regularUsers: "Regular Users",
     administrators: "Administrators",
-    manageUsers: "Manage Users",
+    manageUsers: "Account Management",
     manageUsersDesc: "View all users, change roles, and manage user accounts",
     systemInfo: "System Information",
     database: "Database:",
@@ -19,7 +19,7 @@ export const adminTranslations = {
     totalUsers: "総ユーザ数",
     regularUsers: "一般ユーザ",
     administrators: "管理者",
-    manageUsers: "ユーザ管理",
+    manageUsers: "アカウント管理",
     manageUsersDesc:
       "すべてのユーザを表示し、ロールの変更とユーザアカウントの管理を行います",
     systemInfo: "システム情報",

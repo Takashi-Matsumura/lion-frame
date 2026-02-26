@@ -129,6 +129,7 @@ export const authConfig = {
             role: true,
             language: true,
             twoFactorEnabled: true,
+            forcePasswordChange: true,
           },
         });
         if (dbUser) {
@@ -137,7 +138,7 @@ export const authConfig = {
           token.language = dbUser.language;
           token.twoFactorEnabled = dbUser.twoFactorEnabled;
 
-          token.mustChangePassword = false;
+          token.mustChangePassword = dbUser.forcePasswordChange;
         } else if (user) {
           // フォールバック: DBにない場合はuserオブジェクトから取得
           token.id = user.id;

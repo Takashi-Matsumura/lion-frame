@@ -16,6 +16,7 @@ import {
   Search,
   Shield,
   Trash2,
+  UserPlus,
   Wrench,
 } from "lucide-react";
 import Image from "next/image";
@@ -205,7 +206,7 @@ export function AdminClient({
   const { width } = useSidebarStore();
   const activeTab = (searchParams.get("tab") as TabType) || "users";
 
-  // ユーザ管理タブの状態
+  // アカウント管理タブの状態
   const [paginatedUsers, setPaginatedUsers] = useState<User[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -221,6 +222,46 @@ export function AdminClient({
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  // パスワードリセットの状態
+  const [showResetPasswordConfirm, setShowResetPasswordConfirm] = useState(false);
+  const [showResetPasswordResult, setShowResetPasswordResult] = useState(false);
+  const [userToReset, setUserToReset] = useState<User | null>(null);
+  const [resettingPassword, setResettingPassword] = useState(false);
+  const [temporaryPassword, setTemporaryPassword] = useState("");
+  const [passwordCopied, setPasswordCopied] = useState(false);
+
+  // 社員からアカウント作成の状態
+  const [showCandidateDialog, setShowCandidateDialog] = useState(false);
+  const [showCreateResult, setShowCreateResult] = useState(false);
+  const [candidateOrgId, setCandidateOrgId] = useState<string>("");
+  const [candidateSearch, setCandidateSearch] = useState("");
+  const [candidateDeptFilter, setCandidateDeptFilter] = useState<string>("ALL");
+  const [candidates, setCandidates] = useState<
+    {
+      employeeId: string;
+      name: string;
+      email: string | null;
+      hasEmail: boolean;
+      department: string;
+      section: string | null;
+      position: string;
+      suggestedRole: string;
+    }[]
+  >([]);
+  const [candidatesLoading, setCandidatesLoading] = useState(false);
+  const [selectedCandidates, setSelectedCandidates] = useState<
+    Record<string, { role: string }>
+  >({});
+  const [creatingAccounts, setCreatingAccounts] = useState(false);
+  const [createResult, setCreateResult] = useState<{
+    created: { name: string; email: string; role: string; temporaryPassword: string }[];
+    skipped: number;
+    errors: { employeeId: string; message: string }[];
+  } | null>(null);
+  const [organizations, setOrganizations] = useState<
+    { id: string; name: string; departments: { id: string; name: string }[] }[]
+  >([]);
 
   // モジュール管理タブの状態
   const [modulesData, setModulesData] = useState<ModulesData | null>(null);
@@ -1105,6 +1146,44 @@ export function AdminClient({
     setShowDeleteModal(false);
   };
 
+  // パスワードリセット処理
+  const handleResetPassword = useCallback(async () => {
+    if (!userToReset) return;
+
+    try {
+      setResettingPassword(true);
+      const response = await fetch(
+        `/api/admin/users/${userToReset.id}/reset-password`,
+        { method: "POST" },
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.errorJa || data.error || "Failed to reset password",
+        );
+      }
+
+      setTemporaryPassword(data.temporaryPassword);
+      setShowResetPasswordConfirm(false);
+      setShowResetPasswordResult(true);
+    } catch (error) {
+      console.error("Error resetting password:", error);
+      alert(
+        t(
+          error instanceof Error ? error.message : "Failed to reset password",
+          error instanceof Error
+            ? error.message
+            : "パスワードのリセットに失敗しました",
+        ),
+      );
+      setShowResetPasswordConfirm(false);
+    } finally {
+      setResettingPassword(false);
+    }
+  }, [userToReset, t]);
+
   // ユーザ削除処理
   const handleDeleteUser = useCallback(async () => {
     if (!userToDelete) return;
@@ -1141,6 +1220,112 @@ export function AdminClient({
     t, // 削除成功
     closeDeleteModal,
   ]);
+
+  // 組織一覧を取得
+  const fetchOrganizations = useCallback(async () => {
+    try {
+      const res = await fetch("/api/admin/organization");
+      const data = await res.json();
+      if (res.ok && data.organizations) {
+        setOrganizations(
+          data.organizations.map((org: { id: string; name: string; departments: { id: string; name: string }[] }) => ({
+            id: org.id,
+            name: org.name,
+            departments: org.departments.map((d: { id: string; name: string }) => ({
+              id: d.id,
+              name: d.name,
+            })),
+          })),
+        );
+      }
+    } catch (error) {
+      console.error("Error fetching organizations:", error);
+    }
+  }, []);
+
+  // 候補社員を取得
+  const fetchCandidates = useCallback(
+    async (orgId: string) => {
+      if (!orgId) {
+        setCandidates([]);
+        return;
+      }
+      setCandidatesLoading(true);
+      try {
+        const params = new URLSearchParams({ organizationId: orgId });
+        if (candidateSearch) params.set("search", candidateSearch);
+        if (candidateDeptFilter && candidateDeptFilter !== "ALL")
+          params.set("departmentId", candidateDeptFilter);
+        const res = await fetch(`/api/admin/users/candidates?${params}`);
+        const data = await res.json();
+        if (res.ok) {
+          setCandidates(data.candidates || []);
+        }
+      } catch (error) {
+        console.error("Error fetching candidates:", error);
+      } finally {
+        setCandidatesLoading(false);
+      }
+    },
+    [candidateSearch, candidateDeptFilter],
+  );
+
+  // 社員からアカウント作成
+  const handleCreateFromEmployees = useCallback(async () => {
+    const accounts = Object.entries(selectedCandidates)
+      .map(([employeeId, { role }]) => {
+        const c = candidates.find((c) => c.employeeId === employeeId);
+        if (!c || !c.email) return null;
+        return { employeeId, email: c.email, name: c.name, role };
+      })
+      .filter(Boolean);
+
+    if (accounts.length === 0) return;
+    setCreatingAccounts(true);
+    try {
+      const res = await fetch("/api/admin/users/create-from-employees", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ accounts }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(
+          data.error ||
+            t("Account creation failed", "アカウント作成に失敗しました"),
+        );
+        return;
+      }
+      setCreateResult(data);
+      setShowCandidateDialog(false);
+      setSelectedCandidates({});
+      setShowCreateResult(true);
+      await fetchUsers();
+    } catch (error) {
+      console.error("Error creating accounts:", error);
+      alert(t("Account creation failed", "アカウント作成に失敗しました"));
+    } finally {
+      setCreatingAccounts(false);
+    }
+  }, [selectedCandidates, candidates, fetchUsers, t]);
+
+  // 作成結果CSVダウンロード
+  const handleCreateResultCsvDownload = useCallback(() => {
+    if (!createResult?.created.length) return;
+    const bom = "\uFEFF";
+    const header = `${t("Name", "名前")},${t("Email", "メールアドレス")},${t("Role", "ロール")},${t("Temporary Password", "仮パスワード")}`;
+    const rows = createResult.created.map(
+      (a) => `${a.name},${a.email},${a.role},${a.temporaryPassword}`,
+    );
+    const csv = bom + [header, ...rows].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "created-accounts.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [createResult, t]);
 
   // ヘッダーの高さを計算（タブがある場合は高くなる）
   // ヘッダー本体: 約72px + タブナビ: 約44px = 約116px ≈ 7.25rem
@@ -1711,7 +1896,7 @@ export function AdminClient({
             </Card>
           )}
 
-          {/* ユーザ管理タブ */}
+          {/* アカウント管理タブ */}
           {activeTab === "users" && (
             <Card className="flex-1 flex flex-col min-h-0">
               <CardContent className="p-6 flex-1 flex flex-col min-h-0">
@@ -1772,6 +1957,33 @@ export function AdminClient({
                         </SelectItem>
                       </SelectContent>
                     </Select>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => {
+                              fetchOrganizations();
+                              setCandidateOrgId("");
+                              setCandidateSearch("");
+                              setCandidateDeptFilter("ALL");
+                              setCandidates([]);
+                              setSelectedCandidates({});
+                              setShowCandidateDialog(true);
+                            }}
+                          >
+                            <UserPlus className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          {t(
+                            "Create from Employees",
+                            "社員からアカウント作成",
+                          )}
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </div>
                 </div>
 
@@ -1959,25 +2171,52 @@ export function AdminClient({
                                 </TableCell>
                                 <TableCell className="text-right">
                                   {user.id !== currentUserId ? (
-                                    <TooltipProvider>
-                                      <Tooltip>
-                                        <TooltipTrigger asChild>
-                                          <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                                            onClick={() =>
-                                              openDeleteModal(user)
-                                            }
-                                          >
-                                            <Trash2 className="h-4 w-4" />
-                                          </Button>
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                          <p>{t("Delete", "削除")}</p>
-                                        </TooltipContent>
-                                      </Tooltip>
-                                    </TooltipProvider>
+                                    <div className="flex items-center justify-end gap-1">
+                                      <TooltipProvider>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <Button
+                                              variant="ghost"
+                                              size="icon"
+                                              className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                                              onClick={() => {
+                                                setUserToReset(user);
+                                                setShowResetPasswordConfirm(true);
+                                              }}
+                                            >
+                                              <RefreshCw className="h-4 w-4" />
+                                            </Button>
+                                          </TooltipTrigger>
+                                          <TooltipContent>
+                                            <p>
+                                              {t(
+                                                "Reset Password",
+                                                "パスワードリセット",
+                                              )}
+                                            </p>
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      </TooltipProvider>
+                                      <TooltipProvider>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <Button
+                                              variant="ghost"
+                                              size="icon"
+                                              className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                              onClick={() =>
+                                                openDeleteModal(user)
+                                              }
+                                            >
+                                              <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                          </TooltipTrigger>
+                                          <TooltipContent>
+                                            <p>{t("Delete", "削除")}</p>
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      </TooltipProvider>
+                                    </div>
                                   ) : (
                                     <span className="text-sm text-muted-foreground">
                                       {t("(You)", "(自分)")}
@@ -3107,6 +3346,530 @@ export function AdminClient({
         disabled={deleting}
         onDelete={handleDeleteUser}
       />
+
+      {/* パスワードリセット確認ダイアログ */}
+      <Dialog
+        open={showResetPasswordConfirm && !!userToReset}
+        onOpenChange={(open) => {
+          if (!open) {
+            setShowResetPasswordConfirm(false);
+            setUserToReset(null);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {t("Reset Password", "パスワードリセット")}
+            </DialogTitle>
+            <DialogDescription>
+              {userToReset
+                ? t(
+                    `Are you sure you want to reset the password for "${userToReset.name || userToReset.email}"? A temporary password will be generated.`,
+                    `「${userToReset.name || userToReset.email}」のパスワードをリセットしますか？仮パスワードが発行されます。`,
+                  )
+                : ""}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowResetPasswordConfirm(false);
+                setUserToReset(null);
+              }}
+            >
+              {t("Cancel", "キャンセル")}
+            </Button>
+            <Button
+              onClick={handleResetPassword}
+              disabled={resettingPassword}
+              loading={resettingPassword}
+            >
+              {resettingPassword
+                ? t("Resetting...", "リセット中...")
+                : t("Reset", "リセット")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 仮パスワード表示ダイアログ */}
+      <Dialog
+        open={showResetPasswordResult}
+        onOpenChange={(open) => {
+          if (!open) {
+            setShowResetPasswordResult(false);
+            setUserToReset(null);
+            setTemporaryPassword("");
+            setPasswordCopied(false);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {t("Temporary Password", "仮パスワード")}
+            </DialogTitle>
+            <DialogDescription>
+              {t(
+                "Please share this temporary password with the user. They will be required to change it on next login.",
+                "この仮パスワードをユーザに伝えてください。次回ログイン時にパスワード変更が求められます。",
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex items-center gap-2 p-3 bg-muted rounded-md">
+            <code className="flex-1 text-lg font-mono tracking-wider text-center">
+              {temporaryPassword}
+            </code>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 shrink-0"
+              onClick={() => {
+                navigator.clipboard.writeText(temporaryPassword);
+                setPasswordCopied(true);
+                setTimeout(() => setPasswordCopied(false), 2000);
+              }}
+            >
+              {passwordCopied ? (
+                <Check className="h-4 w-4 text-green-600" />
+              ) : (
+                <Copy className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
+          <DialogFooter>
+            <Button
+              onClick={() => {
+                setShowResetPasswordResult(false);
+                setUserToReset(null);
+                setTemporaryPassword("");
+                setPasswordCopied(false);
+              }}
+            >
+              {t("Close", "閉じる")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 社員からアカウント作成ダイアログ */}
+      <Dialog
+        open={showCandidateDialog}
+        onOpenChange={(open) => {
+          if (!open) {
+            setShowCandidateDialog(false);
+            setCandidates([]);
+            setSelectedCandidates({});
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-4xl max-h-[85vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle>
+              {t("Create Accounts from Employees", "社員からアカウント作成")}
+            </DialogTitle>
+            <DialogDescription>
+              {t(
+                "Select employees from the organization chart to create user accounts. A temporary password will be generated for each account.",
+                "組織図の社員データからアカウントを作成します。各アカウントに仮パスワードが自動生成されます。",
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 overflow-y-auto flex-1 min-h-0">
+            {/* フィルター */}
+            <div className="flex flex-wrap gap-3">
+              <div className="flex-1 min-w-[200px]">
+                <Label className="text-xs text-muted-foreground mb-1 block">
+                  {t("Organization", "組織")}
+                </Label>
+                <Select
+                  value={candidateOrgId}
+                  onValueChange={(val) => {
+                    setCandidateOrgId(val);
+                    setCandidateDeptFilter("ALL");
+                    setSelectedCandidates({});
+                    fetchCandidates(val);
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue
+                      placeholder={t(
+                        "Select organization",
+                        "組織を選択",
+                      )}
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {organizations.map((org) => (
+                      <SelectItem key={org.id} value={org.id}>
+                        {org.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex-1 min-w-[200px]">
+                <Label className="text-xs text-muted-foreground mb-1 block">
+                  {t("Department", "部署")}
+                </Label>
+                <Select
+                  value={candidateDeptFilter}
+                  onValueChange={(val) => {
+                    setCandidateDeptFilter(val);
+                    setSelectedCandidates({});
+                    fetchCandidates(candidateOrgId);
+                  }}
+                  disabled={!candidateOrgId}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ALL">
+                      {t("All departments", "全部署")}
+                    </SelectItem>
+                    {organizations
+                      .find((o) => o.id === candidateOrgId)
+                      ?.departments.map((dept) => (
+                        <SelectItem key={dept.id} value={dept.id}>
+                          {dept.name}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex-1 min-w-[200px]">
+                <Label className="text-xs text-muted-foreground mb-1 block">
+                  {t("Search", "検索")}
+                </Label>
+                <Input
+                  placeholder={t(
+                    "Name, employee ID, email...",
+                    "名前、社員番号、メール...",
+                  )}
+                  value={candidateSearch}
+                  onChange={(e) => setCandidateSearch(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") fetchCandidates(candidateOrgId);
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* 候補一覧 */}
+            {candidatesLoading ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto" />
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {t("Loading...", "読み込み中...")}
+                </p>
+              </div>
+            ) : candidates.length > 0 ? (
+              <div className="rounded-lg border overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-10">
+                        <input
+                          type="checkbox"
+                          className="rounded"
+                          checked={
+                            candidates.filter((c) => c.hasEmail).length > 0 &&
+                            candidates
+                              .filter((c) => c.hasEmail)
+                              .every((c) => selectedCandidates[c.employeeId])
+                          }
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              const newSelected: Record<string, { role: string }> = {};
+                              for (const c of candidates) {
+                                if (c.hasEmail) {
+                                  newSelected[c.employeeId] = {
+                                    role:
+                                      selectedCandidates[c.employeeId]?.role ||
+                                      c.suggestedRole,
+                                  };
+                                }
+                              }
+                              setSelectedCandidates(newSelected);
+                            } else {
+                              setSelectedCandidates({});
+                            }
+                          }}
+                        />
+                      </TableHead>
+                      <TableHead>{t("Name", "名前")}</TableHead>
+                      <TableHead>{t("Email", "メールアドレス")}</TableHead>
+                      <TableHead>{t("Department", "部署")}</TableHead>
+                      <TableHead>{t("Position", "役職")}</TableHead>
+                      <TableHead>{t("Role", "ロール")}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {candidates.map((c) => (
+                      <TableRow
+                        key={c.employeeId}
+                        className={!c.hasEmail ? "opacity-50" : ""}
+                      >
+                        <TableCell>
+                          <input
+                            type="checkbox"
+                            className="rounded"
+                            disabled={!c.hasEmail}
+                            checked={!!selectedCandidates[c.employeeId]}
+                            onChange={(e) => {
+                              setSelectedCandidates((prev) => {
+                                if (e.target.checked) {
+                                  return {
+                                    ...prev,
+                                    [c.employeeId]: {
+                                      role:
+                                        prev[c.employeeId]?.role ||
+                                        c.suggestedRole,
+                                    },
+                                  };
+                                }
+                                const { [c.employeeId]: _, ...rest } = prev;
+                                return rest;
+                              });
+                            }}
+                          />
+                        </TableCell>
+                        <TableCell className="text-sm font-medium">
+                          {c.name}
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {c.hasEmail ? (
+                            c.email
+                          ) : (
+                            <Badge
+                              variant="outline"
+                              className="text-xs text-orange-600 border-orange-300"
+                            >
+                              {t("No email", "メール未登録")}
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {c.department}
+                          {c.section && ` / ${c.section}`}
+                        </TableCell>
+                        <TableCell className="text-sm">{c.position}</TableCell>
+                        <TableCell>
+                          <Select
+                            value={
+                              selectedCandidates[c.employeeId]?.role ||
+                              c.suggestedRole
+                            }
+                            onValueChange={(val) => {
+                              setSelectedCandidates((prev) => ({
+                                ...prev,
+                                [c.employeeId]: { role: val },
+                              }));
+                            }}
+                            disabled={!c.hasEmail}
+                          >
+                            <SelectTrigger className="h-7 text-xs w-[120px]">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="ADMIN">ADMIN</SelectItem>
+                              <SelectItem value="EXECUTIVE">
+                                EXECUTIVE
+                              </SelectItem>
+                              <SelectItem value="MANAGER">MANAGER</SelectItem>
+                              <SelectItem value="USER">USER</SelectItem>
+                              <SelectItem value="GUEST">GUEST</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            ) : candidateOrgId ? (
+              <div className="text-center py-8 text-muted-foreground text-sm">
+                {t(
+                  "No candidates found. All employees may already have accounts.",
+                  "候補が見つかりません。全社員にアカウントが作成済みの可能性があります。",
+                )}
+              </div>
+            ) : null}
+          </div>
+          <DialogFooter className="flex items-center justify-between sm:justify-between">
+            <p className="text-sm text-muted-foreground">
+              {Object.keys(selectedCandidates).length > 0
+                ? t(
+                    `${Object.keys(selectedCandidates).length} selected`,
+                    `${Object.keys(selectedCandidates).length} 名選択中`,
+                  )
+                : ""}
+            </p>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowCandidateDialog(false);
+                  setCandidates([]);
+                  setSelectedCandidates({});
+                }}
+              >
+                {t("Cancel", "キャンセル")}
+              </Button>
+              <Button
+                onClick={handleCreateFromEmployees}
+                disabled={
+                  Object.keys(selectedCandidates).length === 0 ||
+                  creatingAccounts
+                }
+              >
+                {creatingAccounts
+                  ? t("Creating...", "作成中...")
+                  : t(
+                      `Create ${Object.keys(selectedCandidates).length} accounts`,
+                      `${Object.keys(selectedCandidates).length} 名のアカウントを作成`,
+                    )}
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* アカウント作成結果ダイアログ */}
+      <Dialog
+        open={showCreateResult}
+        onOpenChange={(open) => {
+          if (!open) {
+            setShowCreateResult(false);
+            setCreateResult(null);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-2xl max-h-[80vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle>
+              {t("Account Creation Results", "アカウント作成結果")}
+            </DialogTitle>
+          </DialogHeader>
+          {createResult && (
+            <div className="space-y-4 overflow-y-auto flex-1 min-h-0">
+              {/* 統計 */}
+              <div className="grid grid-cols-3 gap-3">
+                <div className="text-center p-3 rounded-lg bg-green-50 dark:bg-green-950/30">
+                  <p className="text-2xl font-bold text-green-600">
+                    {createResult.created.length}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {t("Created", "作成")}
+                  </p>
+                </div>
+                <div className="text-center p-3 rounded-lg bg-yellow-50 dark:bg-yellow-950/30">
+                  <p className="text-2xl font-bold text-yellow-600">
+                    {createResult.skipped}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {t("Skipped", "スキップ")}
+                  </p>
+                </div>
+                <div className="text-center p-3 rounded-lg bg-red-50 dark:bg-red-950/30">
+                  <p className="text-2xl font-bold text-red-600">
+                    {createResult.errors.length}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {t("Errors", "エラー")}
+                  </p>
+                </div>
+              </div>
+
+              {/* 作成アカウント一覧 */}
+              {createResult.created.length > 0 && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-sm font-medium">
+                      {t("Created Accounts", "作成されたアカウント")}
+                    </h4>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleCreateResultCsvDownload}
+                    >
+                      {t("Download CSV", "CSVダウンロード")}
+                    </Button>
+                  </div>
+                  <div className="rounded-lg border overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>{t("Name", "名前")}</TableHead>
+                          <TableHead>{t("Email", "メールアドレス")}</TableHead>
+                          <TableHead>{t("Role", "ロール")}</TableHead>
+                          <TableHead>
+                            {t("Temporary Password", "仮パスワード")}
+                          </TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {createResult.created.map((account) => (
+                          <TableRow key={account.email}>
+                            <TableCell className="text-sm">
+                              {account.name || "-"}
+                            </TableCell>
+                            <TableCell className="text-sm">
+                              {account.email}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className="text-xs">
+                                {account.role}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <code className="text-sm font-mono bg-muted px-1.5 py-0.5 rounded">
+                                {account.temporaryPassword}
+                              </code>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              )}
+
+              {/* エラー一覧 */}
+              {createResult.errors.length > 0 && (
+                <div className="space-y-2">
+                  <h4 className="text-sm font-medium text-red-600">
+                    {t("Errors", "エラー")}
+                  </h4>
+                  <div className="space-y-1">
+                    {createResult.errors.map((err) => (
+                      <p
+                        key={`error-${err.employeeId}`}
+                        className="text-sm text-muted-foreground"
+                      >
+                        {err.employeeId}: {err.message}
+                      </p>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button
+              onClick={() => {
+                setShowCreateResult(false);
+                setCreateResult(null);
+              }}
+            >
+              {t("Close", "閉じる")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* アナウンス作成/編集モーダル */}
       <Dialog

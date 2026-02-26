@@ -19,14 +19,14 @@ const adminTabs: AppTab[] = [
   },
   {
     id: "users",
-    name: "User Management",
-    nameJa: "ユーザ管理",
+    name: "Account Management",
+    nameJa: "アカウント管理",
     icon: <FaUsers className="w-5 h-5" />,
     order: 2,
     enabled: true,
     allowAccessKey: true,
-    description: "Manage system users",
-    descriptionJa: "システムユーザを管理します",
+    description: "Manage system accounts",
+    descriptionJa: "システムアカウントを管理します",
   },
   {
     id: "access-keys",
@@ -95,7 +95,7 @@ const adminTabs: AppTab[] = [
  *
  * システムの基本機能と管理機能を提供します。
  * - 全社員: ダッシュボード
- * - 管理者: システム環境（ユーザ管理、モジュール管理、アクセスキー管理等）
+ * - 管理者: システム環境（アカウント管理、モジュール管理、アクセスキー管理等）
  */
 export const systemModule: AppModule = {
   id: "system",

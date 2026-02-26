@@ -61,6 +61,7 @@ model User {
   lastSignInAt  DateTime?
   twoFactorEnabled Boolean    @default(false)
   twoFactorSecret  String?
+  forcePasswordChange Boolean @default(false)
   accounts      Account[]
   sessions      Session[]
   userAccessKeys UserAccessKey[]
