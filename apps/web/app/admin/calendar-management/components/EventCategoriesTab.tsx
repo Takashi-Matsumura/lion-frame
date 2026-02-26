@@ -375,6 +375,8 @@ export function EventCategoriesTab({ language }: EventCategoriesTabProps) {
         deleteLabel={t.delete}
         disabled={saving}
         onDelete={handleDelete}
+        requireConfirmText="DELETE"
+        confirmPrompt={t.confirmPrompt}
       />
     </div>
   );

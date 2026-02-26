@@ -477,6 +477,8 @@ export function HolidayManagementClient({
         deleteLabel={t.delete}
         disabled={saving}
         onDelete={handleDelete}
+        requireConfirmText="DELETE"
+        confirmPrompt={t.confirmPrompt}
       />
 
       {/* AI Generate Dialog */}

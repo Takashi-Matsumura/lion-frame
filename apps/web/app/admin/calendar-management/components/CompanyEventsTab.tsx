@@ -512,6 +512,8 @@ export function CompanyEventsTab({ language }: CompanyEventsTabProps) {
         deleteLabel={t.delete}
         disabled={saving}
         onDelete={handleDelete}
+        requireConfirmText="DELETE"
+        confirmPrompt={t.confirmPrompt}
       />
     </div>
   );

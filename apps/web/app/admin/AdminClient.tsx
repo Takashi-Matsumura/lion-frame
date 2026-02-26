@@ -4514,8 +4514,8 @@ export function AdminClient({
         </DialogContent>
       </Dialog>
 
-      {/* アナウンス削除確認モーダル */}
-      <Dialog
+      {/* アナウンス削除確認モーダル（DELETE入力式） */}
+      <DeleteConfirmDialog
         open={showAnnouncementDeleteModal && !!announcementToDelete}
         onOpenChange={(open) => {
           if (!open) {
@@ -4523,43 +4523,25 @@ export function AdminClient({
             setAnnouncementToDelete(null);
           }
         }}
-      >
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>
-              {t("Delete Announcement", "アナウンスを削除")}
-            </DialogTitle>
-            <DialogDescription>
-              {announcementToDelete &&
-                t(
-                  `Are you sure you want to delete "${announcementToDelete.title}"? This action cannot be undone.`,
-                  `「${announcementToDelete.title}」を削除してもよろしいですか？この操作は取り消せません。`,
-                )}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setShowAnnouncementDeleteModal(false);
-                setAnnouncementToDelete(null);
-              }}
-              disabled={announcementDeleting}
-            >
-              {t("Cancel", "キャンセル")}
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleDeleteAnnouncement}
-              disabled={announcementDeleting}
-            >
-              {announcementDeleting
-                ? t("Deleting...", "削除中...")
-                : t("Delete", "削除")}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        title={t("Delete Announcement", "アナウンスを削除")}
+        description={
+          announcementToDelete
+            ? t(
+                `Are you sure you want to delete "${announcementToDelete.title}"? This action cannot be undone.`,
+                `「${announcementToDelete.title}」を削除してもよろしいですか？この操作は取り消せません。`,
+              )
+            : ""
+        }
+        cancelLabel={t("Cancel", "キャンセル")}
+        deleteLabel={announcementDeleting ? t("Deleting...", "削除中...") : t("Delete", "削除")}
+        disabled={announcementDeleting}
+        onDelete={handleDeleteAnnouncement}
+        requireConfirmText="DELETE"
+        confirmPrompt={t(
+          'Type "DELETE" to confirm:',
+          "確認のため「DELETE」と入力してください：",
+        )}
+      />
     </div>
   );
 }
