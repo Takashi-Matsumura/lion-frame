@@ -16,6 +16,7 @@ export type AuditAction =
   // USER_MANAGEMENT
   | "USER_CREATE"
   | "USER_DELETE"
+  | "BULK_USER_DELETE"
   | "USER_ROLE_CHANGE"
   | "PASSWORD_RESET"
   | "PASSWORD_CHANGE"

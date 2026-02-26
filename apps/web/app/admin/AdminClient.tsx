@@ -265,6 +265,14 @@ export function AdminClient({
   const [organizations, setOrganizations] = useState<
     { id: string; name: string; departments: { id: string; name: string }[] }[]
   >([]);
+  // 退職者アカウント管理の状態
+  const [candidateTab, setCandidateTab] = useState<"create" | "retired">("create");
+  const [retiredAccounts, setRetiredAccounts] = useState<
+    { userId: string; name: string; email: string | null; role: string; department: string; position: string }[]
+  >([]);
+  const [retiredAccountsLoading, setRetiredAccountsLoading] = useState(false);
+  const [selectedRetired, setSelectedRetired] = useState<Set<string>>(new Set());
+  const [deletingRetired, setDeletingRetired] = useState(false);
 
   // モジュール管理タブの状態
   const [modulesData, setModulesData] = useState<ModulesData | null>(null);
@@ -1312,6 +1320,61 @@ export function AdminClient({
       setCreatingAccounts(false);
     }
   }, [selectedCandidates, candidates, fetchUsers, t]);
+
+  // 退職者アカウント取得
+  const fetchRetiredAccounts = useCallback(
+    async (orgId: string) => {
+      if (!orgId) {
+        setRetiredAccounts([]);
+        return;
+      }
+      setRetiredAccountsLoading(true);
+      try {
+        const res = await fetch(
+          `/api/admin/users/retired-accounts?organizationId=${orgId}`,
+        );
+        const data = await res.json();
+        if (res.ok) {
+          setRetiredAccounts(data.accounts || []);
+        }
+      } catch (error) {
+        console.error("Error fetching retired accounts:", error);
+      } finally {
+        setRetiredAccountsLoading(false);
+      }
+    },
+    [],
+  );
+
+  // 退職者アカウント一括削除
+  const handleDeleteRetiredAccounts = useCallback(async () => {
+    if (selectedRetired.size === 0) return;
+    setDeletingRetired(true);
+    try {
+      const res = await fetch("/api/admin/users/bulk-delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userIds: Array.from(selectedRetired) }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(
+          data.errorJa || data.error ||
+            t("Deletion failed", "削除に失敗しました"),
+        );
+        return;
+      }
+      setShowCandidateDialog(false);
+      setSelectedRetired(new Set());
+      setRetiredAccounts([]);
+      await fetchUsers();
+    } catch (error) {
+      console.error("Error deleting retired accounts:", error);
+      alert(t("Deletion failed", "削除に失敗しました"));
+    } finally {
+      setDeletingRetired(false);
+    }
+  }, [selectedRetired, fetchUsers, t]);
 
   // 作成結果CSVダウンロード
   const handleCreateResultCsvDownload = useCallback(() => {
@@ -3504,7 +3567,7 @@ export function AdminClient({
         </DialogContent>
       </Dialog>
 
-      {/* 社員からアカウント作成ダイアログ */}
+      {/* 社員アカウント管理ダイアログ */}
       <Dialog
         open={showCandidateDialog}
         onOpenChange={(open) => {
@@ -3512,22 +3575,64 @@ export function AdminClient({
             setShowCandidateDialog(false);
             setCandidates([]);
             setSelectedCandidates({});
+            setCandidateTab("create");
+            setRetiredAccounts([]);
+            setSelectedRetired(new Set());
           }
         }}
       >
         <DialogContent className="sm:max-w-4xl max-h-[85vh] flex flex-col">
           <DialogHeader>
             <DialogTitle>
-              {t("Create Accounts from Employees", "社員からアカウント作成")}
+              {t("Employee Account Management", "社員アカウント管理")}
             </DialogTitle>
             <DialogDescription>
-              {t(
-                "Select employees from the organization chart to create user accounts. A temporary password will be generated for each account.",
-                "組織図の社員データからアカウントを作成します。各アカウントに仮パスワードが自動生成されます。",
-              )}
+              {candidateTab === "create"
+                ? t(
+                    "Select employees from the organization chart to create user accounts. A temporary password will be generated for each account.",
+                    "組織図の社員データからアカウントを作成します。各アカウントに仮パスワードが自動生成されます。",
+                  )
+                : t(
+                    "Delete accounts of retired employees that are no longer needed.",
+                    "退職した社員の不要なアカウントを削除します。",
+                  )}
             </DialogDescription>
           </DialogHeader>
+          {/* タブ切り替え */}
+          <div className="flex gap-1 border-b pb-0">
+            <button
+              type="button"
+              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                candidateTab === "create"
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+              onClick={() => setCandidateTab("create")}
+            >
+              <UserPlus className="h-4 w-4 inline-block mr-1.5 -mt-0.5" />
+              {t("Create Accounts", "アカウント作成")}
+            </button>
+            <button
+              type="button"
+              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                candidateTab === "retired"
+                  ? "border-destructive text-destructive"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+              onClick={() => {
+                setCandidateTab("retired");
+                if (candidateOrgId) {
+                  fetchRetiredAccounts(candidateOrgId);
+                }
+              }}
+            >
+              <Trash2 className="h-4 w-4 inline-block mr-1.5 -mt-0.5" />
+              {t("Retired Accounts", "退職者アカウント")}
+            </button>
+          </div>
           <div className="space-y-4 overflow-y-auto flex-1 min-h-0">
+          {candidateTab === "create" ? (<>
+          {/* === アカウント作成タブ === */}
             {/* フィルター */}
             <div className="flex flex-wrap gap-3">
               <div className="flex-1 min-w-[200px]">
@@ -3748,8 +3853,134 @@ export function AdminClient({
                 )}
               </div>
             ) : null}
+          </>) : (
+          <>
+          {/* === 退職者アカウントタブ === */}
+            {/* 組織選択 */}
+            <div className="flex flex-wrap gap-3">
+              <div className="flex-1 min-w-[200px]">
+                <Label className="text-xs text-muted-foreground mb-1 block">
+                  {t("Organization", "組織")}
+                </Label>
+                <Select
+                  value={candidateOrgId}
+                  onValueChange={(val) => {
+                    setCandidateOrgId(val);
+                    setSelectedRetired(new Set());
+                    fetchRetiredAccounts(val);
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue
+                      placeholder={t(
+                        "Select organization",
+                        "組織を選択",
+                      )}
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {organizations.map((org) => (
+                      <SelectItem key={org.id} value={org.id}>
+                        {org.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* 退職者アカウント一覧 */}
+            {retiredAccountsLoading ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto" />
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {t("Loading...", "読み込み中...")}
+                </p>
+              </div>
+            ) : retiredAccounts.length > 0 ? (
+              <div className="rounded-lg border overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-10">
+                        <input
+                          type="checkbox"
+                          className="rounded"
+                          checked={
+                            retiredAccounts.length > 0 &&
+                            retiredAccounts.every((a) =>
+                              selectedRetired.has(a.userId),
+                            )
+                          }
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedRetired(
+                                new Set(retiredAccounts.map((a) => a.userId)),
+                              );
+                            } else {
+                              setSelectedRetired(new Set());
+                            }
+                          }}
+                        />
+                      </TableHead>
+                      <TableHead>{t("Name", "名前")}</TableHead>
+                      <TableHead>{t("Email", "メールアドレス")}</TableHead>
+                      <TableHead>{t("Role", "ロール")}</TableHead>
+                      <TableHead>{t("Department", "元部署")}</TableHead>
+                      <TableHead>{t("Position", "役職")}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {retiredAccounts.map((a) => (
+                      <TableRow key={a.userId}>
+                        <TableCell>
+                          <input
+                            type="checkbox"
+                            className="rounded"
+                            checked={selectedRetired.has(a.userId)}
+                            onChange={(e) => {
+                              setSelectedRetired((prev) => {
+                                const next = new Set(prev);
+                                if (e.target.checked) {
+                                  next.add(a.userId);
+                                } else {
+                                  next.delete(a.userId);
+                                }
+                                return next;
+                              });
+                            }}
+                          />
+                        </TableCell>
+                        <TableCell className="text-sm font-medium">
+                          {a.name}
+                        </TableCell>
+                        <TableCell className="text-sm">{a.email}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="text-xs">
+                            {a.role}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-sm">{a.department}</TableCell>
+                        <TableCell className="text-sm">{a.position}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            ) : candidateOrgId ? (
+              <div className="text-center py-8 text-muted-foreground text-sm">
+                {t(
+                  "No retired employees with active accounts found.",
+                  "アカウントが残っている退職者はいません。",
+                )}
+              </div>
+            ) : null}
+          </>
+          )}
           </div>
           <DialogFooter className="flex items-center justify-between sm:justify-between">
+            {candidateTab === "create" ? (
+            <>
             <p className="text-sm text-muted-foreground">
               {Object.keys(selectedCandidates).length > 0
                 ? t(
@@ -3784,6 +4015,43 @@ export function AdminClient({
                     )}
               </Button>
             </div>
+            </>
+            ) : (
+            <>
+            <p className="text-sm text-muted-foreground">
+              {selectedRetired.size > 0
+                ? t(
+                    `${selectedRetired.size} selected`,
+                    `${selectedRetired.size} 名選択中`,
+                  )
+                : ""}
+            </p>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowCandidateDialog(false);
+                  setRetiredAccounts([]);
+                  setSelectedRetired(new Set());
+                }}
+              >
+                {t("Cancel", "キャンセル")}
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleDeleteRetiredAccounts}
+                disabled={selectedRetired.size === 0 || deletingRetired}
+              >
+                {deletingRetired
+                  ? t("Deleting...", "削除中...")
+                  : t(
+                      `Delete ${selectedRetired.size} accounts`,
+                      `${selectedRetired.size} 名のアカウントを削除`,
+                    )}
+              </Button>
+            </div>
+            </>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
