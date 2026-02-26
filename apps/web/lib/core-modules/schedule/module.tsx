@@ -4,8 +4,33 @@
  * カレンダーとスケジュール管理を提供するモジュール
  */
 
+import { FaCalendarCheck, FaCog, FaTags } from "react-icons/fa";
 import { getMenuIcon, getModuleIcon } from "@/lib/modules/icons";
-import type { AppModule } from "@/types/module";
+import type { AppModule, AppTab } from "@/types/module";
+
+const calendarManagementTabs: AppTab[] = [
+  {
+    id: "holidays",
+    name: "Holiday Management",
+    nameJa: "祝日管理",
+    icon: <FaCalendarCheck className="w-5 h-5" />,
+    order: 1,
+  },
+  {
+    id: "categories",
+    name: "Event Categories",
+    nameJa: "イベントカテゴリ",
+    icon: <FaTags className="w-5 h-5" />,
+    order: 2,
+  },
+  {
+    id: "settings",
+    name: "Calendar Settings",
+    nameJa: "カレンダー設定",
+    icon: <FaCog className="w-5 h-5" />,
+    order: 3,
+  },
+];
 
 export const scheduleModule: AppModule = {
   id: "schedule",
@@ -34,18 +59,22 @@ export const scheduleModule: AppModule = {
       isImplemented: true,
     },
     {
-      id: "holidayManagement",
+      id: "calendarManagement",
       moduleId: "schedule",
-      name: "Holiday Management",
-      nameJa: "祝日管理",
-      path: "/admin/holidays",
+      name: "Calendar Management",
+      nameJa: "カレンダー管理",
+      path: "/admin/calendar-management",
       menuGroup: "admin",
       requiredRoles: ["ADMIN"],
       enabled: true,
       order: 75,
-      description: "Manage holidays and generate national holidays with AI",
-      descriptionJa: "祝日の管理とAIによる国民の祝日の一括生成",
+      icon: getMenuIcon("calendarManagement", "schedule"),
+      description:
+        "Manage holidays, event categories, and calendar settings",
+      descriptionJa:
+        "祝日、イベントカテゴリ、カレンダー設定の管理",
       isImplemented: true,
+      tabs: calendarManagementTabs,
     },
   ],
   services: [
@@ -82,7 +111,8 @@ export const scheduleModule: AppModule = {
       name: "AI Concierge",
       nameJa: "AIコンシェルジュ",
       description: "2-step AI schedule concierge with tool selection",
-      descriptionJa: "2ステップAIスケジュールコンシェルジュ（ツール選択方式）",
+      descriptionJa:
+        "2ステップAIスケジュールコンシェルジュ（ツール選択方式）",
       apiEndpoints: ["/api/calendar/concierge"],
       enabled: true,
     },

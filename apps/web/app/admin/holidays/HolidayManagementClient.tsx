@@ -4,8 +4,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Languages } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { useSidebar } from "@/components/ui/sidebar";
-import { useSidebarStore } from "@/lib/stores/sidebar-store";
 import {
   Dialog,
   DialogContent,
@@ -70,8 +68,6 @@ export function HolidayManagementClient({
   language,
 }: HolidayManagementClientProps) {
   const t = holidayTranslations[language];
-  const { open } = useSidebar();
-  const { width } = useSidebarStore();
 
   const currentYear = new Date().getFullYear();
   const [holidays, setHolidays] = useState<Holiday[]>([]);
@@ -278,14 +274,6 @@ export function HolidayManagementClient({
   }
 
   return (
-    <div
-      className="fixed inset-0 flex flex-col transition-all duration-300"
-      style={{
-        top: "4.5rem",
-        left: open ? `${width}px` : "4rem",
-      }}
-    >
-      <div className="flex-1 overflow-hidden">
         <div className="max-w-5xl mx-auto p-6 h-full flex flex-col gap-4">
           {/* Toolbar */}
           <div className="flex flex-wrap items-center gap-3 shrink-0">
@@ -540,7 +528,5 @@ export function HolidayManagementClient({
           </DialogContent>
         </Dialog>
         </div>
-      </div>
-    </div>
   );
 }

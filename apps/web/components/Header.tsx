@@ -91,6 +91,7 @@ export function Header({
   const isDataManagement = pathname === "/admin/data-management";
   const isEvaluationMaster = pathname === "/admin/evaluation-master";
   const isEvaluationRag = pathname === "/admin/evaluation-rag";
+  const isCalendarManagement = pathname === "/admin/calendar-management";
 
   // 組織分析タブ
   const analyticsTab = searchParams.get("tab") || "overview";
@@ -245,6 +246,19 @@ export function Header({
       active: evaluationRagTab === tab.id,
     })) || [];
 
+  // カレンダー管理タブ（レジストリから取得）
+  const calendarManagementTab = searchParams.get("tab") || "holidays";
+  const registryCalendarManagementTabs = getTabsByMenuPath(
+    "/admin/calendar-management",
+  );
+  const calendarManagementTabs =
+    registryCalendarManagementTabs?.map((tab) => ({
+      name: language === "ja" ? tab.nameJa : tab.name,
+      icon: tab.icon,
+      path: `/admin/calendar-management?tab=${tab.id}`,
+      active: calendarManagementTab === tab.id,
+    })) || [];
+
   const renderTabs = (tabs: TabItem[], label: string) => (
     <div className="border-t border-border bg-muted">
       <nav className="flex gap-1 px-6" aria-label={label}>
@@ -349,6 +363,14 @@ export function Header({
         renderTabs(
           filterTabsByPermission(evaluationRagTabs, "/admin/evaluation-rag"),
           "Evaluation AI Support Tabs",
+        )}
+      {isCalendarManagement &&
+        renderTabs(
+          filterTabsByPermission(
+            calendarManagementTabs,
+            "/admin/calendar-management",
+          ),
+          "Calendar Management Tabs",
         )}
     </header>
   );
