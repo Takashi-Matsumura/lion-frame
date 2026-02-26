@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
+import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -357,10 +358,7 @@ export function AuditLogsClient({ language }: AuditLogsClientProps) {
 
           {/* ローディング */}
           {loading && (
-            <div className="text-center py-12">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto" />
-              <p className="mt-4 text-muted-foreground">{t.loading}</p>
-            </div>
+            <PageSkeleton contentHeight="h-[400px]" />
           )}
 
           {/* ログテーブル */}

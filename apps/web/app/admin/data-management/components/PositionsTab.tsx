@@ -11,6 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { PageSkeleton } from "@/components/ui/page-skeleton";
 import type { DataManagementTranslation } from "../translations";
 
 interface PositionMaster {
@@ -270,9 +271,7 @@ export function PositionsTab({ language, t }: PositionsTabProps) {
 
       {/* Loading */}
       {isLoading && (
-        <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-        </div>
+        <PageSkeleton contentHeight="h-[300px]" />
       )}
 
       {/* Table */}

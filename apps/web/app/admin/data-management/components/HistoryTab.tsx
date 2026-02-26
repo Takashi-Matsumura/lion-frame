@@ -3,6 +3,7 @@
 import type { ChangeType } from "@prisma/client";
 import { useCallback, useEffect, useState } from "react";
 import { FaFilter, FaHistory } from "react-icons/fa";
+import { PageSkeleton } from "@/components/ui/page-skeleton";
 import type { DataManagementTranslation } from "../translations";
 
 interface ChangeLog {
@@ -164,9 +165,7 @@ export function HistoryTab({ organizationId, language, t }: HistoryTabProps) {
 
       {/* History Table */}
       {isLoading ? (
-        <div className="text-center py-12 text-muted-foreground">
-          <p>{t.loading}</p>
-        </div>
+        <PageSkeleton contentHeight="h-[300px]" />
       ) : logs.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground">
           <FaHistory className="w-12 h-12 mx-auto mb-4 opacity-50" />
