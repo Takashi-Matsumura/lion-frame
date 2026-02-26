@@ -4,6 +4,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Languages } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useSidebar } from "@/components/ui/sidebar";
+import { useSidebarStore } from "@/lib/stores/sidebar-store";
 import {
   Dialog,
   DialogContent,
@@ -68,6 +70,8 @@ export function HolidayManagementClient({
   language,
 }: HolidayManagementClientProps) {
   const t = holidayTranslations[language];
+  const { open } = useSidebar();
+  const { width } = useSidebarStore();
 
   const currentYear = new Date().getFullYear();
   const [holidays, setHolidays] = useState<Holiday[]>([]);
@@ -274,9 +278,17 @@ export function HolidayManagementClient({
   }
 
   return (
-    <div className="max-w-5xl mx-auto space-y-4">
-      {/* Toolbar */}
-      <div className="flex flex-wrap items-center gap-3">
+    <div
+      className="fixed inset-0 flex flex-col transition-all duration-300"
+      style={{
+        top: "4.5rem",
+        left: open ? `${width}px` : "4rem",
+      }}
+    >
+      <div className="flex-1 overflow-hidden">
+        <div className="max-w-5xl mx-auto p-6 h-full flex flex-col gap-4">
+          {/* Toolbar */}
+          <div className="flex flex-wrap items-center gap-3 shrink-0">
         <Select value={filterType} onValueChange={setFilterType}>
           <SelectTrigger className="w-[160px]">
             <SelectValue />
@@ -315,18 +327,19 @@ export function HolidayManagementClient({
         </Button>
       </div>
 
-      {/* Table */}
-      {holidays.length === 0 ? (
-        <EmptyState
-          message={t.noHolidays}
-          description={t.noHolidaysDescription}
-          className="border rounded-lg"
-        />
-      ) : (
-        <div className="border rounded-lg overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow>
+          {/* Table */}
+          {holidays.length === 0 ? (
+            <EmptyState
+              message={t.noHolidays}
+              description={t.noHolidaysDescription}
+              className="border rounded-lg"
+            />
+          ) : (
+            <div className="border rounded-lg overflow-hidden flex-1 flex flex-col min-h-0">
+              <div className="overflow-y-auto flex-1">
+                <Table>
+                  <TableHeader className="sticky top-0 bg-muted/50 z-10">
+                    <TableRow>
                 <TableHead className="w-[140px]">{t.date}</TableHead>
                 <TableHead>{t.name}</TableHead>
                 <TableHead>{t.nameEn}</TableHead>
@@ -366,12 +379,13 @@ export function HolidayManagementClient({
                   </TableCell>
                 </TableRow>
               ))}
-            </TableBody>
-          </Table>
-        </div>
-      )}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          )}
 
-      {/* Add/Edit Dialog */}
+          {/* Add/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -523,8 +537,10 @@ export function HolidayManagementClient({
               {generating ? t.generating : t.generate}
             </Button>
           </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </DialogContent>
+        </Dialog>
+        </div>
+      </div>
     </div>
   );
 }
