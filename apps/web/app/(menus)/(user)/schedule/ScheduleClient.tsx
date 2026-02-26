@@ -57,6 +57,14 @@ interface EventFormData {
   category: string;
 }
 
+interface DualMonthCell {
+  currentDay: number | null;
+  nextDay: number | null;
+  currentDateKey: string | null;
+  nextDateKey: string | null;
+  dayOfWeek: number;
+}
+
 const CATEGORY_COLORS: Record<string, string> = {
   personal: "bg-yellow-300",
   work: "bg-orange-300",
@@ -76,6 +84,10 @@ const INITIAL_FORM: EventFormData = {
   category: "work",
 };
 
+function formatDateKey(year: number, month: number, day: number): string {
+  return `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
 function getCalendarDays(year: number, month: number): (number | null)[] {
   const firstDay = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -86,8 +98,48 @@ function getCalendarDays(year: number, month: number): (number | null)[] {
   return days;
 }
 
-function formatDateKey(year: number, month: number, day: number): string {
-  return `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+function getDualMonthGrid(year: number, month: number): DualMonthCell[] {
+  const firstDayCurrent = new Date(year, month, 1).getDay();
+  const daysInCurrent = new Date(year, month + 1, 0).getDate();
+
+  const nextYear = month === 11 ? year + 1 : year;
+  const nextMonth = month === 11 ? 0 : month + 1;
+  const firstDayNext = new Date(nextYear, nextMonth, 1).getDay();
+  const daysInNext = new Date(nextYear, nextMonth + 1, 0).getDate();
+
+  const rowsCurrent = Math.ceil((firstDayCurrent + daysInCurrent) / 7);
+  const rowsNext = Math.ceil((firstDayNext + daysInNext) / 7);
+  const totalRows = Math.max(rowsCurrent, rowsNext);
+
+  const cells: DualMonthCell[] = [];
+
+  for (let row = 0; row < totalRows; row++) {
+    for (let col = 0; col < 7; col++) {
+      const idx = row * 7 + col;
+
+      const currentIdx = idx - firstDayCurrent;
+      const currentDay =
+        currentIdx >= 0 && currentIdx < daysInCurrent ? currentIdx + 1 : null;
+
+      const nextIdx = idx - firstDayNext;
+      const nextDay =
+        nextIdx >= 0 && nextIdx < daysInNext ? nextIdx + 1 : null;
+
+      cells.push({
+        currentDay,
+        nextDay,
+        currentDateKey: currentDay
+          ? formatDateKey(year, month, currentDay)
+          : null,
+        nextDateKey: nextDay
+          ? formatDateKey(nextYear, nextMonth, nextDay)
+          : null,
+        dayOfWeek: col,
+      });
+    }
+  }
+
+  return cells;
 }
 
 function toLocalDatetimeValue(date: Date): string {
@@ -115,6 +167,10 @@ export function ScheduleClient({ language }: ScheduleClientProps) {
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth());
   const [selectedDay, setSelectedDay] = useState<number | null>(now.getDate());
+  const [selectedMonth, setSelectedMonth] = useState<"current" | "next">(
+    "current",
+  );
+  const [viewMode, setViewMode] = useState<"single" | "dual">("dual");
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [holidays, setHolidays] = useState<Holiday[]>([]);
   const [loading, setLoading] = useState(true);
@@ -139,16 +195,24 @@ export function ScheduleClient({ language }: ScheduleClientProps) {
     return formatDateKey(n.getFullYear(), n.getMonth(), n.getDate());
   }, []);
 
+  // Next month year/month
+  const nextYear = month === 11 ? year + 1 : year;
+  const nextMonthNum = month === 11 ? 0 : month + 1;
+
   const fetchData = useCallback(async () => {
     setLoading(true);
     const startDate = `${year}-${String(month + 1).padStart(2, "0")}-01`;
-    const lastDay = new Date(year, month + 1, 0).getDate();
-    const endDate = `${year}-${String(month + 1).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+    const lastDayNext = new Date(nextYear, nextMonthNum + 1, 0).getDate();
+    const endDate = `${nextYear}-${String(nextMonthNum + 1).padStart(2, "0")}-${String(lastDayNext).padStart(2, "0")}`;
 
     try {
       const [eventsRes, holidaysRes] = await Promise.all([
-        fetch(`/api/calendar/app-events?startDate=${startDate}&endDate=${endDate}`),
-        fetch(`/api/calendar/holidays?startDate=${startDate}&endDate=${endDate}&type=all`),
+        fetch(
+          `/api/calendar/app-events?startDate=${startDate}&endDate=${endDate}`,
+        ),
+        fetch(
+          `/api/calendar/holidays?startDate=${startDate}&endDate=${endDate}&type=all`,
+        ),
       ]);
 
       if (eventsRes.ok) {
@@ -162,7 +226,7 @@ export function ScheduleClient({ language }: ScheduleClientProps) {
     } finally {
       setLoading(false);
     }
-  }, [year, month]);
+  }, [year, month, nextYear, nextMonthNum]);
 
   useEffect(() => {
     fetchData();
@@ -188,7 +252,14 @@ export function ScheduleClient({ language }: ScheduleClientProps) {
     return map;
   }, [holidays]);
 
-  const days = useMemo(() => getCalendarDays(year, month), [year, month]);
+  const dualGrid = useMemo(
+    () => getDualMonthGrid(year, month),
+    [year, month],
+  );
+  const singleGrid = useMemo(
+    () => getCalendarDays(year, month),
+    [year, month],
+  );
   const weekdays = [t.sun, t.mon, t.tue, t.wed, t.thu, t.fri, t.sat];
 
   // Navigation
@@ -200,6 +271,7 @@ export function ScheduleClient({ language }: ScheduleClientProps) {
       setMonth((m) => m - 1);
     }
     setSelectedDay(null);
+    setSelectedMonth("current");
   }, [month]);
 
   const goToNextMonth = useCallback(() => {
@@ -210,6 +282,7 @@ export function ScheduleClient({ language }: ScheduleClientProps) {
       setMonth((m) => m + 1);
     }
     setSelectedDay(null);
+    setSelectedMonth("current");
   }, [month]);
 
   const goToToday = useCallback(() => {
@@ -217,46 +290,113 @@ export function ScheduleClient({ language }: ScheduleClientProps) {
     setYear(n.getFullYear());
     setMonth(n.getMonth());
     setSelectedDay(n.getDate());
+    setSelectedMonth("current");
   }, []);
 
   // Month title
   const monthTitle = useMemo(() => {
-    if (language === "ja") {
-      return `${year}年 ${month + 1}月`;
-    }
     const monthNames = [
-      "January", "February", "March", "April", "May", "June",
-      "July", "August", "September", "October", "November", "December",
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December",
     ];
-    return `${monthNames[month]} ${year}`;
-  }, [year, month, language]);
+    if (viewMode === "single") {
+      if (language === "ja") return `${year}年 ${month + 1}月`;
+      return `${monthNames[month]} ${year}`;
+    }
+    let main: string;
+    let sub: string;
+    if (language === "ja") {
+      main = `${year}年 ${month + 1}月`;
+      sub =
+        nextYear !== year
+          ? `/ ${nextYear}年${nextMonthNum + 1}月`
+          : `/ ${nextMonthNum + 1}月`;
+    } else {
+      main =
+        nextYear !== year
+          ? `${monthNames[month]} ${year}`
+          : `${monthNames[month]}`;
+      sub =
+        nextYear !== year
+          ? `/ ${monthNames[nextMonthNum]} ${nextYear}`
+          : `/ ${monthNames[nextMonthNum]} ${year}`;
+    }
+    return (
+      <>
+        {main}{" "}
+        <span className="text-sm font-normal text-muted-foreground">{sub}</span>
+      </>
+    );
+  }, [year, month, nextYear, nextMonthNum, language, viewMode]);
 
   // Selected day data
-  const selectedDateKey = selectedDay
-    ? formatDateKey(year, month, selectedDay)
-    : null;
-  const selectedEvents = selectedDateKey ? eventsByDate[selectedDateKey] ?? [] : [];
-  const selectedHolidays = selectedDateKey ? holidaysByDate[selectedDateKey] ?? [] : [];
+  const selectedDateKey = useMemo(() => {
+    if (!selectedDay) return null;
+    if (selectedMonth === "next") {
+      return formatDateKey(nextYear, nextMonthNum, selectedDay);
+    }
+    return formatDateKey(year, month, selectedDay);
+  }, [selectedDay, selectedMonth, year, month, nextYear, nextMonthNum]);
+
+  const selectedEvents = selectedDateKey
+    ? (eventsByDate[selectedDateKey] ?? [])
+    : [];
+  const selectedHolidays = selectedDateKey
+    ? (holidaysByDate[selectedDateKey] ?? [])
+    : [];
 
   // Day label for detail panel
   const selectedDayLabel = useMemo(() => {
     if (!selectedDay) return "";
-    const d = new Date(year, month, selectedDay);
+    const selYear = selectedMonth === "next" ? nextYear : year;
+    const selMonth = selectedMonth === "next" ? nextMonthNum : month;
+    const d = new Date(selYear, selMonth, selectedDay);
     const dayOfWeek = weekdays[d.getDay()];
     if (language === "ja") {
-      return `${month + 1}月${selectedDay}日(${dayOfWeek})`;
+      return `${selMonth + 1}月${selectedDay}日(${dayOfWeek})`;
     }
     const monthNames = [
-      "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
     ];
-    return `${monthNames[month]} ${selectedDay} (${dayOfWeek})`;
-  }, [selectedDay, year, month, language, weekdays]);
+    return `${monthNames[selMonth]} ${selectedDay} (${dayOfWeek})`;
+  }, [
+    selectedDay,
+    selectedMonth,
+    year,
+    month,
+    nextYear,
+    nextMonthNum,
+    language,
+    weekdays,
+  ]);
 
   // Event form handlers
   const openAddDialog = useCallback(() => {
+    const selYear = selectedMonth === "next" ? nextYear : year;
+    const selMonth = selectedMonth === "next" ? nextMonthNum : month;
     const baseDate = selectedDay
-      ? new Date(year, month, selectedDay, 9, 0)
+      ? new Date(selYear, selMonth, selectedDay, 9, 0)
       : new Date(year, month, 1, 9, 0);
     const endDate = new Date(baseDate);
     endDate.setHours(endDate.getHours() + 1);
@@ -268,7 +408,7 @@ export function ScheduleClient({ language }: ScheduleClientProps) {
       endTime: toLocalDatetimeValue(endDate),
     });
     setDialogOpen(true);
-  }, [selectedDay, year, month]);
+  }, [selectedDay, selectedMonth, year, month, nextYear, nextMonthNum]);
 
   const openEditDialog = useCallback((event: CalendarEvent) => {
     setEditingEvent(event);
@@ -359,27 +499,64 @@ export function ScheduleClient({ language }: ScheduleClientProps) {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col gap-4 h-[calc(100svh-8rem)] overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between shrink-0">
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={goToPrevMonth} aria-label={t.prevMonth}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={goToPrevMonth}
+            aria-label={t.prevMonth}
+          >
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <h2 className="text-lg font-semibold min-w-[140px] text-center">
+          <h2 className="text-lg font-semibold min-w-[200px] text-center">
             {monthTitle}
           </h2>
-          <Button variant="outline" size="sm" onClick={goToNextMonth} aria-label={t.nextMonth}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={goToNextMonth}
+            aria-label={t.nextMonth}
+          >
             <ChevronRight className="h-4 w-4" />
           </Button>
           <Button variant="outline" size="sm" onClick={goToToday}>
             {t.today}
           </Button>
+          <div className="flex border rounded-md overflow-hidden ml-2">
+            <button
+              type="button"
+              className={`px-2.5 py-1 text-xs font-medium transition-colors ${
+                viewMode === "single"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-background text-muted-foreground hover:bg-accent"
+              }`}
+              onClick={() => {
+                setViewMode("single");
+                setSelectedMonth("current");
+              }}
+            >
+              1
+            </button>
+            <button
+              type="button"
+              className={`px-2.5 py-1 text-xs font-medium transition-colors border-l ${
+                viewMode === "dual"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-background text-muted-foreground hover:bg-accent"
+              }`}
+              onClick={() => setViewMode("dual")}
+            >
+              2
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Calendar grid */}
-      <div className="border rounded-lg overflow-hidden">
+      <div className="border rounded-lg overflow-hidden shrink-0">
         {/* Weekday header */}
         <div className="grid grid-cols-7 border-b bg-muted/50">
           {weekdays.map((wd, i) => (
@@ -396,78 +573,238 @@ export function ScheduleClient({ language }: ScheduleClientProps) {
 
         {/* Day cells */}
         <div className="grid grid-cols-7">
-          {days.map((day, idx) => {
-            if (day === null) {
-              return <div key={`empty-${idx}`} className="min-h-[80px] border-b border-r bg-muted/20" />;
-            }
-
-            const dateKey = formatDateKey(year, month, day);
-            const dayOfWeek = (idx % 7);
-            const isToday = dateKey === todayKey;
-            const isSelected = day === selectedDay;
-            const dayHolidays = holidaysByDate[dateKey] ?? [];
-            const dayEvents = eventsByDate[dateKey] ?? [];
-            const isHoliday = dayHolidays.length > 0;
-            const isSunday = dayOfWeek === 0;
-            const isSaturday = dayOfWeek === 6;
-
-            return (
-              <button
-                type="button"
-                key={dateKey}
-                className={`min-h-[80px] border-b border-r p-1 flex flex-col transition-colors hover:bg-accent/50 cursor-pointer ${
-                  isSelected ? "bg-accent" : ""
-                } ${isToday ? "bg-primary/5 ring-1 ring-inset ring-primary" : ""}`}
-                onClick={() => setSelectedDay(day)}
-              >
-                <div className="text-left">
-                  <span
-                    className={`text-sm font-medium inline-flex items-center justify-center ${
-                      isToday
-                        ? "bg-gray-900 text-white rounded-full w-6 h-6 leading-none dark:bg-gray-100 dark:text-gray-900"
-                        : isSunday || isHoliday
-                          ? "text-red-500"
-                          : isSaturday
-                            ? "text-blue-500"
-                            : ""
-                    }`}
-                  >
-                    {day}
-                  </span>
-                  {/* Holiday name */}
-                  {dayHolidays.map((h) => (
+          {viewMode === "single"
+            ? singleGrid.map((day, idx) => {
+                if (day === null) {
+                  return (
                     <div
-                      key={h.id}
-                      className="text-[10px] text-red-500 truncate leading-tight"
-                    >
-                      {language === "ja" ? h.name : (h.nameEn ?? h.name)}
-                    </div>
-                  ))}
-                </div>
-                {/* Event dots */}
-                <div className="flex-1" />
-                <div className="flex justify-center gap-0.5 pb-0.5">
-                  {dayEvents.slice(0, 3).map((ev) => (
-                    <span
-                      key={ev.id}
-                      className={`w-2 h-2 rounded-full ${CATEGORY_COLORS[ev.category] ?? CATEGORY_COLORS.other}`}
+                      key={`empty-${idx}`}
+                      className="min-h-[80px] border-b border-r bg-muted/20"
                     />
-                  ))}
-                  {dayEvents.length > 3 && (
-                    <span className="text-[10px] text-muted-foreground">
-                      +{dayEvents.length - 3}
-                    </span>
-                  )}
-                </div>
-              </button>
-            );
-          })}
+                  );
+                }
+
+                const dateKey = formatDateKey(year, month, day);
+                const dayOfWeek = idx % 7;
+                const isToday = dateKey === todayKey;
+                const isSelected =
+                  selectedMonth === "current" && day === selectedDay;
+                const dayHolidays = holidaysByDate[dateKey] ?? [];
+                const dayEvents = eventsByDate[dateKey] ?? [];
+                const isHoliday = dayHolidays.length > 0;
+                const isSunday = dayOfWeek === 0;
+                const isSaturday = dayOfWeek === 6;
+
+                return (
+                  <button
+                    type="button"
+                    key={dateKey}
+                    className={`min-h-[80px] border-b border-r p-1 flex flex-col transition-colors hover:bg-accent/50 cursor-pointer ${
+                      isSelected ? "bg-accent" : ""
+                    } ${isToday ? "bg-primary/5" : ""}`}
+                    onClick={() => {
+                      setSelectedDay(day);
+                      setSelectedMonth("current");
+                    }}
+                  >
+                    <div className="text-left">
+                      <div className="flex items-center gap-0.5">
+                        <span
+                          className={`text-sm font-medium inline-flex items-center justify-center ${
+                            isToday
+                              ? "bg-gray-900 text-white rounded-full w-6 h-6 leading-none dark:bg-gray-100 dark:text-gray-900"
+                              : isSunday || isHoliday
+                                ? "text-red-500"
+                                : isSaturday
+                                  ? "text-blue-500"
+                                  : ""
+                          }`}
+                        >
+                          {day}
+                        </span>
+                        {dayEvents.slice(0, 3).map((ev) => (
+                          <span
+                            key={ev.id}
+                            className={`w-1.5 h-1.5 rounded-full ${CATEGORY_COLORS[ev.category] ?? CATEGORY_COLORS.other}`}
+                          />
+                        ))}
+                        {dayEvents.length > 3 && (
+                          <span className="text-[8px] text-muted-foreground">
+                            +{dayEvents.length - 3}
+                          </span>
+                        )}
+                      </div>
+                      {dayHolidays.map((h) => (
+                        <div
+                          key={h.id}
+                          className="text-[10px] text-red-500 truncate leading-tight"
+                        >
+                          {language === "ja"
+                            ? h.name
+                            : (h.nameEn ?? h.name)}
+                        </div>
+                      ))}
+                    </div>
+                  </button>
+                );
+              })
+            : dualGrid.map((cell, idx) => {
+                const hasCurrent = cell.currentDay !== null;
+                const hasNext = cell.nextDay !== null;
+                const isEmpty = !hasCurrent && !hasNext;
+
+                if (isEmpty) {
+                  return (
+                    <div
+                      key={`empty-${idx}`}
+                      className="min-h-[80px] border-b border-r bg-muted/20"
+                    />
+                  );
+                }
+
+                const currentEvents = cell.currentDateKey
+                  ? (eventsByDate[cell.currentDateKey] ?? [])
+                  : [];
+                const nextEvents = cell.nextDateKey
+                  ? (eventsByDate[cell.nextDateKey] ?? [])
+                  : [];
+                const currentHolidays = cell.currentDateKey
+                  ? (holidaysByDate[cell.currentDateKey] ?? [])
+                  : [];
+                const nextHolidays = cell.nextDateKey
+                  ? (holidaysByDate[cell.nextDateKey] ?? [])
+                  : [];
+
+                const isTodayCurrent = cell.currentDateKey === todayKey;
+                const isTodayNext = cell.nextDateKey === todayKey;
+                const isSelectedCurrent =
+                  selectedMonth === "current" &&
+                  selectedDay === cell.currentDay;
+                const isSelectedNext =
+                  selectedMonth === "next" && selectedDay === cell.nextDay;
+
+                const isSunday = cell.dayOfWeek === 0;
+                const isSaturday = cell.dayOfWeek === 6;
+
+                return (
+                  <div
+                    key={`cell-${idx}`}
+                    className="min-h-[80px] border-b border-r relative dual-month-cell"
+                  >
+                    {/* Upper-left triangle: current month */}
+                    {hasCurrent ? (
+                      <button
+                        type="button"
+                        className={`absolute inset-0 clip-upper-left p-1 flex flex-col items-start cursor-pointer transition-colors hover:bg-accent/30 ${
+                          isSelectedCurrent ? "bg-accent/50" : ""
+                        } ${isTodayCurrent ? "bg-primary/5" : ""}`}
+                        onClick={() => {
+                          setSelectedDay(cell.currentDay);
+                          setSelectedMonth("current");
+                        }}
+                      >
+                        <div className="flex items-center gap-0.5">
+                          <span
+                            className={`text-base font-bold inline-flex items-center justify-center ${
+                              isTodayCurrent
+                                ? "bg-gray-900 text-white rounded-full w-7 h-7 leading-none dark:bg-gray-100 dark:text-gray-900"
+                                : isSunday || currentHolidays.length > 0
+                                  ? "text-red-500"
+                                  : isSaturday
+                                    ? "text-blue-500"
+                                    : ""
+                            }`}
+                          >
+                            {cell.currentDay}
+                          </span>
+                          {currentEvents.slice(0, 2).map((ev) => (
+                            <span
+                              key={ev.id}
+                              className={`w-1.5 h-1.5 rounded-full ${CATEGORY_COLORS[ev.category] ?? CATEGORY_COLORS.other}`}
+                            />
+                          ))}
+                          {currentEvents.length > 2 && (
+                            <span className="text-[8px] text-muted-foreground">
+                              +{currentEvents.length - 2}
+                            </span>
+                          )}
+                        </div>
+                        {currentHolidays.slice(0, 1).map((h) => (
+                          <span
+                            key={h.id}
+                            className="text-[9px] text-red-500 truncate leading-tight max-w-[60%]"
+                          >
+                            {language === "ja"
+                              ? h.name
+                              : (h.nameEn ?? h.name)}
+                          </span>
+                        ))}
+                      </button>
+                    ) : (
+                      <div className="absolute inset-0 clip-upper-left bg-muted/30" />
+                    )}
+
+                    {/* Lower-right triangle: next month */}
+                    {hasNext ? (
+                      <button
+                        type="button"
+                        className={`absolute inset-0 clip-lower-right p-1 flex flex-col items-end justify-end cursor-pointer transition-colors hover:bg-accent/30 ${
+                          isSelectedNext ? "bg-accent/50" : ""
+                        } ${isTodayNext ? "bg-primary/5" : ""}`}
+                        onClick={() => {
+                          setSelectedDay(cell.nextDay);
+                          setSelectedMonth("next");
+                        }}
+                      >
+                        {nextHolidays.slice(0, 1).map((h) => (
+                          <span
+                            key={h.id}
+                            className="text-[9px] text-red-500 truncate leading-tight max-w-[60%]"
+                          >
+                            {language === "ja"
+                              ? h.name
+                              : (h.nameEn ?? h.name)}
+                          </span>
+                        ))}
+                        <div className="flex items-center gap-0.5">
+                          {nextEvents.slice(0, 2).map((ev) => (
+                            <span
+                              key={ev.id}
+                              className={`w-1.5 h-1.5 rounded-full ${CATEGORY_COLORS[ev.category] ?? CATEGORY_COLORS.other}`}
+                            />
+                          ))}
+                          {nextEvents.length > 2 && (
+                            <span className="text-[8px] text-muted-foreground">
+                              +{nextEvents.length - 2}
+                            </span>
+                          )}
+                          <span
+                            className={`text-sm font-medium opacity-50 inline-flex items-center justify-center ${
+                              isTodayNext
+                                ? "bg-gray-900 text-white rounded-full w-6 h-6 leading-none opacity-100 dark:bg-gray-100 dark:text-gray-900"
+                                : isSunday || nextHolidays.length > 0
+                                  ? "text-red-500"
+                                  : isSaturday
+                                    ? "text-blue-500"
+                                    : "text-foreground"
+                            }`}
+                          >
+                            {cell.nextDay}
+                          </span>
+                        </div>
+                      </button>
+                    ) : (
+                      <div className="absolute inset-0 clip-lower-right bg-muted/30" />
+                    )}
+                  </div>
+                );
+              })}
         </div>
       </div>
 
       {/* Selected day detail */}
       {selectedDay && (
-        <div className="border rounded-lg p-4 min-h-[calc(100vh-11rem-400px)]">
+        <div className="border rounded-lg p-4 flex-1 min-h-0 overflow-y-auto">
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-semibold">{selectedDayLabel}</h3>
             <Button size="sm" onClick={openAddDialog}>
@@ -490,7 +827,9 @@ export function ScheduleClient({ language }: ScheduleClientProps) {
                 <span className="text-red-600 dark:text-red-400 font-medium">
                   {language === "ja" ? h.name : (h.nameEn ?? h.name)}
                 </span>
-                <span className="text-muted-foreground text-xs">({t.holiday})</span>
+                <span className="text-muted-foreground text-xs">
+                  ({t.holiday})
+                </span>
               </div>
             ))}
 
@@ -506,7 +845,9 @@ export function ScheduleClient({ language }: ScheduleClientProps) {
                   className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${CATEGORY_COLORS[ev.category] ?? CATEGORY_COLORS.other}`}
                 />
                 <span className="text-muted-foreground font-mono text-xs whitespace-nowrap">
-                  {ev.allDay ? t.allDay : `${formatTime(ev.startTime)}-${formatTime(ev.endTime)}`}
+                  {ev.allDay
+                    ? t.allDay
+                    : `${formatTime(ev.startTime)}-${formatTime(ev.endTime)}`}
                 </span>
                 <span className="truncate">{ev.title}</span>
                 <span className="text-muted-foreground text-xs ml-auto whitespace-nowrap">
@@ -534,7 +875,9 @@ export function ScheduleClient({ language }: ScheduleClientProps) {
                 id="event-title"
                 placeholder={t.eventTitlePlaceholder}
                 value={form.title}
-                onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, title: e.target.value }))
+                }
               />
             </div>
 
@@ -544,7 +887,9 @@ export function ScheduleClient({ language }: ScheduleClientProps) {
                 id="event-description"
                 placeholder={t.eventDescriptionPlaceholder}
                 value={form.description}
-                onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, description: e.target.value }))
+                }
                 rows={2}
               />
             </div>
@@ -555,7 +900,9 @@ export function ScheduleClient({ language }: ScheduleClientProps) {
                 id="event-location"
                 placeholder={t.eventLocationPlaceholder}
                 value={form.location}
-                onChange={(e) => setForm((f) => ({ ...f, location: e.target.value }))}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, location: e.target.value }))
+                }
               />
             </div>
 
@@ -635,16 +982,29 @@ export function ScheduleClient({ language }: ScheduleClientProps) {
               <Label>{t.category}</Label>
               <Select
                 value={form.category}
-                onValueChange={(val) => setForm((f) => ({ ...f, category: val }))}
+                onValueChange={(val) =>
+                  setForm((f) => ({ ...f, category: val }))
+                }
               >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {(["work", "meeting", "visitor", "trip", "personal", "other"] as const).map((cat) => (
+                  {(
+                    [
+                      "work",
+                      "meeting",
+                      "visitor",
+                      "trip",
+                      "personal",
+                      "other",
+                    ] as const
+                  ).map((cat) => (
                     <SelectItem key={cat} value={cat}>
                       <span className="flex items-center gap-2">
-                        <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${CATEGORY_COLORS[cat]}`} />
+                        <span
+                          className={`w-2.5 h-2.5 rounded-full shrink-0 ${CATEGORY_COLORS[cat]}`}
+                        />
                         {categoryLabel(cat)}
                       </span>
                     </SelectItem>
@@ -666,7 +1026,11 @@ export function ScheduleClient({ language }: ScheduleClientProps) {
               </Button>
             )}
             <div className="flex-1" />
-            <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={saving}>
+            <Button
+              variant="outline"
+              onClick={() => setDialogOpen(false)}
+              disabled={saving}
+            >
               {t.cancel}
             </Button>
             <Button onClick={handleSave} disabled={saving || !form.title.trim()}>
@@ -691,7 +1055,11 @@ export function ScheduleClient({ language }: ScheduleClientProps) {
             >
               {t.cancel}
             </Button>
-            <Button variant="destructive" onClick={handleDelete} disabled={saving}>
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={saving}
+            >
               {t.delete}
             </Button>
           </DialogFooter>

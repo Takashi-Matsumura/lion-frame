@@ -1156,8 +1156,8 @@ export function AdminClient({
         left: open ? `${width}px` : "4rem",
       }}
     >
-      <div className="flex-1 overflow-y-auto">
-        <div className="max-w-7xl mx-auto p-6 space-y-6">
+      <div className={`flex-1 ${["users", "access-keys", "announcements"].includes(activeTab) ? "overflow-hidden" : "overflow-y-auto"}`}>
+        <div className={`max-w-7xl mx-auto p-6 ${["users", "access-keys", "announcements"].includes(activeTab) ? "h-full flex flex-col" : "space-y-6"}`}>
           {/* システム情報タブ */}
           {activeTab === "system" && (
             <Card>
@@ -1723,8 +1723,8 @@ export function AdminClient({
 
           {/* ユーザ管理タブ */}
           {activeTab === "users" && (
-            <Card>
-              <CardContent className="p-6">
+            <Card className="flex-1 flex flex-col min-h-0">
+              <CardContent className="p-6 flex-1 flex flex-col min-h-0">
                 {/* ツールバー：検索・フィルター */}
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                   <form
@@ -1797,7 +1797,7 @@ export function AdminClient({
 
                 {/* ユーザテーブル */}
                 {!loading && paginatedUsers.length > 0 && (
-                  <>
+                  <div className="flex-1 flex flex-col min-h-0">
                     {/* ページネーション（テーブル上部） */}
                     <div className="flex items-center justify-between mb-4">
                       <p className="text-sm text-muted-foreground">
@@ -1840,8 +1840,8 @@ export function AdminClient({
                     </div>
 
                     {/* テーブルコンテナ */}
-                    <div className="rounded-lg border overflow-hidden">
-                      <div className="overflow-y-auto max-h-[calc(100vh-32rem)]">
+                    <div className="rounded-lg border overflow-hidden flex-1 flex flex-col min-h-0">
+                      <div className="overflow-y-auto flex-1">
                         <Table>
                           <TableHeader className="sticky top-0 bg-muted/50 z-10">
                             <TableRow>
@@ -2000,7 +2000,7 @@ export function AdminClient({
                         </Table>
                       </div>
                     </div>
-                  </>
+                  </div>
                 )}
 
                 {/* データなし */}
@@ -2017,8 +2017,8 @@ export function AdminClient({
 
           {/* アクセスキー管理タブ */}
           {activeTab === "access-keys" && (
-            <Card>
-              <CardContent className="p-8">
+            <Card className="flex-1 flex flex-col min-h-0">
+              <CardContent className="p-8 flex-1 flex flex-col min-h-0">
                 <AccessKeyManager
                   accessKeys={accessKeys}
                   users={users}
@@ -2834,8 +2834,8 @@ export function AdminClient({
 
           {/* アナウンスタブ */}
           {activeTab === "announcements" && (
-            <Card>
-              <CardContent className="p-6">
+            <Card className="flex-1 flex flex-col min-h-0">
+              <CardContent className="p-6 flex-1 flex flex-col min-h-0">
                 {/* ヘッダー */}
                 <div className="flex items-center justify-between mb-6">
                   <div>
@@ -2905,7 +2905,7 @@ export function AdminClient({
 
                 {/* アナウンス一覧 */}
                 {!announcementsLoading && announcements.length > 0 && (
-                  <div className="space-y-4">
+                  <div className="flex-1 overflow-y-auto space-y-4 min-h-0">
                     {announcements.map((announcement) => {
                       const now = new Date();
                       const startAt = new Date(announcement.startAt);

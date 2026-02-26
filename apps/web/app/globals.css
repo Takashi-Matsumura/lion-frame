@@ -293,3 +293,24 @@
   background-color: oklch(0.12 0.005 260);
   border-color: oklch(0.35 0.01 260);
 }
+
+/* Dual-month calendar: diagonal line (bottom-left → top-right) */
+.dual-month-cell {
+  background: linear-gradient(
+    to bottom right,
+    transparent calc(50% - 0.5px),
+    var(--color-border) calc(50% - 0.5px),
+    var(--color-border) calc(50% + 0.5px),
+    transparent calc(50% + 0.5px)
+  );
+}
+
+/* Upper-left triangle clip for current month */
+.clip-upper-left {
+  clip-path: polygon(0 0, 100% 0, 0 100%);
+}
+
+/* Lower-right triangle clip for next month */
+.clip-lower-right {
+  clip-path: polygon(100% 0, 100% 100%, 0 100%);
+}
