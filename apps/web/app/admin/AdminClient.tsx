@@ -273,6 +273,7 @@ export function AdminClient({
   const [retiredAccountsLoading, setRetiredAccountsLoading] = useState(false);
   const [selectedRetired, setSelectedRetired] = useState<Set<string>>(new Set());
   const [deletingRetired, setDeletingRetired] = useState(false);
+  const [showRetiredDeleteConfirm, setShowRetiredDeleteConfirm] = useState(false);
 
   // モジュール管理タブの状態
   const [modulesData, setModulesData] = useState<ModulesData | null>(null);
@@ -1364,6 +1365,7 @@ export function AdminClient({
         );
         return;
       }
+      setShowRetiredDeleteConfirm(false);
       setShowCandidateDialog(false);
       setSelectedRetired(new Set());
       setRetiredAccounts([]);
@@ -1373,6 +1375,7 @@ export function AdminClient({
       alert(t("Deletion failed", "削除に失敗しました"));
     } finally {
       setDeletingRetired(false);
+      setShowRetiredDeleteConfirm(false);
     }
   }, [selectedRetired, fetchUsers, t]);
 
@@ -3441,7 +3444,7 @@ export function AdminClient({
         </div>
       </div>
 
-      {/* 削除確認モーダル */}
+      {/* 削除確認モーダル（DELETE入力式） */}
       <DeleteConfirmDialog
         open={showDeleteModal && !!userToDelete}
         onOpenChange={(open) => !open && closeDeleteModal()}
@@ -3458,6 +3461,11 @@ export function AdminClient({
         deleteLabel={deleting ? t("Deleting...", "削除中...") : t("Delete", "削除")}
         disabled={deleting}
         onDelete={handleDeleteUser}
+        requireConfirmText="DELETE"
+        confirmPrompt={t(
+          'Type "DELETE" to confirm:',
+          "確認のため「DELETE」と入力してください：",
+        )}
       />
 
       {/* パスワードリセット確認ダイアログ */}
@@ -4039,7 +4047,7 @@ export function AdminClient({
               </Button>
               <Button
                 variant="destructive"
-                onClick={handleDeleteRetiredAccounts}
+                onClick={() => setShowRetiredDeleteConfirm(true)}
                 disabled={selectedRetired.size === 0 || deletingRetired}
               >
                 {deletingRetired
@@ -4055,6 +4063,26 @@ export function AdminClient({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* 退職者アカウント一括削除確認（DELETE入力式） */}
+      <DeleteConfirmDialog
+        open={showRetiredDeleteConfirm}
+        onOpenChange={setShowRetiredDeleteConfirm}
+        title={t("Delete Accounts", "アカウントを削除")}
+        description={t(
+          `Are you sure you want to delete ${selectedRetired.size} retired employee accounts? This action cannot be undone.`,
+          `退職者${selectedRetired.size}名のアカウントを削除してもよろしいですか？この操作は取り消せません。`,
+        )}
+        cancelLabel={t("Cancel", "キャンセル")}
+        deleteLabel={deletingRetired ? t("Deleting...", "削除中...") : t("Delete", "削除")}
+        disabled={deletingRetired}
+        onDelete={handleDeleteRetiredAccounts}
+        requireConfirmText="DELETE"
+        confirmPrompt={t(
+          'Type "DELETE" to confirm:',
+          "確認のため「DELETE」と入力してください：",
+        )}
+      />
 
       {/* アカウント作成結果ダイアログ */}
       <Dialog
