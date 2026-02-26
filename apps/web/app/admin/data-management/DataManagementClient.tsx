@@ -4,6 +4,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { FaPlus, FaUsers } from "react-icons/fa";
 import { Card, CardContent } from "@/components/ui/card";
+import { useSidebar } from "@/components/ui/sidebar";
+import { useSidebarStore } from "@/lib/stores/sidebar-store";
 import { HistoryTab } from "./components/HistoryTab";
 import { ImportTab } from "./components/ImportTab";
 import { OrganizeTab } from "./components/OrganizeTab";
@@ -32,6 +34,8 @@ export function DataManagementClient({
   const rawTab = searchParams.get("tab") || "import";
   const tab = rawTab === "employees" ? "organize" : rawTab;
   const t = dataManagementTranslations[language];
+  const { open } = useSidebar();
+  const { width } = useSidebarStore();
 
   // Redirect ?tab=employees to ?tab=organize
   useEffect(() => {
@@ -72,12 +76,23 @@ export function DataManagementClient({
     }
   };
 
+  // ヘッダー本体: 約72px + タブナビ: 約44px = 約116px ≈ 7.25rem
+  const headerHeight = "7.25rem";
+
   return (
-    <div className="max-w-7xl mx-auto mt-8">
-      <Card>
-        <CardContent className="p-6">
-          {/* Organization Selector */}
-          <div className="border-b border-border pb-4 mb-6">
+    <div
+      className="fixed inset-0 flex flex-col transition-all duration-300"
+      style={{
+        top: headerHeight,
+        left: open ? `${width}px` : "4rem",
+      }}
+    >
+      <div className="flex-1 overflow-hidden">
+        <div className="max-w-7xl mx-auto p-6 h-full flex flex-col">
+          <Card className="flex-1 flex flex-col min-h-0">
+            <CardContent className="p-6 flex-1 flex flex-col min-h-0">
+              {/* Organization Selector */}
+              <div className="border-b border-border pb-4 mb-6 shrink-0">
             <div className="flex items-center gap-4">
               <label className="text-sm font-medium text-foreground">
                 {t.selectOrganization}:
@@ -143,41 +158,45 @@ export function DataManagementClient({
             )}
           </div>
 
-          {/* Tab Content */}
-          {tab === "positions" ? (
-            <PositionsTab language={language} t={t} />
-          ) : !selectedOrgId && organizations.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              <FaUsers className="w-12 h-12 mx-auto mb-4 opacity-50" />
-              <p>{t.noOrganization}</p>
-            </div>
-          ) : (
-            <>
-              {tab === "import" && (
-                <ImportTab
-                  organizationId={selectedOrgId}
-                  language={language}
-                  t={t}
-                />
-              )}
-              {tab === "organize" && (
-                <OrganizeTab
-                  organizationId={selectedOrgId}
-                  language={language}
-                  t={t}
-                />
-              )}
-              {tab === "history" && (
-                <HistoryTab
-                  organizationId={selectedOrgId}
-                  language={language}
-                  t={t}
-                />
-              )}
-            </>
-          )}
-        </CardContent>
-      </Card>
+              {/* Tab Content */}
+              <div className="flex-1 flex flex-col min-h-0">
+                {tab === "positions" ? (
+                  <PositionsTab language={language} t={t} />
+                ) : !selectedOrgId && organizations.length === 0 ? (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <FaUsers className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p>{t.noOrganization}</p>
+                  </div>
+                ) : (
+                  <>
+                    {tab === "import" && (
+                      <ImportTab
+                        organizationId={selectedOrgId}
+                        language={language}
+                        t={t}
+                      />
+                    )}
+                    {tab === "organize" && (
+                      <OrganizeTab
+                        organizationId={selectedOrgId}
+                        language={language}
+                        t={t}
+                      />
+                    )}
+                    {tab === "history" && (
+                      <HistoryTab
+                        organizationId={selectedOrgId}
+                        language={language}
+                        t={t}
+                      />
+                    )}
+                  </>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 }

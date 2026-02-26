@@ -21,7 +21,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { LoadingSpinner } from "@/components/ui/Icons";
-import { Skeleton } from "@/components/ui/skeleton";
+import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
+import { EmptyState } from "@/components/ui/empty-state";
+import { PageSkeleton } from "@/components/ui/page-skeleton";
 import {
   Table,
   TableBody,
@@ -267,10 +269,7 @@ export function HolidayManagementClient({
 
   if (loading && holidays.length === 0) {
     return (
-      <div className="max-w-5xl mx-auto space-y-4">
-        <Skeleton className="h-10 w-64" />
-        <Skeleton className="h-[300px] w-full" />
-      </div>
+      <PageSkeleton contentHeight="h-[300px]" className="max-w-5xl mx-auto" />
     );
   }
 
@@ -318,12 +317,11 @@ export function HolidayManagementClient({
 
       {/* Table */}
       {holidays.length === 0 ? (
-        <div className="text-center py-12 border rounded-lg">
-          <p className="text-muted-foreground font-medium">{t.noHolidays}</p>
-          <p className="text-sm text-muted-foreground mt-1">
-            {t.noHolidaysDescription}
-          </p>
-        </div>
+        <EmptyState
+          message={t.noHolidays}
+          description={t.noHolidaysDescription}
+          className="border rounded-lg"
+        />
       ) : (
         <div className="border rounded-lg overflow-hidden">
           <Table>
@@ -468,26 +466,16 @@ export function HolidayManagementClient({
       </Dialog>
 
       {/* Delete Confirm Dialog */}
-      <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
-        <DialogContent className="sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle>{t.deleteHoliday}</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-muted-foreground">{t.deleteConfirm}</p>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setDeleteConfirmOpen(false)}
-              disabled={saving}
-            >
-              {t.cancel}
-            </Button>
-            <Button variant="destructive" onClick={handleDelete} disabled={saving}>
-              {t.delete}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <DeleteConfirmDialog
+        open={deleteConfirmOpen}
+        onOpenChange={setDeleteConfirmOpen}
+        title={t.deleteHoliday}
+        description={t.deleteConfirm}
+        cancelLabel={t.cancel}
+        deleteLabel={t.delete}
+        disabled={saving}
+        onDelete={handleDelete}
+      />
 
       {/* AI Generate Dialog */}
       <Dialog open={generateOpen} onOpenChange={setGenerateOpen}>

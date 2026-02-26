@@ -1,5 +1,6 @@
 import { useCallback } from "react";
 import { Button } from "@/components/ui/button";
+import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import {
   Dialog,
   DialogContent,
@@ -244,30 +245,16 @@ export function EventFormDialog({
       </Dialog>
 
       {/* Delete Confirm Dialog */}
-      <Dialog open={deleteConfirmOpen} onOpenChange={onDeleteConfirmChange}>
-        <DialogContent className="sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle>{t.deleteEvent}</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-muted-foreground">{t.deleteConfirm}</p>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => onDeleteConfirmChange(false)}
-              disabled={saving}
-            >
-              {t.cancel}
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={onDelete}
-              disabled={saving}
-            >
-              {t.delete}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <DeleteConfirmDialog
+        open={deleteConfirmOpen}
+        onOpenChange={onDeleteConfirmChange}
+        title={t.deleteEvent}
+        description={t.deleteConfirm}
+        cancelLabel={t.cancel}
+        deleteLabel={t.delete}
+        disabled={saving}
+        onDelete={onDelete}
+      />
     </>
   );
 }

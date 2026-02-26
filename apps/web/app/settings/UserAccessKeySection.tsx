@@ -6,6 +6,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 
 interface UserAccessKeySectionProps {
@@ -223,15 +224,14 @@ export function UserAccessKeySection({
         </h3>
 
         {accessKeys.length === 0 ? (
-          <div className="p-6 bg-muted rounded-lg border text-center">
-            <RiKey2Line className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-            <p className="text-muted-foreground">
-              {t(
-                "No access keys registered",
-                "登録済みのアクセスキーはありません",
-              )}
-            </p>
-          </div>
+          <EmptyState
+            icon={<RiKey2Line className="w-12 h-12 text-muted-foreground" />}
+            message={t(
+              "No access keys registered",
+              "登録済みのアクセスキーはありません",
+            )}
+            className="p-6 bg-muted rounded-lg border"
+          />
         ) : (
           <div className="space-y-3">
             {accessKeys.map((userAccessKey) => {

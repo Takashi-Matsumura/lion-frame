@@ -6,6 +6,7 @@ import { FaClipboardList, FaStethoscope } from "react-icons/fa";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -512,10 +513,10 @@ export function AuditLogsClient({ language }: AuditLogsClientProps) {
 
           {/* データなし */}
           {!loading && logs.length === 0 && (
-            <div className="text-center py-12">
-              <FaClipboardList className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground">{t.noAuditLogs}</p>
-            </div>
+            <EmptyState
+              icon={<FaClipboardList className="w-12 h-12 text-muted-foreground" />}
+              message={t.noAuditLogs}
+            />
           )}
             </CardContent>
           </Card>

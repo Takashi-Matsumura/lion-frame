@@ -59,6 +59,15 @@ import { Badge } from "@/components/ui/badge";
 // ダイアログ（モーダル）
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
+// 削除確認ダイアログ
+import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
+
+// 空状態
+import { EmptyState } from "@/components/ui/empty-state";
+
+// ページスケルトン（ローディング）
+import { PageSkeleton } from "@/components/ui/page-skeleton";
+
 // スイッチ
 import { Switch } from "@/components/ui/switch";
 
@@ -202,16 +211,131 @@ import { FormModal } from "@/components/modals/FormModal";
 </FormModal>
 ```
 
-## 空状態（Empty State）
+## 削除確認ダイアログ（DeleteConfirmDialog）
+
+Radix UI の `AlertDialog` をラップした削除確認専用コンポーネント。
+削除確認には `Dialog` ではなく、意味的に正しいこのコンポーネントを使用する。
 
 ```tsx
-{data.length === 0 && (
-  <div className="text-center py-12 text-muted-foreground">
-    <Icon className="w-12 h-12 mx-auto mb-4 opacity-50" />
-    <p>データがありません</p>
-  </div>
-)}
+import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
+
+<DeleteConfirmDialog
+  open={deleteConfirmOpen}
+  onOpenChange={setDeleteConfirmOpen}
+  title={t.deleteItem}
+  description={t.deleteConfirm}
+  cancelLabel={t.cancel}
+  deleteLabel={t.delete}
+  disabled={saving}
+  onDelete={handleDelete}
+/>
 ```
+
+### Props
+
+| Prop | 型 | 必須 | デフォルト | 説明 |
+|------|------|------|-----------|------|
+| `open` | `boolean` | ✅ | - | 表示状態 |
+| `onOpenChange` | `(open: boolean) => void` | ✅ | - | 表示切り替え |
+| `title` | `string` | ✅ | - | ダイアログタイトル |
+| `description` | `string` | ✅ | - | 確認メッセージ |
+| `cancelLabel` | `string` | - | `"Cancel"` | キャンセルボタンラベル |
+| `deleteLabel` | `string` | - | `"Delete"` | 削除ボタンラベル |
+| `disabled` | `boolean` | - | `false` | saving中の無効化 |
+| `onDelete` | `() => void` | ✅ | - | 削除実行コールバック |
+
+### 使用箇所
+
+- `HolidayManagementClient.tsx`（祝日削除）
+- `EventFormDialog.tsx`（スケジュールイベント削除）
+- `AdminClient.tsx`（ユーザ削除）
+
+## 空状態（EmptyState）
+
+データがない場合の統一表示コンポーネント。アイコン・メッセージ・サブテキスト・アクションボタンの組み合わせ。
+
+```tsx
+import { EmptyState } from "@/components/ui/empty-state";
+
+// シンプル
+<EmptyState message={t.noData} />
+
+// アイコン + 説明テキスト付き
+<EmptyState
+  icon={<FaClipboardList className="w-12 h-12 text-muted-foreground" />}
+  message={t.noAuditLogs}
+  description={t.noAuditLogsDescription}
+/>
+
+// アクションボタン付き
+<EmptyState
+  icon={<FaBullhorn className="w-12 h-12 text-muted-foreground" />}
+  message={t.noAnnouncements}
+  action={
+    <Button onClick={handleCreate} variant="outline" className="gap-2">
+      <Plus className="h-4 w-4" />
+      {t.createFirst}
+    </Button>
+  }
+/>
+
+// カスタムスタイル
+<EmptyState
+  message={t.noHolidays}
+  description={t.noHolidaysDescription}
+  className="border rounded-lg"
+/>
+```
+
+### Props
+
+| Prop | 型 | 必須 | 説明 |
+|------|------|------|------|
+| `icon` | `React.ReactNode` | - | アイコン要素 |
+| `message` | `string` | ✅ | メインメッセージ |
+| `description` | `string` | - | サブテキスト |
+| `action` | `React.ReactNode` | - | アクションボタン等 |
+| `className` | `string` | - | 追加クラス（`border rounded-lg` 等） |
+
+### 使用箇所
+
+- `AdminClient.tsx`（ユーザなし、アナウンスなし）
+- `AuditLogsClient.tsx`（監査ログなし）
+- `HolidayManagementClient.tsx`（祝日なし）
+- `UserAccessKeySection.tsx`（アクセスキーなし）
+- `OrganizationChartClient.tsx`（社員なし）
+
+## ページスケルトン（PageSkeleton）
+
+ページ読み込み中のスケルトン表示。ヘッダー + コンテンツ領域のプリセット。
+
+```tsx
+import { PageSkeleton } from "@/components/ui/page-skeleton";
+
+// デフォルト（h-10 w-64 ヘッダー + h-[400px] コンテンツ）
+<PageSkeleton />
+
+// カスタムサイズ
+<PageSkeleton contentHeight="h-[300px]" className="max-w-5xl mx-auto" />
+```
+
+### Props
+
+| Prop | 型 | 必須 | デフォルト | 説明 |
+|------|------|------|-----------|------|
+| `headerHeight` | `string` | - | `"h-10"` | ヘッダースケルトンの高さ |
+| `headerWidth` | `string` | - | `"w-64"` | ヘッダースケルトンの幅 |
+| `contentHeight` | `string` | - | `"h-[400px]"` | コンテンツスケルトンの高さ |
+| `className` | `string` | - | - | 外側コンテナの追加クラス |
+
+### 使用箇所
+
+- `HolidayManagementClient.tsx`
+- `ScheduleClient.tsx`
+
+### 注意
+
+スピナー（`LoadingSpinner`）パターンのページには使用しない。PageSkeletonはテーブルやリストがメインのページ用。
 
 ## フォーム要素
 
@@ -512,6 +636,8 @@ export function MyPageClient() {
 - [ ] カラー背景には `dark:` バリアントを追加
 - [ ] shadcn/ui コンポーネントを使用
 - [ ] 適切なスペーシングを適用
-- [ ] 空状態を実装
+- [ ] 空状態は `EmptyState` コンポーネントを使用
+- [ ] 削除確認は `DeleteConfirmDialog` を使用（`Dialog` で自作しない）
+- [ ] ページローディングは `PageSkeleton` を使用（テーブル/リスト系ページ）
 - [ ] モバイル対応を考慮
 - [ ] 日本語→英語のフィールドペアがある場合、AI翻訳ボタンを配置

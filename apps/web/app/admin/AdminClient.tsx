@@ -27,6 +27,7 @@ import { UserRoleChanger } from "@/components/UserRoleChanger";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import {
   Dialog,
   DialogContent,
@@ -35,6 +36,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -1993,11 +1995,9 @@ export function AdminClient({
 
                 {/* データなし */}
                 {!loading && paginatedUsers.length === 0 && (
-                  <div className="text-center py-12">
-                    <p className="text-muted-foreground">
-                      {t("No users found", "ユーザが見つかりません")}
-                    </p>
-                  </div>
+                  <EmptyState
+                    message={t("No users found", "ユーザが見つかりません")}
+                  />
                 )}
               </CardContent>
             </Card>
@@ -3068,20 +3068,20 @@ export function AdminClient({
 
                 {/* データなし */}
                 {!announcementsLoading && announcements.length === 0 && (
-                  <div className="text-center py-12">
-                    <FaBullhorn className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                    <p className="text-muted-foreground mb-4">
-                      {t("No announcements yet", "アナウンスはまだありません")}
-                    </p>
-                    <Button
-                      onClick={openNewAnnouncementModal}
-                      variant="outline"
-                      className="gap-2"
-                    >
-                      <Plus className="h-4 w-4" />
-                      {t("Create First Announcement", "最初のアナウンスを作成")}
-                    </Button>
-                  </div>
+                  <EmptyState
+                    icon={<FaBullhorn className="w-12 h-12 text-muted-foreground" />}
+                    message={t("No announcements yet", "アナウンスはまだありません")}
+                    action={
+                      <Button
+                        onClick={openNewAnnouncementModal}
+                        variant="outline"
+                        className="gap-2"
+                      >
+                        <Plus className="h-4 w-4" />
+                        {t("Create First Announcement", "最初のアナウンスを作成")}
+                      </Button>
+                    }
+                  />
                 )}
               </CardContent>
             </Card>
@@ -3090,39 +3090,23 @@ export function AdminClient({
       </div>
 
       {/* 削除確認モーダル */}
-      <Dialog
+      <DeleteConfirmDialog
         open={showDeleteModal && !!userToDelete}
         onOpenChange={(open) => !open && closeDeleteModal()}
-      >
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>{t("Delete User", "ユーザを削除")}</DialogTitle>
-            <DialogDescription>
-              {userToDelete &&
-                t(
-                  `Are you sure you want to delete "${userToDelete.name}"? This action cannot be undone.`,
-                  `「${userToDelete.name}」を削除してもよろしいですか？この操作は取り消せません。`,
-                )}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={closeDeleteModal}
-              disabled={deleting}
-            >
-              {t("Cancel", "キャンセル")}
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleDeleteUser}
-              disabled={deleting}
-            >
-              {deleting ? t("Deleting...", "削除中...") : t("Delete", "削除")}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        title={t("Delete User", "ユーザを削除")}
+        description={
+          userToDelete
+            ? t(
+                `Are you sure you want to delete "${userToDelete.name}"? This action cannot be undone.`,
+                `「${userToDelete.name}」を削除してもよろしいですか？この操作は取り消せません。`,
+              )
+            : ""
+        }
+        cancelLabel={t("Cancel", "キャンセル")}
+        deleteLabel={deleting ? t("Deleting...", "削除中...") : t("Delete", "削除")}
+        disabled={deleting}
+        onDelete={handleDeleteUser}
+      />
 
       {/* アナウンス作成/編集モーダル */}
       <Dialog

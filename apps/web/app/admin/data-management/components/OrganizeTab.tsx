@@ -649,7 +649,7 @@ export function OrganizeTab({ organizationId, language, t }: OrganizeTabProps) {
   const hasData = (orgData?.departments?.length ?? 0) > 0;
 
   return (
-    <div>
+    <div className="flex-1 flex flex-col min-h-0">
       {/* Header with Publish Settings */}
       <div className="flex items-center justify-between mb-4">
         <div>
@@ -775,7 +775,7 @@ export function OrganizeTab({ organizationId, language, t }: OrganizeTabProps) {
       </div>}
 
       {/* Organization Tree */}
-      {hasData && <ScrollArea className="h-[calc(100vh-30rem)]">
+      {hasData && <ScrollArea className="flex-1 min-h-0">
         <div className="space-y-2 pr-4">
           {loadingEmployees && (
             <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">

@@ -164,7 +164,7 @@ export function ImportTab({ organizationId, language, t }: ImportTabProps) {
   };
 
   return (
-    <div>
+    <div className="flex-1 flex flex-col min-h-0 overflow-y-auto">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <FaUpload className="w-6 h-6 text-primary" />

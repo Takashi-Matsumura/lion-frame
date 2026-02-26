@@ -242,9 +242,9 @@ export function PositionsTab({ language, t }: PositionsTabProps) {
   };
 
   return (
-    <div>
+    <div className="flex-1 flex flex-col min-h-0">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-6 shrink-0">
         <div>
           <h2 className="text-lg font-semibold text-foreground">
             {isJa ? "役職マスタ" : "Position Master"}
@@ -277,9 +277,9 @@ export function PositionsTab({ language, t }: PositionsTabProps) {
 
       {/* Table */}
       {!isLoading && positions.length > 0 && (
-        <div className="overflow-x-auto">
+        <div className="overflow-auto flex-1 min-h-0 rounded-lg border border-border">
           <table className="w-full text-sm">
-            <thead>
+            <thead className="sticky top-0 bg-card z-10">
               <tr className="border-b border-border">
                 <th className="text-left py-3 px-3 font-medium text-muted-foreground">
                   {isJa ? "コード" : "Code"}

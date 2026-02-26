@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
 import {
   Collapsible,
   CollapsibleContent,
@@ -615,9 +616,7 @@ export function OrganizationChartClient({
               })}
 
               {isFiltering && filteredEmployees.length === 0 && (
-                <div className="text-center py-8 text-muted-foreground">
-                  {t.noEmployees}
-                </div>
+                <EmptyState message={t.noEmployees} className="py-8" />
               )}
             </div>
           </ScrollArea>
