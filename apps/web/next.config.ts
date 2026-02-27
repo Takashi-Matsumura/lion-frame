@@ -39,6 +39,13 @@ const nextConfig: NextConfig = {
           },
         ],
       },
+      {
+        // チュートリアルPDF: 同一オリジンのiframe表示を許可
+        source: "/uploads/tutorials/:path*",
+        headers: [
+          { key: "X-Frame-Options", value: "SAMEORIGIN" },
+        ],
+      },
     ];
   },
 
@@ -48,6 +55,7 @@ const nextConfig: NextConfig = {
       bodySizeLimit: "2mb",
     },
   },
+  serverExternalPackages: ["pdf-parse", "pdfjs-dist"],
   images: {
     remotePatterns: [
       {

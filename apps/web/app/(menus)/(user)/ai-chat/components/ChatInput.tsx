@@ -1,7 +1,7 @@
 "use client";
 
 import { RefObject, useState } from "react";
-import { BookOpen } from "lucide-react";
+import { BookOpen, PanelRight } from "lucide-react";
 import {
   RiRefreshLine,
   RiSendPlane2Line,
@@ -33,6 +33,8 @@ interface ChatInputProps {
   tutorialSelectorOpen: boolean;
   onTutorialSelectorOpenChange: (open: boolean) => void;
   tutorialDocsAvailable: boolean;
+  docPanelOpen?: boolean;
+  onToggleDocPanel?: () => void;
 }
 
 function OrgIcon({ className }: { className?: string }) {
@@ -79,6 +81,8 @@ export function ChatInput({
   tutorialSelectorOpen,
   onTutorialSelectorOpenChange,
   tutorialDocsAvailable,
+  docPanelOpen,
+  onToggleDocPanel,
 }: ChatInputProps) {
   const t = aiChatTranslations[language];
   const [isComposing, setIsComposing] = useState(false);
@@ -165,6 +169,16 @@ export function ChatInput({
               <span className="text-purple-500 dark:text-purple-400">
                 ~{formatTokenCount(selectedTutorialDoc.estimatedTokens)}
               </span>
+              {!docPanelOpen && onToggleDocPanel && (
+                <button
+                  type="button"
+                  onClick={onToggleDocPanel}
+                  className="ml-0.5 hover:text-purple-900 dark:hover:text-purple-100 cursor-pointer"
+                  title={t.tutorialPanel.openPanel}
+                >
+                  <PanelRight className="w-3 h-3" />
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => onSelectTutorialDoc(null)}

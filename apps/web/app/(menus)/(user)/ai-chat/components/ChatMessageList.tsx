@@ -25,6 +25,7 @@ interface ChatMessageListProps {
   messagesEndRef: RefObject<HTMLDivElement>;
   orgContextAvailable: boolean;
   tutorialDocuments?: TutorialDocument[];
+  selectedTutorialDoc?: TutorialDocument | null;
   error: string | null;
 }
 
@@ -91,6 +92,7 @@ export function ChatMessageList({
   messagesEndRef,
   orgContextAvailable,
   tutorialDocuments,
+  selectedTutorialDoc,
   error,
 }: ChatMessageListProps) {
   const t = aiChatTranslations[language];
@@ -107,47 +109,48 @@ export function ChatMessageList({
 
           {/* Suggestion chips */}
           <div className="flex flex-wrap gap-2 justify-center max-w-lg">
-            {t.suggestions.map((suggestion, index) => (
-              <button
-                key={index}
-                onClick={() => onSuggestionClick(suggestion, false)}
-                className="px-4 py-2 text-sm border rounded-full hover:bg-muted transition-colors"
-              >
-                {suggestion}
-              </button>
-            ))}
-            {orgContextAvailable &&
-              t.orgSuggestions.map((suggestion, index) => (
-                <button
-                  key={`org-${index}`}
-                  onClick={() => onSuggestionClick(suggestion, true)}
-                  className="px-4 py-2 text-sm border border-green-300 dark:border-green-700 text-green-700 dark:text-green-300 rounded-full hover:bg-green-50 dark:hover:bg-green-950 transition-colors"
-                >
-                  {suggestion}
-                </button>
-              ))}
-            {tutorialDocuments &&
-              tutorialDocuments.length > 0 &&
-              onTutorialSuggestionClick &&
-              tutorialDocuments.flatMap((doc) => {
-                const prompts = doc.suggestedPrompts || [];
-                return prompts.map((prompt, index) => {
-                  const text =
-                    language === "ja" && prompt.textJa
-                      ? prompt.textJa
-                      : prompt.text;
-                  if (!text) return null;
-                  return (
+            {selectedTutorialDoc && onTutorialSuggestionClick ? (
+              // ドキュメント選択中: そのドキュメントのプロンプトのみ表示
+              (selectedTutorialDoc.suggestedPrompts || []).map((prompt, index) => {
+                const text =
+                  language === "ja" && prompt.textJa
+                    ? prompt.textJa
+                    : prompt.text;
+                if (!text) return null;
+                return (
+                  <button
+                    key={`selected-tutorial-${index}`}
+                    onClick={() => onTutorialSuggestionClick(text, selectedTutorialDoc)}
+                    className="px-4 py-2 text-sm border border-purple-300 dark:border-purple-700 text-purple-700 dark:text-purple-300 rounded-full hover:bg-purple-50 dark:hover:bg-purple-950 transition-colors"
+                  >
+                    {text}
+                  </button>
+                );
+              })
+            ) : (
+              // ドキュメント未選択: 通常のサジェスション
+              <>
+                {t.suggestions.map((suggestion, index) => (
+                  <button
+                    key={index}
+                    onClick={() => onSuggestionClick(suggestion, false)}
+                    className="px-4 py-2 text-sm border rounded-full hover:bg-muted transition-colors"
+                  >
+                    {suggestion}
+                  </button>
+                ))}
+                {orgContextAvailable &&
+                  t.orgSuggestions.map((suggestion, index) => (
                     <button
-                      key={`tutorial-${doc.id}-${index}`}
-                      onClick={() => onTutorialSuggestionClick(text, doc)}
-                      className="px-4 py-2 text-sm border border-purple-300 dark:border-purple-700 text-purple-700 dark:text-purple-300 rounded-full hover:bg-purple-50 dark:hover:bg-purple-950 transition-colors"
+                      key={`org-${index}`}
+                      onClick={() => onSuggestionClick(suggestion, true)}
+                      className="px-4 py-2 text-sm border border-green-300 dark:border-green-700 text-green-700 dark:text-green-300 rounded-full hover:bg-green-50 dark:hover:bg-green-950 transition-colors"
                     >
-                      {text}
+                      {suggestion}
                     </button>
-                  );
-                });
-              })}
+                  ))}
+              </>
+            )}
           </div>
         </div>
       </div>

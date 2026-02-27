@@ -42,6 +42,19 @@ export const aiChatTranslations = {
     tutorialTokens: "tokens",
     tutorialSuggestions: "Suggested questions from tutorial:",
     tutorialPages: "pages",
+    // Tutorial panel labels
+    tutorialPanel: {
+      title: "Document Analysis",
+      pdfTab: "Original PDF",
+      textTab: "Extracted Text",
+      close: "Close panel",
+      loading: "Loading...",
+      textDescription: "AI uses this text as reference for answers",
+      copyText: "Copy",
+      copiedText: "Copied",
+      pdfLoadError: "PDF preview is not available. Download the file to view.",
+      openPanel: "Show panel",
+    },
     // Stats labels
     stats: {
       contextUsage: "Context Usage",
@@ -99,6 +112,19 @@ export const aiChatTranslations = {
     tutorialTokens: "トークン",
     tutorialSuggestions: "チュートリアルのおすすめ質問:",
     tutorialPages: "ページ",
+    // Tutorial panel labels
+    tutorialPanel: {
+      title: "ドキュメント分析",
+      pdfTab: "原本PDF",
+      textTab: "抽出テキスト",
+      close: "パネルを閉じる",
+      loading: "読み込み中...",
+      textDescription: "AIはこのテキストを参考にして回答します",
+      copyText: "コピー",
+      copiedText: "コピー済",
+      pdfLoadError: "PDFプレビューを読み込めません。ファイルをダウンロードしてご確認ください。",
+      openPanel: "パネルを表示",
+    },
     // Stats labels
     stats: {
       contextUsage: "コンテキスト使用量",

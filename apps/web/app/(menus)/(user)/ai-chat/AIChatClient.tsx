@@ -16,6 +16,7 @@ import type { ChatMessage, TokenStats, TutorialDocument } from "@/types/ai-chat"
 import { ChatInput } from "./components/ChatInput";
 import { ChatMessageList } from "./components/ChatMessageList";
 import { TokenStatsPanel } from "./components/TokenStatsPanel";
+import { TutorialDocumentPanel } from "./components/TutorialDocumentPanel";
 import { aiChatTranslations } from "./translations";
 
 interface AIChatClientProps {
@@ -42,6 +43,7 @@ export function AIChatClient({ language, userName }: AIChatClientProps) {
   const [tutorialDocuments, setTutorialDocuments] = useState<TutorialDocument[]>([]);
   const [selectedTutorialDoc, setSelectedTutorialDoc] = useState<TutorialDocument | null>(null);
   const [tutorialSelectorOpen, setTutorialSelectorOpen] = useState(false);
+  const [docPanelOpen, setDocPanelOpen] = useState(false);
   const [streamingContent, setStreamingContent] = useState("");
   const [showStats, setShowStats] = useState(true);
   const [tokenStats, setTokenStats] = useState<TokenStats>({
@@ -409,6 +411,13 @@ export function AIChatClient({ language, userName }: AIChatClientProps) {
     }
   };
 
+  const handleSelectTutorialDoc = useCallback((doc: TutorialDocument | null) => {
+    setSelectedTutorialDoc(doc);
+    if (doc) {
+      setDocPanelOpen(true);
+    }
+  }, []);
+
   const handleSuggestionClick = (text: string, useOrg: boolean) => {
     handleSubmit(undefined, text, useOrg);
   };
@@ -441,91 +450,116 @@ export function AIChatClient({ language, userName }: AIChatClientProps) {
     );
   }
 
+  const showPanel = selectedTutorialDoc && docPanelOpen;
+
   return (
-    <div className="flex-1 flex flex-col max-w-4xl mx-auto w-full overflow-hidden min-h-0">
-      {/* Header */}
-      <div className="flex-shrink-0 flex items-center justify-between px-4 py-3 border-b">
-        <div className="flex items-center gap-3">
-          {providerInfo && (
-            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-muted rounded-full text-xs text-muted-foreground">
-              <span className="font-medium">{providerInfo.providerName}</span>
-              <span className="text-muted-foreground/60">/</span>
-              <span>{providerInfo.modelName}</span>
-            </div>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowStats(!showStats)}
-            className={`text-muted-foreground ${showStats ? "bg-muted" : ""}`}
-            title={t.stats.contextUsage}
-          >
-            <RiBarChartBoxLine className="w-4 h-4" />
-          </Button>
-          {messages.length > 0 && (
+    <div className="flex-1 flex overflow-hidden min-h-0 w-full">
+      {/* Left: Chat */}
+      <div
+        className={
+          showPanel
+            ? "flex flex-col overflow-hidden min-h-0 w-1/2 flex-shrink-0"
+            : "flex flex-col overflow-hidden min-h-0 max-w-4xl mx-auto w-full"
+        }
+      >
+        {/* Header */}
+        <div className="flex-shrink-0 flex items-center justify-between px-4 py-3 border-b">
+          <div className="flex items-center gap-3">
+            {providerInfo && (
+              <div className="flex items-center gap-1.5 px-2.5 py-1 bg-muted rounded-full text-xs text-muted-foreground">
+                <span className="font-medium">{providerInfo.providerName}</span>
+                <span className="text-muted-foreground/60">/</span>
+                <span>{providerInfo.modelName}</span>
+              </div>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
             <Button
               variant="ghost"
               size="sm"
-              onClick={handleClearChat}
-              className="text-muted-foreground hover:text-destructive"
+              onClick={() => setShowStats(!showStats)}
+              className={`text-muted-foreground ${showStats ? "bg-muted" : ""}`}
+              title={t.stats.contextUsage}
             >
-              <RiDeleteBinLine className="w-4 h-4 mr-1" />
-              {t.clearChat}
+              <RiBarChartBoxLine className="w-4 h-4" />
             </Button>
-          )}
+            {messages.length > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleClearChat}
+                className="text-muted-foreground hover:text-destructive"
+              >
+                <RiDeleteBinLine className="w-4 h-4 mr-1" />
+                {t.clearChat}
+              </Button>
+            )}
+          </div>
         </div>
+
+        {/* Messages */}
+        <ChatMessageList
+          messages={messages}
+          streamingContent={streamingContent}
+          isLoading={isLoading}
+          language={language}
+          userName={userName}
+          onCopy={handleCopy}
+          copiedId={copiedId}
+          onSuggestionClick={handleSuggestionClick}
+          onTutorialSuggestionClick={handleTutorialSuggestionClick}
+          messagesEndRef={messagesEndRef as React.RefObject<HTMLDivElement>}
+          orgContextAvailable={orgContextAvailable}
+          tutorialDocuments={tutorialDocuments}
+          selectedTutorialDoc={selectedTutorialDoc}
+          error={error}
+        />
+
+        {/* Stats Panel */}
+        <TokenStatsPanel
+          tokenStats={tokenStats}
+          showStats={showStats}
+          isLoading={isLoading}
+          language={language}
+        />
+
+        {/* Input area */}
+        <ChatInput
+          input={input}
+          onInputChange={setInput}
+          onSubmit={() => handleSubmit()}
+          onStop={handleStop}
+          onRegenerate={handleRegenerate}
+          isLoading={isLoading}
+          hasMessages={messages.length > 0}
+          useOrgContext={useOrgContext}
+          onSetUseOrgContext={setUseOrgContext}
+          mentionPopupOpen={mentionPopupOpen}
+          onMentionPopupChange={setMentionPopupOpen}
+          orgContextAvailable={orgContextAvailable}
+          language={language}
+          textareaRef={textareaRef as React.RefObject<HTMLTextAreaElement>}
+          selectedTutorialDoc={selectedTutorialDoc}
+          onSelectTutorialDoc={handleSelectTutorialDoc}
+          tutorialDocuments={tutorialDocuments}
+          tutorialSelectorOpen={tutorialSelectorOpen}
+          onTutorialSelectorOpenChange={setTutorialSelectorOpen}
+          tutorialDocsAvailable={tutorialDocsAvailable}
+          docPanelOpen={docPanelOpen}
+          onToggleDocPanel={() => setDocPanelOpen(!docPanelOpen)}
+        />
       </div>
 
-      {/* Messages */}
-      <ChatMessageList
-        messages={messages}
-        streamingContent={streamingContent}
-        isLoading={isLoading}
-        language={language}
-        userName={userName}
-        onCopy={handleCopy}
-        copiedId={copiedId}
-        onSuggestionClick={handleSuggestionClick}
-        onTutorialSuggestionClick={handleTutorialSuggestionClick}
-        messagesEndRef={messagesEndRef as React.RefObject<HTMLDivElement>}
-        orgContextAvailable={orgContextAvailable}
-        tutorialDocuments={tutorialDocuments}
-        error={error}
-      />
-
-      {/* Stats Panel */}
-      <TokenStatsPanel
-        tokenStats={tokenStats}
-        showStats={showStats}
-        isLoading={isLoading}
-        language={language}
-      />
-
-      {/* Input area */}
-      <ChatInput
-        input={input}
-        onInputChange={setInput}
-        onSubmit={() => handleSubmit()}
-        onStop={handleStop}
-        onRegenerate={handleRegenerate}
-        isLoading={isLoading}
-        hasMessages={messages.length > 0}
-        useOrgContext={useOrgContext}
-        onSetUseOrgContext={setUseOrgContext}
-        mentionPopupOpen={mentionPopupOpen}
-        onMentionPopupChange={setMentionPopupOpen}
-        orgContextAvailable={orgContextAvailable}
-        language={language}
-        textareaRef={textareaRef as React.RefObject<HTMLTextAreaElement>}
-        selectedTutorialDoc={selectedTutorialDoc}
-        onSelectTutorialDoc={setSelectedTutorialDoc}
-        tutorialDocuments={tutorialDocuments}
-        tutorialSelectorOpen={tutorialSelectorOpen}
-        onTutorialSelectorOpenChange={setTutorialSelectorOpen}
-        tutorialDocsAvailable={tutorialDocsAvailable}
-      />
+      {/* Right: Document Panel */}
+      {showPanel && (
+        <div className="hidden md:flex w-1/2 border-l">
+          <TutorialDocumentPanel
+            document={selectedTutorialDoc}
+            onClose={() => setDocPanelOpen(false)}
+            language={language}
+          />
+        </div>
+      )}
     </div>
   );
 }

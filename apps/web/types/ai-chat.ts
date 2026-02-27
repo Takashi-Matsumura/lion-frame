@@ -29,6 +29,14 @@ export interface TutorialDocument {
 }
 
 /**
+ * Tutorial document detail (with extractedText and fileUrl for panel display)
+ */
+export interface TutorialDocumentDetail extends TutorialDocument {
+  extractedText: string;
+  fileUrl: string;
+}
+
+/**
  * Token usage statistics
  */
 export interface TokenStats {
