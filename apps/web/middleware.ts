@@ -174,6 +174,22 @@ export default auth(async (req) => {
     }
   }
 
+  // Fire-and-forget: ページアクセスログ（レスポンスをブロックしない）
+  // 静的ファイル・認証ページ・設定ページは除外
+  const excludedLogPaths = ["/login", "/auth/", "/settings", "/_next/", "/api/"];
+  const shouldLog = !excludedLogPaths.some((p) => pathname.startsWith(p));
+  if (shouldLog && session.user?.id) {
+    const logUrl = new URL("/api/usage-log", req.nextUrl.origin);
+    fetch(logUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        cookie: req.headers.get("cookie") || "",
+      },
+      body: JSON.stringify({ path: pathname }),
+    }).catch(() => {});
+  }
+
   return NextResponse.next();
 });
 

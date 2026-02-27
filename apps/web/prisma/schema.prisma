@@ -72,6 +72,7 @@ model User {
   announcements Announcement[]
   announcementDismissals AnnouncementDismissal[]
   calendarEvents CalendarEvent[]
+  usageLogs     UsageLog[]
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 }
@@ -653,6 +654,37 @@ model CompanyEvent {
 
   @@index([startDate])
   @@index([endDate])
+}
+
+// ========================================
+// 利用状況トラッキング
+// ========================================
+
+// ページアクセスログ（生データ）
+model UsageLog {
+  id        String   @id @default(cuid())
+  userId    String
+  path      String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([path, createdAt])
+  @@index([createdAt])
+}
+
+// 利用統計（日次集計キャッシュ）
+model UsageStat {
+  id        String   @id @default(cuid())
+  date      DateTime @db.Date
+  metric    String
+  value     Int
+  breakdown Json?
+
+  @@unique([date, metric])
+  @@index([date])
+  @@index([metric, date])
 }
 
 // ========================================

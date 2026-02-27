@@ -5,12 +5,14 @@ import { useRouter } from "next/navigation";
 import {
   RiAlertLine,
   RiArrowRightLine,
+  RiBarChartLine,
   RiCheckboxCircleLine,
   RiCloseCircleLine,
   RiDatabase2Line,
   RiErrorWarningLine,
   RiFileUploadLine,
   RiMegaphoneLine,
+  RiMessage3Line,
   RiPlayCircleLine,
   RiPulseLine,
   RiShieldUserLine,
@@ -83,6 +85,35 @@ interface DiagnosticResponse {
   timestamp: string;
 }
 
+interface UsageStatsData {
+  period: { start: string; end: string };
+  login: {
+    dau: { date: string; count: number }[];
+    wau: number;
+    mau: number;
+    dauMauRatio: number;
+    peakHours: { hour: number; count: number }[];
+  };
+  features: {
+    name: string;
+    nameJa: string;
+    path: string;
+    accessCount: number;
+    uniqueUsers: number;
+  }[];
+  departments: {
+    name: string;
+    totalEmployees: number;
+    loggedInUsers: number;
+    adoptionRate: number;
+  }[];
+  aiChat: {
+    totalMessages: number;
+    uniqueUsers: number;
+    dailyTrend: { date: string; count: number }[];
+  };
+}
+
 export function AdminDashboard({ language }: AdminDashboardProps) {
   const t = adminDashboardTranslations[language];
   const router = useRouter();
@@ -91,6 +122,9 @@ export function AdminDashboard({ language }: AdminDashboardProps) {
   const [diagnosticResults, setDiagnosticResults] = useState<DiagnosticResult[] | null>(null);
   const [diagRunning, setDiagRunning] = useState(false);
   const autoRunRef = useRef(false);
+  const [usageStats, setUsageStats] = useState<UsageStatsData | null>(null);
+  const [usagePeriod, setUsagePeriod] = useState<"7d" | "30d" | "90d">("30d");
+  const usageAutoRunRef = useRef(false);
 
   const fetchSummary = useCallback(async () => {
     setLoading(true);
@@ -126,6 +160,18 @@ export function AdminDashboard({ language }: AdminDashboardProps) {
     }
   }, [fetchSummary]);
 
+  const fetchUsageStats = useCallback(async (period: string) => {
+    try {
+      const res = await fetch(`/api/admin/usage-stats?period=${period}`);
+      if (res.ok) {
+        const json = await res.json();
+        setUsageStats(json);
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
   useEffect(() => {
     fetchSummary().then((summaryData) => {
       if (!summaryData || autoRunRef.current) return;
@@ -150,6 +196,20 @@ export function AdminDashboard({ language }: AdminDashboardProps) {
       }
     });
   }, [fetchSummary]);
+
+  // 利用統計の取得 + 自動集計 & 週次レポート
+  useEffect(() => {
+    fetchUsageStats(usagePeriod);
+  }, [usagePeriod, fetchUsageStats]);
+
+  useEffect(() => {
+    if (usageAutoRunRef.current) return;
+    usageAutoRunRef.current = true;
+    // 日次集計をバックグラウンドで自動実行
+    fetch("/api/admin/usage-stats/aggregate", { method: "POST" }).catch(() => {});
+    // 週次レポートをバックグラウンドで自動実行
+    fetch("/api/admin/usage-stats/report", { method: "POST" }).catch(() => {});
+  }, []);
 
   if (loading && !data) {
     return <AdminDashboardSkeleton />;
@@ -436,7 +496,218 @@ export function AdminDashboard({ language }: AdminDashboardProps) {
           </CardContent>
         </Card>
       </div>
+
+      {/* Usage Statistics Section */}
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base flex items-center gap-2">
+              <RiBarChartLine className="w-5 h-5" />
+              {t.usageStats}
+            </CardTitle>
+            <div className="flex gap-1">
+              {(["7d", "30d", "90d"] as const).map((p) => (
+                <Button
+                  key={p}
+                  variant={usagePeriod === p ? "default" : "ghost"}
+                  size="sm"
+                  className="text-xs px-2 h-7"
+                  onClick={() => setUsagePeriod(p)}
+                >
+                  {t[`period${p}` as const]}
+                </Button>
+              ))}
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {usageStats ? (
+            <div className="space-y-6">
+              {/* Login Trend Sparkline + KPIs */}
+              <div>
+                <h4 className="text-sm font-medium mb-3">{t.loginTrend}</h4>
+                <div className="grid grid-cols-3 gap-4 mb-3">
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                      {usageStats.login.wau}
+                    </p>
+                    <p className="text-xs text-muted-foreground">{t.wau}</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-green-600 dark:text-green-400">
+                      {usageStats.login.mau}
+                    </p>
+                    <p className="text-xs text-muted-foreground">{t.mau}</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+                      {usageStats.login.dauMauRatio}
+                    </p>
+                    <p className="text-xs text-muted-foreground">{t.dauMauRatio}</p>
+                  </div>
+                </div>
+                <DauSparkline data={usageStats.login.dau} />
+              </div>
+
+              {/* Feature Ranking + Department Adoption */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Feature Usage Ranking */}
+                <div>
+                  <h4 className="text-sm font-medium mb-3">{t.featureRanking}</h4>
+                  {usageStats.features.length > 0 ? (
+                    <div className="space-y-2">
+                      {usageStats.features.slice(0, 8).map((f) => {
+                        const maxAccess = usageStats.features[0]?.accessCount || 1;
+                        const widthPct = Math.max(
+                          (f.accessCount / maxAccess) * 100,
+                          4,
+                        );
+                        return (
+                          <div key={f.path}>
+                            <div className="flex items-center justify-between text-xs mb-1">
+                              <span className="truncate">
+                                {language === "ja" ? f.nameJa : f.name}
+                              </span>
+                              <span className="text-muted-foreground shrink-0 ml-2">
+                                {f.accessCount} {t.accessCount} · {f.uniqueUsers} {t.uniqueUsersLabel}
+                              </span>
+                            </div>
+                            <div className="h-2 bg-muted rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-blue-500 dark:bg-blue-400 rounded-full transition-all"
+                                style={{ width: `${widthPct}%` }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">{t.noUsageData}</p>
+                  )}
+                </div>
+
+                {/* Department Adoption */}
+                <div>
+                  <h4 className="text-sm font-medium mb-3">{t.departmentAdoption}</h4>
+                  {usageStats.departments.length > 0 ? (
+                    <div className="space-y-2">
+                      {usageStats.departments.map((d) => (
+                        <div key={d.name}>
+                          <div className="flex items-center justify-between text-xs mb-1">
+                            <span className="truncate">{d.name}</span>
+                            <span className="text-muted-foreground shrink-0 ml-2">
+                              {d.loggedInUsers}/{d.totalEmployees}{t.people} ({d.adoptionRate}%)
+                            </span>
+                          </div>
+                          <div className="h-2 bg-muted rounded-full overflow-hidden">
+                            <div
+                              className={`h-full rounded-full transition-all ${
+                                d.adoptionRate >= 70
+                                  ? "bg-green-500 dark:bg-green-400"
+                                  : d.adoptionRate >= 40
+                                    ? "bg-yellow-500 dark:bg-yellow-400"
+                                    : "bg-red-500 dark:bg-red-400"
+                              }`}
+                              style={{ width: `${Math.max(d.adoptionRate, 4)}%` }}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">{t.noUsageData}</p>
+                  )}
+                </div>
+              </div>
+
+              {/* AI Chat Usage */}
+              <div>
+                <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
+                  <RiMessage3Line className="w-4 h-4" />
+                  {t.aiChatUsage}
+                </h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <Card>
+                    <CardContent className="pt-4 pb-4">
+                      <p className="text-2xl font-bold">{usageStats.aiChat.totalMessages}</p>
+                      <p className="text-xs text-muted-foreground">{t.totalMessages}</p>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="pt-4 pb-4">
+                      <p className="text-2xl font-bold">{usageStats.aiChat.uniqueUsers}</p>
+                      <p className="text-xs text-muted-foreground">{t.uniqueUsers}</p>
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="grid grid-cols-3 gap-4">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="text-center">
+                    <Skeleton className="h-8 w-12 mx-auto mb-1" />
+                    <Skeleton className="h-3 w-10 mx-auto" />
+                  </div>
+                ))}
+              </div>
+              <Skeleton className="h-16 w-full" />
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
+  );
+}
+
+/**
+ * SVGスパークライン: DAU推移を描画
+ */
+function DauSparkline({ data }: { data: { date: string; count: number }[] }) {
+  if (data.length === 0) return null;
+
+  const width = 600;
+  const height = 60;
+  const padding = 2;
+
+  const maxCount = Math.max(...data.map((d) => d.count), 1);
+  const stepX = (width - padding * 2) / Math.max(data.length - 1, 1);
+
+  const points = data.map((d, i) => ({
+    x: padding + i * stepX,
+    y: height - padding - ((d.count / maxCount) * (height - padding * 2)),
+  }));
+
+  const pathD = points
+    .map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`)
+    .join(" ");
+
+  // 塗りつぶし用のパス
+  const fillD = `${pathD} L ${points[points.length - 1].x} ${height - padding} L ${points[0].x} ${height - padding} Z`;
+
+  return (
+    <svg
+      viewBox={`0 0 ${width} ${height}`}
+      className="w-full h-16"
+      preserveAspectRatio="none"
+    >
+      <defs>
+        <linearGradient id="sparkFill" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="rgb(59, 130, 246)" stopOpacity="0.3" />
+          <stop offset="100%" stopColor="rgb(59, 130, 246)" stopOpacity="0.05" />
+        </linearGradient>
+      </defs>
+      <path d={fillD} fill="url(#sparkFill)" />
+      <path
+        d={pathD}
+        fill="none"
+        stroke="rgb(59, 130, 246)"
+        strokeWidth="2"
+        vectorEffect="non-scaling-stroke"
+      />
+    </svg>
   );
 }
 

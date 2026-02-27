@@ -114,6 +114,7 @@ cd apps/web && npx prisma db push && pnpm db:seed
 | 履歴 | EmployeeHistory, OrganizationHistory, ChangeLog |
 | AI | RagDocument, RagChat |
 | カレンダー | CalendarEvent, Holiday |
+| 利用状況 | UsageLog, UsageStat |
 | システム | SystemSetting |
 
 ## 重要なルール

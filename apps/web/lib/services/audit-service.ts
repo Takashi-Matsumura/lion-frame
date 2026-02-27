@@ -5,7 +5,8 @@ export type AuditCategory =
   | "AUTH"
   | "USER_MANAGEMENT"
   | "SYSTEM_SETTING"
-  | "MODULE";
+  | "MODULE"
+  | "USAGE";
 
 // 監査ログのアクション
 export type AuditAction =
@@ -50,7 +51,9 @@ export type AuditAction =
   | "MENU_TOGGLE"
   | "ACCESS_KEY_PERMISSION_UPDATE"
   | "AI_CHAT_MESSAGE"
-  | "ORG_CONTEXT_TOGGLE";
+  | "ORG_CONTEXT_TOGGLE"
+  // USAGE
+  | "PAGE_ACCESS";
 
 export interface AuditLogInput {
   action: AuditAction;
