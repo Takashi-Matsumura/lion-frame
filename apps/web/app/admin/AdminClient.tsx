@@ -4,7 +4,7 @@ import type { AccessKey } from "@prisma/client";
 import { useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import { Card, CardContent } from "@/components/ui/card";
-import { useSidebar } from "@/components/ui/sidebar";
+import { useIsMobile } from "@/lib/hooks/use-mobile";
 import {
   AccessKeyManagerSkeleton,
   AnnouncementsTabSkeleton,
@@ -12,7 +12,6 @@ import {
   SystemTabSkeleton,
   UsersTabSkeleton,
 } from "./components/skeletons";
-import { useSidebarStore } from "@/lib/stores/sidebar-store";
 import type { AppMenu, AppModule } from "@/types/module";
 
 // bundle-dynamic-imports: タブコンポーネントを遅延読み込み
@@ -73,8 +72,7 @@ export function AdminClient({
   modules,
 }: AdminClientProps) {
   const searchParams = useSearchParams();
-  const { open } = useSidebar();
-  const { width } = useSidebarStore();
+  const isMobile = useIsMobile();
   const activeTab = (searchParams.get("tab") as TabType) || "users";
 
   const headerHeight = "7.25rem";
@@ -84,7 +82,7 @@ export function AdminClient({
       className="fixed inset-0 flex flex-col bg-muted/30 transition-all duration-300"
       style={{
         top: headerHeight,
-        left: open ? `${width}px` : "4rem",
+        left: isMobile ? "0" : "4rem",
       }}
     >
       <div className={`flex-1 ${["users", "access-keys", "announcements"].includes(activeTab) ? "overflow-hidden" : "overflow-y-auto"}`}>

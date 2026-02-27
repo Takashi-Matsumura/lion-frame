@@ -4,8 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useState } from "react";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { Card, CardContent } from "@/components/ui/card";
-import { useSidebar } from "@/components/ui/sidebar";
-import { useSidebarStore } from "@/lib/stores/sidebar-store";
+import { useIsMobile } from "@/lib/hooks/use-mobile";
 import { PasswordChangeSection } from "./PasswordChangeSection";
 import { TwoFactorSection } from "./TwoFactorSection";
 import type { settingsTranslations } from "./translations";
@@ -28,8 +27,7 @@ export function SettingsClient({
   twoFactorEnabled: initialTwoFactorEnabled,
   mustChangePassword: initialMustChangePassword,
 }: SettingsClientProps) {
-  const { open } = useSidebar();
-  const { width } = useSidebarStore();
+  const isMobile = useIsMobile();
   const router = useRouter();
   const searchParams = useSearchParams();
   const activeTab = (searchParams.get("tab") as "basic" | "keys") || "basic";
@@ -63,7 +61,7 @@ export function SettingsClient({
 
       <div
         className="fixed inset-0 flex flex-col bg-muted/30 transition-all duration-300"
-        style={{ top: "6rem", left: open ? `${width}px` : "4rem" }}
+        style={{ top: "6rem", left: isMobile ? "0" : "4rem" }}
       >
         {/* スクロール可能なコンテンツエリア */}
         <div className="flex-1 overflow-y-auto p-6">

@@ -4,8 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { FaPlus, FaUsers } from "react-icons/fa";
 import { Card, CardContent } from "@/components/ui/card";
-import { useSidebar } from "@/components/ui/sidebar";
-import { useSidebarStore } from "@/lib/stores/sidebar-store";
+import { useIsMobile } from "@/lib/hooks/use-mobile";
 import { HistoryTab } from "./components/HistoryTab";
 import { ImportTab } from "./components/ImportTab";
 import { OrganizeTab } from "./components/OrganizeTab";
@@ -34,8 +33,7 @@ export function DataManagementClient({
   const rawTab = searchParams.get("tab") || "import";
   const tab = rawTab === "employees" ? "organize" : rawTab;
   const t = dataManagementTranslations[language];
-  const { open } = useSidebar();
-  const { width } = useSidebarStore();
+  const isMobile = useIsMobile();
 
   // Redirect ?tab=employees to ?tab=organize
   useEffect(() => {
@@ -84,7 +82,7 @@ export function DataManagementClient({
       className="fixed inset-0 flex flex-col transition-all duration-300"
       style={{
         top: headerHeight,
-        left: open ? `${width}px` : "4rem",
+        left: isMobile ? "0" : "4rem",
       }}
     >
       <div className="flex-1 overflow-hidden">

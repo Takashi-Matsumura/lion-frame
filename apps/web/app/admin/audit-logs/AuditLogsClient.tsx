@@ -16,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useSidebar } from "@/components/ui/sidebar";
+import { useIsMobile } from "@/lib/hooks/use-mobile";
 import {
   Table,
   TableBody,
@@ -25,7 +25,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useSidebarStore } from "@/lib/stores/sidebar-store";
 import { auditLogsTranslations } from "./translations";
 
 interface AuditLog {
@@ -54,8 +53,7 @@ const PAGE_SIZE = 25;
 
 export function AuditLogsClient({ language }: AuditLogsClientProps) {
   const t = auditLogsTranslations[language];
-  const { open } = useSidebar();
-  const { width } = useSidebarStore();
+  const isMobile = useIsMobile();
 
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState(false);
@@ -199,7 +197,7 @@ export function AuditLogsClient({ language }: AuditLogsClientProps) {
       className="fixed inset-0 flex flex-col transition-all duration-300"
       style={{
         top: "4.5rem",
-        left: open ? `${width}px` : "4rem",
+        left: isMobile ? "0" : "4rem",
       }}
     >
       <div className="flex-1 overflow-hidden">
