@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { getLanguage } from "@/lib/i18n/get-language";
+import { AdminDashboard } from "./AdminDashboard";
 import { DashboardClient } from "./DashboardClient";
 import { dashboardTranslations } from "./translations";
 
@@ -23,13 +24,18 @@ export default async function DashboardPage() {
 
   const language = await getLanguage();
   const userRole = session.user.role || "USER";
+  const isAdmin = userRole === "ADMIN";
 
   return (
     <div className="max-w-7xl mx-auto">
-      <DashboardClient
-        language={language as "en" | "ja"}
-        userRole={userRole}
-      />
+      {isAdmin ? (
+        <AdminDashboard language={language as "en" | "ja"} />
+      ) : (
+        <DashboardClient
+          language={language as "en" | "ja"}
+          userRole={userRole}
+        />
+      )}
     </div>
   );
 }

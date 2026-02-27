@@ -245,6 +245,27 @@ export const POST = apiHandler(async (_request, session) => {
     totalDurationMs: results.reduce((sum, r) => sum + r.durationMs, 0),
   };
 
+  // 失敗がある場合、全ADMIN宛に警告通知をブロードキャスト
+  if (summary.fail > 0) {
+    const failedNames = results
+      .filter((r) => r.status === "fail")
+      .map((r) => r.nameJa)
+      .join(", ");
+    await NotificationService.broadcast({
+      role: "ADMIN",
+      type: "WARNING",
+      priority: "HIGH",
+      title: `System Diagnostic: ${summary.fail} check(s) failed`,
+      titleJa: `システム診断: ${summary.fail}件のチェックが失敗`,
+      message: `Failed checks: ${results.filter((r) => r.status === "fail").map((r) => r.name).join(", ")}`,
+      messageJa: `失敗した項目: ${failedNames}`,
+      actionUrl: "/dashboard",
+      actionLabel: "View Dashboard",
+      actionLabelJa: "ダッシュボードを確認",
+      source: "SYSTEM_DIAGNOSTIC",
+    });
+  }
+
   return {
     results,
     summary,

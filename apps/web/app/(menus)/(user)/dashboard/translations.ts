@@ -1,3 +1,92 @@
+export const adminDashboardTranslations = {
+  en: {
+    tabTitle: "Home",
+    // KPI Cards
+    totalUsers: "Total Users",
+    activeEmployees: "Active Employees",
+    unlinkedEmployees: "Unlinked Employees",
+    inactiveUsers: "Inactive Users",
+    expiredAnnouncements: "Expired Announcements",
+    systemHealth: "System Health",
+    // KPI Descriptions
+    inactiveUsersDesc: "No login for 7+ days",
+    unlinkedEmployeesDesc: "Employees without account",
+    // Quick Actions
+    quickActions: "Quick Actions",
+    createAccount: "Create Account from Employee",
+    newAnnouncement: "New Announcement",
+    dataImport: "Data Import",
+    runDiagnostics: "Run Diagnostics",
+    running: "Running...",
+    // System Health
+    systemHealthTitle: "System Health",
+    lastRun: "Last run",
+    neverRun: "Never run",
+    autoRunning: "Auto-running diagnostics...",
+    allPassed: "All checks passed",
+    failCount: " failed",
+    warnCount: " warning(s)",
+    // Diagnostic statuses
+    pass: "Pass",
+    fail: "Fail",
+    warn: "Warning",
+    // Recent Activity
+    recentActivity: "Recent Activity",
+    viewAll: "View All",
+    noActivity: "No recent activity",
+    // Misc
+    admins: "Admins",
+    managers: "Managers",
+    users: "Users",
+    guests: "Guests",
+    active: "Active",
+    expired: "Expired",
+  },
+  ja: {
+    tabTitle: "ホーム",
+    // KPI Cards
+    totalUsers: "総ユーザ数",
+    activeEmployees: "在籍社員数",
+    unlinkedEmployees: "未アカウント社員",
+    inactiveUsers: "非活性ユーザ",
+    expiredAnnouncements: "期限切れアナウンス",
+    systemHealth: "システム状態",
+    // KPI Descriptions
+    inactiveUsersDesc: "7日以上ログインなし",
+    unlinkedEmployeesDesc: "アカウント未作成の社員",
+    // Quick Actions
+    quickActions: "クイックアクション",
+    createAccount: "社員からアカウント作成",
+    newAnnouncement: "新規アナウンス",
+    dataImport: "データインポート",
+    runDiagnostics: "診断を実行",
+    running: "実行中...",
+    // System Health
+    systemHealthTitle: "システムヘルス",
+    lastRun: "最終実行",
+    neverRun: "未実行",
+    autoRunning: "自動診断を実行中...",
+    allPassed: "全チェック正常",
+    failCount: "件の失敗",
+    warnCount: "件の警告",
+    // Diagnostic statuses
+    pass: "正常",
+    fail: "失敗",
+    warn: "警告",
+    // Recent Activity
+    recentActivity: "最近のアクティビティ",
+    viewAll: "すべて表示",
+    noActivity: "最近のアクティビティはありません",
+    // Misc
+    admins: "管理者",
+    managers: "管理職",
+    users: "一般",
+    guests: "ゲスト",
+    active: "有効",
+    expired: "期限切れ",
+  },
+} as const;
+
 export const dashboardTranslations = {
   en: {
     title: "Dashboard",
