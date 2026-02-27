@@ -57,11 +57,10 @@ async function runDiagnostic(
  * 各診断項目を個別の監査ログエントリとして記録する。
  */
 export const POST = apiHandler(async (_request, session) => {
-  const results: DiagnosticResult[] = [];
-
-  // 1. DB Connection
-  results.push(
-    await runDiagnostic("db_connection", "Database Connection", "データベース接続", async () => {
+  // 全診断を並列実行（async-parallel: Promise.all で独立した処理を並列化）
+  const results = await Promise.all([
+    // 1. DB Connection
+    runDiagnostic("db_connection", "Database Connection", "データベース接続", async () => {
       await prisma.$queryRaw`SELECT 1`;
       return {
         status: "pass",
@@ -69,11 +68,9 @@ export const POST = apiHandler(async (_request, session) => {
         messageJa: "データベース接続に成功しました",
       };
     }),
-  );
 
-  // 2. Auth System
-  results.push(
-    await runDiagnostic("auth_system", "Authentication", "認証システム", async () => {
+    // 2. Auth System
+    runDiagnostic("auth_system", "Authentication", "認証システム", async () => {
       if (session.user?.email) {
         return {
           status: "pass",
@@ -87,11 +84,9 @@ export const POST = apiHandler(async (_request, session) => {
         messageJa: "セッションはありますがメールアドレスがありません",
       };
     }),
-  );
 
-  // 3. Audit Log (write → read → delete)
-  results.push(
-    await runDiagnostic("audit_log", "Audit Log", "監査ログ", async () => {
+    // 3. Audit Log (write → read → delete)
+    runDiagnostic("audit_log", "Audit Log", "監査ログ", async () => {
       const testLog = await prisma.auditLog.create({
         data: {
           action: "SYSTEM_DIAGNOSTIC",
@@ -123,11 +118,9 @@ export const POST = apiHandler(async (_request, session) => {
         messageJa: "監査ログの書込/読取/削除に成功しました",
       };
     }),
-  );
 
-  // 4. Notification (create → read → delete)
-  results.push(
-    await runDiagnostic("notification", "Notification", "通知", async () => {
+    // 4. Notification (create → read → delete)
+    runDiagnostic("notification", "Notification", "通知", async () => {
       const testNotification = await prisma.notification.create({
         data: {
           userId: session.user.id,
@@ -161,11 +154,9 @@ export const POST = apiHandler(async (_request, session) => {
         messageJa: "通知の書込/読取/削除に成功しました",
       };
     }),
-  );
 
-  // 5. API Health
-  results.push(
-    await runDiagnostic("api_health", "API Health", "API応答", async () => {
+    // 5. API Health
+    runDiagnostic("api_health", "API Health", "API応答", async () => {
       const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
       const response = await fetch(`${baseUrl}/api/health`);
       if (response.status === 200) {
@@ -181,11 +172,9 @@ export const POST = apiHandler(async (_request, session) => {
         messageJa: `ヘルスエンドポイントが${response.status}を返しました`,
       };
     }),
-  );
 
-  // 6. Login Notification Cleanup
-  results.push(
-    await runDiagnostic("login_notification_cleanup", "Login Notification Cleanup", "ログイン通知クリーンアップ", async () => {
+    // 6. Login Notification Cleanup
+    runDiagnostic("login_notification_cleanup", "Login Notification Cleanup", "ログイン通知クリーンアップ", async () => {
       const result = await NotificationService.purgeLoginNotifications();
       if (result.count > 0) {
         return {
@@ -200,11 +189,9 @@ export const POST = apiHandler(async (_request, session) => {
         messageJa: "削除対象のログイン通知はありません",
       };
     }),
-  );
 
-  // 7. Storage
-  results.push(
-    await runDiagnostic("storage", "Storage", "ストレージ", async () => {
+    // 7. Storage
+    runDiagnostic("storage", "Storage", "ストレージ", async () => {
       const uploadsDir = join(process.cwd(), "public", "uploads");
       try {
         await access(uploadsDir, constants.W_OK);
@@ -230,7 +217,7 @@ export const POST = apiHandler(async (_request, session) => {
         }
       }
     }),
-  );
+  ]);
 
   // 各診断結果を個別の監査ログエントリとして記録
   for (const result of results) {

@@ -22,44 +22,50 @@ const DrawerPortal = DrawerPrimitive.Portal;
 
 const DrawerClose = DrawerPrimitive.Close;
 
-const DrawerOverlay = React.forwardRef<
-  React.ComponentRef<typeof DrawerPrimitive.Overlay>,
-  React.ComponentPropsWithoutRef<typeof DrawerPrimitive.Overlay>
->(({ className, ...props }, ref) => (
-  <DrawerPrimitive.Overlay
-    ref={ref}
-    className={cn("fixed inset-0 z-50 bg-black/80", className)}
-    suppressHydrationWarning
-    {...props}
-  />
-));
-DrawerOverlay.displayName = DrawerPrimitive.Overlay.displayName;
-
-const DrawerContent = React.forwardRef<
-  React.ComponentRef<typeof DrawerPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof DrawerPrimitive.Content>
->(({ className, children, ...props }, ref) => (
-  <DrawerPortal>
-    <DrawerOverlay />
-    <DrawerPrimitive.Content
+// react19-no-forwardref: forwardRef → ref prop
+function DrawerOverlay({
+  className,
+  ref,
+  ...props
+}: React.ComponentPropsWithoutRef<typeof DrawerPrimitive.Overlay> & { ref?: React.Ref<React.ComponentRef<typeof DrawerPrimitive.Overlay>> }) {
+  return (
+    <DrawerPrimitive.Overlay
       ref={ref}
-      className={cn(
-        "fixed inset-x-0 bottom-0 z-50 mt-24 flex h-auto flex-col rounded-t-[10px] border bg-background",
-        className,
-      )}
-      // Suppress hydration warnings caused by browser extensions (e.g., Chrome's __gchrome_uniqueid)
+      className={cn("fixed inset-0 z-50 bg-black/80", className)}
       suppressHydrationWarning
       {...props}
-    >
-      <div
-        className="mx-auto mt-4 h-2 w-[100px] rounded-full bg-muted"
+    />
+  );
+}
+
+function DrawerContent({
+  className,
+  children,
+  ref,
+  ...props
+}: React.ComponentPropsWithoutRef<typeof DrawerPrimitive.Content> & { ref?: React.Ref<React.ComponentRef<typeof DrawerPrimitive.Content>> }) {
+  return (
+    <DrawerPortal>
+      <DrawerOverlay />
+      <DrawerPrimitive.Content
+        ref={ref}
+        className={cn(
+          "fixed inset-x-0 bottom-0 z-50 mt-24 flex h-auto flex-col rounded-t-[10px] border bg-background",
+          className,
+        )}
+        // Suppress hydration warnings caused by browser extensions (e.g., Chrome's __gchrome_uniqueid)
         suppressHydrationWarning
-      />
-      {children}
-    </DrawerPrimitive.Content>
-  </DrawerPortal>
-));
-DrawerContent.displayName = "DrawerContent";
+        {...props}
+      >
+        <div
+          className="mx-auto mt-4 h-2 w-[100px] rounded-full bg-muted"
+          suppressHydrationWarning
+        />
+        {children}
+      </DrawerPrimitive.Content>
+    </DrawerPortal>
+  );
+}
 
 const DrawerHeader = ({
   className,
@@ -85,34 +91,38 @@ const DrawerFooter = ({
 );
 DrawerFooter.displayName = "DrawerFooter";
 
-const DrawerTitle = React.forwardRef<
-  React.ComponentRef<typeof DrawerPrimitive.Title>,
-  React.ComponentPropsWithoutRef<typeof DrawerPrimitive.Title>
->(({ className, ...props }, ref) => (
-  <DrawerPrimitive.Title
-    ref={ref}
-    className={cn(
-      "text-lg font-semibold leading-none tracking-tight",
-      className,
-    )}
-    suppressHydrationWarning
-    {...props}
-  />
-));
-DrawerTitle.displayName = DrawerPrimitive.Title.displayName;
+function DrawerTitle({
+  className,
+  ref,
+  ...props
+}: React.ComponentPropsWithoutRef<typeof DrawerPrimitive.Title> & { ref?: React.Ref<React.ComponentRef<typeof DrawerPrimitive.Title>> }) {
+  return (
+    <DrawerPrimitive.Title
+      ref={ref}
+      className={cn(
+        "text-lg font-semibold leading-none tracking-tight",
+        className,
+      )}
+      suppressHydrationWarning
+      {...props}
+    />
+  );
+}
 
-const DrawerDescription = React.forwardRef<
-  React.ComponentRef<typeof DrawerPrimitive.Description>,
-  React.ComponentPropsWithoutRef<typeof DrawerPrimitive.Description>
->(({ className, ...props }, ref) => (
-  <DrawerPrimitive.Description
-    ref={ref}
-    className={cn("text-sm text-muted-foreground", className)}
-    suppressHydrationWarning
-    {...props}
-  />
-));
-DrawerDescription.displayName = DrawerPrimitive.Description.displayName;
+function DrawerDescription({
+  className,
+  ref,
+  ...props
+}: React.ComponentPropsWithoutRef<typeof DrawerPrimitive.Description> & { ref?: React.Ref<React.ComponentRef<typeof DrawerPrimitive.Description>> }) {
+  return (
+    <DrawerPrimitive.Description
+      ref={ref}
+      className={cn("text-sm text-muted-foreground", className)}
+      suppressHydrationWarning
+      {...props}
+    />
+  );
+}
 
 export {
   Drawer,

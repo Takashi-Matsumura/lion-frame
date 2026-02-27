@@ -60,36 +60,33 @@ export function AIChatClient({ language, userName }: AIChatClientProps) {
   const statsIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Check if AI is enabled and get provider info
+  // 両方のfetchを並列実行（async-parallel: ウォーターフォール排除）
   useEffect(() => {
-    fetch("/api/ai/chat")
-      .then((res) => res.json())
-      .then((data) => {
-        setAiEnabled(data.available);
-        if (data.providerName && data.modelName) {
+    Promise.all([
+      fetch("/api/ai/chat").then((res) => res.json()),
+      fetch("/api/ai/tutorial-documents").then((res) => res.json()).catch(() => null),
+    ])
+      .then(([chatData, tutorialData]) => {
+        setAiEnabled(chatData.available);
+        if (chatData.providerName && chatData.modelName) {
           setProviderInfo({
-            providerName: data.providerName,
-            modelName: data.modelName,
+            providerName: chatData.providerName,
+            modelName: chatData.modelName,
           });
           const contextWindow = getContextWindowSize(
-            data.providerName,
-            data.modelName,
+            chatData.providerName,
+            chatData.modelName,
           );
           setTokenStats((prev) => ({ ...prev, contextWindow }));
         }
-        if (data.orgContextAvailable) {
+        if (chatData.orgContextAvailable) {
           setOrgContextAvailable(true);
         }
-        if (data.tutorialDocsAvailable) {
+        if (chatData.tutorialDocsAvailable) {
           setTutorialDocsAvailable(true);
-          // チュートリアル一覧を取得
-          fetch("/api/ai/tutorial-documents")
-            .then((res) => res.json())
-            .then((tData) => {
-              if (tData.documents) {
-                setTutorialDocuments(tData.documents);
-              }
-            })
-            .catch(() => {});
+          if (tutorialData?.documents) {
+            setTutorialDocuments(tutorialData.documents);
+          }
         }
       })
       .catch(() => {

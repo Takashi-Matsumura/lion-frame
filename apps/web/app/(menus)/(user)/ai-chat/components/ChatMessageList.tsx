@@ -1,14 +1,17 @@
 "use client";
 
 import { RefObject } from "react";
+import dynamic from "next/dynamic";
 import {
   RiCheckLine,
   RiFileCopyLine,
   RiSparklingLine,
   RiUser3Line,
 } from "react-icons/ri";
-import ReactMarkdown from "react-markdown";
 import { Button } from "@/components/ui/button";
+
+// bundle-dynamic-imports: 重いmarkdownパーサーを遅延読み込み
+const ReactMarkdown = dynamic(() => import("react-markdown"), { ssr: false });
 import type { ChatMessage, TutorialDocument } from "@/types/ai-chat";
 import { aiChatTranslations } from "../translations";
 

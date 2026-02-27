@@ -18,8 +18,9 @@ const CollapsiblePanelContext =
     isOpen: false,
   });
 
+// react19-no-forwardref: useContext → use()
 function useCollapsiblePanel() {
-  const context = React.useContext(CollapsiblePanelContext);
+  const context = React.use(CollapsiblePanelContext);
   if (!context) {
     throw new Error(
       "useCollapsiblePanel must be used within a CollapsiblePanel",

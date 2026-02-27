@@ -28,38 +28,38 @@ export const GET = apiHandler(async (request) => {
       select: { id: true, name: true },
     });
   } else {
-    // まずPUBLISHED状態の組織を探す
-    organization = await prisma.organization.findFirst({
-      where: { status: "PUBLISHED" },
-      orderBy: { publishedAt: "desc" },
-    });
-
-    // SCHEDULEDで公開日が過ぎている組織があれば自動的にPUBLISHEDに更新
-    if (!organization) {
-      const scheduledOrg = await prisma.organization.findFirst({
+    // PUBLISHED/SCHEDULED検索を並列実行（async-parallel）
+    const [published, scheduled] = await Promise.all([
+      prisma.organization.findFirst({
+        where: { status: "PUBLISHED" },
+        orderBy: { publishedAt: "desc" },
+      }),
+      prisma.organization.findFirst({
         where: {
           status: "SCHEDULED",
           publishAt: { lte: new Date() },
         },
         orderBy: { publishAt: "asc" },
+      }),
+    ]);
+
+    if (published) {
+      organization = published;
+    } else if (scheduled) {
+      // 既存のPUBLISHED組織をアーカイブ
+      await prisma.organization.updateMany({
+        where: { status: "PUBLISHED" },
+        data: { status: "ARCHIVED" },
       });
 
-      if (scheduledOrg) {
-        // 既存のPUBLISHED組織をアーカイブ
-        await prisma.organization.updateMany({
-          where: { status: "PUBLISHED" },
-          data: { status: "ARCHIVED" },
-        });
-
-        // この組織をPUBLISHEDに更新
-        organization = await prisma.organization.update({
-          where: { id: scheduledOrg.id },
-          data: {
-            status: "PUBLISHED",
-            publishedAt: new Date(),
-          },
-        });
-      }
+      // この組織をPUBLISHEDに更新
+      organization = await prisma.organization.update({
+        where: { id: scheduled.id },
+        data: {
+          status: "PUBLISHED",
+          publishedAt: new Date(),
+        },
+      });
     }
   }
 

@@ -17,8 +17,12 @@ interface NotificationBellProps {
 }
 
 export function NotificationBell({ language }: NotificationBellProps) {
-  const { unreadCount, isOpen, setOpen, fetchUnreadCount, fetchNotifications } =
-    useNotificationStore();
+  // rerender-derived-state: 必要なフィールドのみ個別にセレクタで取得
+  const unreadCount = useNotificationStore((s) => s.unreadCount);
+  const isOpen = useNotificationStore((s) => s.isOpen);
+  const setOpen = useNotificationStore((s) => s.setOpen);
+  const fetchUnreadCount = useNotificationStore((s) => s.fetchUnreadCount);
+  const fetchNotifications = useNotificationStore((s) => s.fetchNotifications);
 
   // Fetch unread count on mount and poll every 30 seconds
   useEffect(() => {

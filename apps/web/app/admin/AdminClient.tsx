@@ -2,15 +2,29 @@
 
 import type { AccessKey } from "@prisma/client";
 import { useSearchParams } from "next/navigation";
-import { AccessKeyManager } from "@/components/AccessKeyManager";
+import dynamic from "next/dynamic";
 import { Card, CardContent } from "@/components/ui/card";
+import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { useSidebar } from "@/components/ui/sidebar";
 import { useSidebarStore } from "@/lib/stores/sidebar-store";
 import type { AppMenu, AppModule } from "@/types/module";
-import { AnnouncementsTab } from "./components/AnnouncementsTab";
-import { ModulesTab } from "./components/ModulesTab";
-import { SystemTab } from "./components/SystemTab";
-import { UsersTab } from "./components/UsersTab";
+
+// bundle-dynamic-imports: タブコンポーネントを遅延読み込み
+const SystemTab = dynamic(() => import("./components/SystemTab").then((m) => ({ default: m.SystemTab })), {
+  loading: () => <PageSkeleton />,
+});
+const UsersTab = dynamic(() => import("./components/UsersTab").then((m) => ({ default: m.UsersTab })), {
+  loading: () => <PageSkeleton />,
+});
+const AccessKeyManager = dynamic(() => import("@/components/AccessKeyManager").then((m) => ({ default: m.AccessKeyManager })), {
+  loading: () => <PageSkeleton />,
+});
+const ModulesTab = dynamic(() => import("./components/ModulesTab").then((m) => ({ default: m.ModulesTab })), {
+  loading: () => <PageSkeleton />,
+});
+const AnnouncementsTab = dynamic(() => import("./components/AnnouncementsTab").then((m) => ({ default: m.AnnouncementsTab })), {
+  loading: () => <PageSkeleton />,
+});
 
 type AccessKeyWithTargetUser = AccessKey & {
   targetUser: {

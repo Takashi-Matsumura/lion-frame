@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import {
   createContext,
   type ReactNode,
-  useContext,
+  use,
   useEffect,
   useState,
 } from "react";
@@ -50,7 +50,8 @@ export function SidebarNavigationProvider({
 }
 
 export function useSidebarNavigation() {
-  const context = useContext(SidebarNavigationContext);
+  // react19-no-forwardref: useContext → use()
+  const context = use(SidebarNavigationContext);
   // プロバイダー外で使用された場合はフォールバック（ローディング表示なし）
   if (!context) {
     return {

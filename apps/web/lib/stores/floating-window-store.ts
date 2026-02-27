@@ -24,11 +24,12 @@ interface OpenOptions {
   initialSize?: FloatingWindowSize;
 }
 
+// architecture-avoid-boolean-props: 3つのbooleanを単一のstatus型に統合
+type WindowStatus = "closed" | "normal" | "minimized" | "maximized";
+
 interface FloatingWindowStore {
-  // 表示状態
-  isOpen: boolean;
-  isMinimized: boolean;
-  isMaximized: boolean;
+  // 表示状態（単一のstatus型で無効な状態の組み合わせを排除）
+  windowStatus: WindowStatus;
 
   // 位置とサイズ
   position: FloatingWindowPosition;
@@ -57,9 +58,7 @@ interface FloatingWindowStore {
 export const useFloatingWindowStore = create<FloatingWindowStore>(
   (set, get) => ({
     // 初期状態
-    isOpen: false,
-    isMinimized: false,
-    isMaximized: false,
+    windowStatus: "closed",
     position: DEFAULT_POSITION,
     size: DEFAULT_SIZE,
     prevPosition: null,
@@ -70,9 +69,7 @@ export const useFloatingWindowStore = create<FloatingWindowStore>(
 
     open: (options) => {
       set({
-        isOpen: true,
-        isMinimized: false,
-        isMaximized: false,
+        windowStatus: "normal",
         title: options?.title ?? "Sub Window",
         titleJa: options?.titleJa ?? "サブウィンドウ",
         content: options?.content ?? null,
@@ -83,9 +80,7 @@ export const useFloatingWindowStore = create<FloatingWindowStore>(
 
     close: () => {
       set({
-        isOpen: false,
-        isMinimized: false,
-        isMaximized: false,
+        windowStatus: "closed",
         content: null,
         prevPosition: null,
         prevSize: null,
@@ -93,12 +88,12 @@ export const useFloatingWindowStore = create<FloatingWindowStore>(
     },
 
     minimize: () => {
-      set({ isMinimized: true, isMaximized: false });
+      set({ windowStatus: "minimized" });
     },
 
     maximize: () => {
-      const { position, size, isMaximized } = get();
-      if (!isMaximized) {
+      const { position, size, windowStatus } = get();
+      if (windowStatus !== "maximized") {
         set({
           prevPosition: position,
           prevSize: size,
@@ -107,24 +102,23 @@ export const useFloatingWindowStore = create<FloatingWindowStore>(
             width: typeof window !== "undefined" ? window.innerWidth : 1200,
             height: typeof window !== "undefined" ? window.innerHeight : 800,
           },
-          isMaximized: true,
-          isMinimized: false,
+          windowStatus: "maximized",
         });
       }
     },
 
     restore: () => {
-      const { prevPosition, prevSize, isMaximized, isMinimized } = get();
-      if (isMaximized && prevPosition && prevSize) {
+      const { prevPosition, prevSize, windowStatus } = get();
+      if (windowStatus === "maximized" && prevPosition && prevSize) {
         set({
           position: prevPosition,
           size: prevSize,
-          isMaximized: false,
+          windowStatus: "normal",
           prevPosition: null,
           prevSize: null,
         });
-      } else if (isMinimized) {
-        set({ isMinimized: false });
+      } else if (windowStatus === "minimized") {
+        set({ windowStatus: "normal" });
       }
     },
 
@@ -148,3 +142,4 @@ export const useFloatingWindowStore = create<FloatingWindowStore>(
 );
 
 export { DEFAULT_POSITION, DEFAULT_SIZE, MIN_SIZE };
+export type { WindowStatus };

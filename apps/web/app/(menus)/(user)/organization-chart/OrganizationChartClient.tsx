@@ -110,8 +110,9 @@ export function OrganizationChartClient({
   const [showInactive, setShowInactive] = useState(false);
 
   // ツリー展開状態
-  const [expandedDepts, setExpandedDepts] = useState<Set<string>>(new Set());
-  const [expandedSects, setExpandedSects] = useState<Set<string>>(new Set());
+  // rerender-lazy-state-init: 関数を渡して遅延初期化
+  const [expandedDepts, setExpandedDepts] = useState<Set<string>>(() => new Set());
+  const [expandedSects, setExpandedSects] = useState<Set<string>>(() => new Set());
 
   // 社員詳細ダイアログ
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(

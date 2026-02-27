@@ -30,34 +30,35 @@ export const GET = apiHandler(async (request) => {
   const limit = parseInt(searchParams.get("limit") || "50", 10);
 
   // 公開済み組織を取得（PUBLISHED優先、SCHEDULED自動昇格）
-  let organization = await prisma.organization.findFirst({
-    where: { status: "PUBLISHED" },
-    orderBy: { publishedAt: "desc" },
-  });
-
-  if (!organization) {
-    const scheduledOrg = await prisma.organization.findFirst({
+  // PUBLISHED/SCHEDULED検索を並列実行（async-parallel）
+  const [published, scheduled] = await Promise.all([
+    prisma.organization.findFirst({
+      where: { status: "PUBLISHED" },
+      orderBy: { publishedAt: "desc" },
+    }),
+    prisma.organization.findFirst({
       where: {
         status: "SCHEDULED",
         publishAt: { lte: new Date() },
       },
       orderBy: { publishAt: "asc" },
+    }),
+  ]);
+
+  let organization = published;
+  if (!organization && scheduled) {
+    await prisma.organization.updateMany({
+      where: { status: "PUBLISHED" },
+      data: { status: "ARCHIVED" },
     });
 
-    if (scheduledOrg) {
-      await prisma.organization.updateMany({
-        where: { status: "PUBLISHED" },
-        data: { status: "ARCHIVED" },
-      });
-
-      organization = await prisma.organization.update({
-        where: { id: scheduledOrg.id },
-        data: {
-          status: "PUBLISHED",
-          publishedAt: new Date(),
-        },
-      });
-    }
+    organization = await prisma.organization.update({
+      where: { id: scheduled.id },
+      data: {
+        status: "PUBLISHED",
+        publishedAt: new Date(),
+      },
+    });
   }
 
   if (!organization) {
@@ -118,14 +119,29 @@ export const GET = apiHandler(async (request) => {
     where.position = position;
   }
 
-  // 総件数を取得
-  const total = await prisma.employee.count({ where });
+  // 独立したクエリを並列実行（async-parallel）
+  const [total, positionMasters, allEmployees] = await Promise.all([
+    prisma.employee.count({ where }),
+    prisma.positionMaster.findMany({
+      where: { isActive: true },
+      select: { code: true, displayOrder: true, color: true },
+    }),
+    prisma.employee.findMany({
+      where,
+      include: {
+        department: {
+          select: { id: true, name: true, code: true },
+        },
+        section: {
+          select: { id: true, name: true, code: true },
+        },
+        course: {
+          select: { id: true, name: true, code: true },
+        },
+      },
+    }),
+  ]);
 
-  // PositionMasterからdisplayOrderとcolorを取得
-  const positionMasters = await prisma.positionMaster.findMany({
-    where: { isActive: true },
-    select: { code: true, displayOrder: true, color: true },
-  });
   const positionOrderMap = new Map<string, number>();
   const positionColorMap = new Map<string, string | null>();
   for (const pm of positionMasters) {
@@ -133,22 +149,6 @@ export const GET = apiHandler(async (request) => {
     positionColorMap.set(pm.code, pm.color);
   }
   const usePositionMaster = positionMasters.length > 0;
-
-  // 社員一覧を取得（ソートはJavaScriptで行う）
-  const allEmployees = await prisma.employee.findMany({
-    where,
-    include: {
-      department: {
-        select: { id: true, name: true, code: true },
-      },
-      section: {
-        select: { id: true, name: true, code: true },
-      },
-      course: {
-        select: { id: true, name: true, code: true },
-      },
-    },
-  });
 
   // カスタムソート: PositionMaster.displayOrder → 役職コード順（「000」は最後）→ 名前の五十音順
   const sortedEmployees = allEmployees.sort((a, b) => {

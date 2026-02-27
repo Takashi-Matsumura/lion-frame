@@ -16,9 +16,7 @@ type ResizeDirection = "n" | "s" | "e" | "w" | "ne" | "nw" | "se" | "sw";
 
 export function FloatingWindow({ language = "en" }: FloatingWindowProps) {
   const {
-    isOpen,
-    isMinimized,
-    isMaximized,
+    windowStatus,
     position,
     size,
     title,
@@ -31,6 +29,8 @@ export function FloatingWindow({ language = "en" }: FloatingWindowProps) {
     setPosition,
     setSize,
   } = useFloatingWindowStore();
+
+  const isMaximized = windowStatus === "maximized";
 
   const windowRef = useRef<HTMLDivElement>(null);
   const isDraggingRef = useRef(false);
@@ -149,22 +149,22 @@ export function FloatingWindow({ language = "en" }: FloatingWindowProps) {
   // ESCキーで閉じる
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && isOpen && !isMinimized) {
+      if (e.key === "Escape" && windowStatus !== "closed" && windowStatus !== "minimized") {
         close();
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, isMinimized, close]);
+  }, [windowStatus, close]);
 
   // SSR対策
   if (typeof window === "undefined") return null;
-  if (!isOpen) return null;
+  if (windowStatus === "closed") return null;
 
   const displayTitle = language === "ja" ? titleJa : title;
 
   // 最小化時はタスクバー風の表示
-  if (isMinimized) {
+  if (windowStatus === "minimized") {
     return createPortal(
       <button
         type="button"
