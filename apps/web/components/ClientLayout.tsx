@@ -1,12 +1,14 @@
 "use client";
 
 import type { Session } from "next-auth";
+import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import {
   SidebarInset,
   SidebarProvider,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { useIsMobile } from "@/lib/hooks/use-mobile";
 import { useSidebarStore } from "@/lib/stores/sidebar-store";
 import type { AppMenu } from "@/types/module";
 import { AppSidebar } from "./AppSidebar";
@@ -30,6 +32,7 @@ interface ClientLayoutProps {
 function ResizeHandle() {
   const { width, setWidth, isModalOpen } = useSidebarStore();
   const { open } = useSidebar();
+  const isMobile = useIsMobile();
   const isResizingRef = useRef(false);
   const [isResizing, setIsResizing] = useState(false);
 
@@ -63,7 +66,7 @@ function ResizeHandle() {
     document.body.style.userSelect = "none";
   };
 
-  if (!open || isModalOpen) return null;
+  if (isMobile || !open || isModalOpen) return null;
 
   return (
     <div
@@ -81,6 +84,42 @@ function ResizeHandle() {
   );
 }
 
+function MobileOverlay() {
+  const { open, setOpen } = useSidebar();
+  const isMobile = useIsMobile();
+
+  if (!isMobile || !open) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-[9] bg-black/50"
+      onClick={() => setOpen(false)}
+    />
+  );
+}
+
+function MobileAutoClose() {
+  const pathname = usePathname();
+  const isMobile = useIsMobile();
+  const { setOpen } = useSidebar();
+  const setOpenRef = useRef(setOpen);
+  setOpenRef.current = setOpen;
+  const initialRef = useRef(true);
+
+  useEffect(() => {
+    if (isMobile) {
+      if (initialRef.current) {
+        initialRef.current = false;
+        setOpenRef.current(false);
+        return;
+      }
+      setOpenRef.current(false);
+    }
+  }, [pathname, isMobile]);
+
+  return null;
+}
+
 export function ClientLayout({
   session,
   language = "en",
@@ -96,6 +135,7 @@ export function ClientLayout({
 
   return (
     <SidebarProvider>
+      <MobileAutoClose />
       <AppSidebar
         session={session}
         accessibleMenus={accessibleMenus}
@@ -104,6 +144,7 @@ export function ClientLayout({
         language={language}
         mustChangePassword={mustChangePassword}
       />
+      <MobileOverlay />
       <ResizeHandle />
       <SidebarInset>{children}</SidebarInset>
     </SidebarProvider>

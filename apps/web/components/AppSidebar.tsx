@@ -2,6 +2,7 @@
 
 import type { Session } from "next-auth";
 import { Sidebar, SidebarContent, SidebarRail } from "@/components/ui/sidebar";
+import { useIsMobile } from "@/lib/hooks/use-mobile";
 import { useSidebarStore } from "@/lib/stores/sidebar-store";
 import type { AppMenu } from "@/types/module";
 import { SidebarHeaderContent } from "./sidebar/SidebarHeaderContent";
@@ -31,12 +32,13 @@ export function AppSidebar({
   mustChangePassword = false,
 }: AppSidebarProps) {
   const { width } = useSidebarStore();
+  const isMobile = useIsMobile();
   const isAdmin = session.user.role === "ADMIN";
 
   return (
     <SidebarNavigationProvider>
       <Sidebar
-        collapsible="icon"
+        collapsible={isMobile ? "offcanvas" : "icon"}
         className="border-r border-sidebar-border"
         style={
           {

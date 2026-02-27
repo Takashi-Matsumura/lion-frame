@@ -14,7 +14,7 @@ interface TabItem {
   active: boolean;
 }
 
-import { Info } from "lucide-react";
+import { Info, Menu } from "lucide-react";
 import {
   FaChartBar,
   FaDatabase,
@@ -32,6 +32,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useSidebar } from "@/components/ui/sidebar";
+import { useIsMobile } from "@/lib/hooks/use-mobile";
 import { getPageIcon, getPageTitle } from "@/lib/i18n/page-titles";
 import { useSidebarStore } from "@/lib/stores/sidebar-store";
 
@@ -53,6 +55,8 @@ export function Header({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { width, open } = useSidebarStore();
+  const { setOpen: setSidebarOpen } = useSidebar();
+  const isMobile = useIsMobile();
   const pageTitle = getPageTitle(pathname, language as "en" | "ja");
   const pageIcon = getPageIcon(pathname);
 
@@ -296,7 +300,13 @@ export function Header({
     <header
       className="bg-card shadow-lg border-b border-border fixed top-0 right-0 z-[8] transition-all duration-300"
       style={{
-        left: session ? (open ? `${width}px` : "4rem") : "0",
+        left: session
+          ? isMobile
+            ? "0"
+            : open
+              ? `${width}px`
+              : "4rem"
+          : "0",
       }}
     >
       {/* システムアナウンスバナー */}
@@ -305,6 +315,17 @@ export function Header({
       <div className="px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
+            {session && isMobile && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 shrink-0"
+                onClick={() => setSidebarOpen(true)}
+              >
+                <Menu className="h-5 w-5" />
+                <span className="sr-only">Menu</span>
+              </Button>
+            )}
             {session ? (
               <h1 className="text-xl font-bold flex items-center gap-2">
                 {pageIcon && (
