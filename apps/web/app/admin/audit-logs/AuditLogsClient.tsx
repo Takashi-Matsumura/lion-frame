@@ -17,6 +17,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useIsMobile } from "@/lib/hooks/use-mobile";
+import { useSidebar } from "@/components/ui/sidebar";
+import { useSidebarStore } from "@/lib/stores/sidebar-store";
 import {
   Table,
   TableBody,
@@ -54,6 +56,8 @@ const PAGE_SIZE = 25;
 export function AuditLogsClient({ language }: AuditLogsClientProps) {
   const t = auditLogsTranslations[language];
   const isMobile = useIsMobile();
+  const { open } = useSidebar();
+  const { width } = useSidebarStore();
 
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState(false);
@@ -192,12 +196,14 @@ export function AuditLogsClient({ language }: AuditLogsClientProps) {
     );
   };
 
+  const sidebarLeft = isMobile ? "0" : open ? `${width}px` : "4rem";
+
   return (
     <div
       className="fixed inset-0 flex flex-col transition-all duration-300"
       style={{
         top: "4.5rem",
-        left: isMobile ? "0" : "4rem",
+        left: sidebarLeft,
       }}
     >
       <div className="flex-1 overflow-hidden">

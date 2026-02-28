@@ -5,6 +5,8 @@ import { useEffect, useState } from "react";
 import { FaPlus, FaUsers } from "react-icons/fa";
 import { Card, CardContent } from "@/components/ui/card";
 import { useIsMobile } from "@/lib/hooks/use-mobile";
+import { useSidebar } from "@/components/ui/sidebar";
+import { useSidebarStore } from "@/lib/stores/sidebar-store";
 import { HistoryTab } from "./components/HistoryTab";
 import { ImportTab } from "./components/ImportTab";
 import { OrganizeTab } from "./components/OrganizeTab";
@@ -34,6 +36,8 @@ export function DataManagementClient({
   const tab = rawTab === "employees" ? "organize" : rawTab;
   const t = dataManagementTranslations[language];
   const isMobile = useIsMobile();
+  const { open } = useSidebar();
+  const { width } = useSidebarStore();
 
   // Redirect ?tab=employees to ?tab=organize
   useEffect(() => {
@@ -77,12 +81,14 @@ export function DataManagementClient({
   // ヘッダー本体: 約72px + タブナビ: 約44px = 約116px ≈ 7.25rem
   const headerHeight = "7.25rem";
 
+  const sidebarLeft = isMobile ? "0" : open ? `${width}px` : "4rem";
+
   return (
     <div
       className="fixed inset-0 flex flex-col transition-all duration-300"
       style={{
         top: headerHeight,
-        left: isMobile ? "0" : "4rem",
+        left: sidebarLeft,
       }}
     >
       <div className="flex-1 overflow-hidden">

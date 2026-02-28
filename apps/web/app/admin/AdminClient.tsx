@@ -5,6 +5,8 @@ import { useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import { Card, CardContent } from "@/components/ui/card";
 import { useIsMobile } from "@/lib/hooks/use-mobile";
+import { useSidebar } from "@/components/ui/sidebar";
+import { useSidebarStore } from "@/lib/stores/sidebar-store";
 import {
   AccessKeyManagerSkeleton,
   AnnouncementsTabSkeleton,
@@ -73,16 +75,19 @@ export function AdminClient({
 }: AdminClientProps) {
   const searchParams = useSearchParams();
   const isMobile = useIsMobile();
+  const { open } = useSidebar();
+  const { width } = useSidebarStore();
   const activeTab = (searchParams.get("tab") as TabType) || "users";
 
   const headerHeight = "7.25rem";
+  const sidebarLeft = isMobile ? "0" : open ? `${width}px` : "4rem";
 
   return (
     <div
       className="fixed inset-0 flex flex-col bg-muted/30 transition-all duration-300"
       style={{
         top: headerHeight,
-        left: isMobile ? "0" : "4rem",
+        left: sidebarLeft,
       }}
     >
       <div className={`flex-1 ${["users", "access-keys", "announcements"].includes(activeTab) ? "overflow-hidden" : "overflow-y-auto"}`}>

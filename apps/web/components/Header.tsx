@@ -36,6 +36,7 @@ import {
 } from "@/components/ui/tooltip";
 import { useSidebar } from "@/components/ui/sidebar";
 import { useIsMobile } from "@/lib/hooks/use-mobile";
+import { useSidebarStore } from "@/lib/stores/sidebar-store";
 import { getPageIcon, getPageTitle } from "@/lib/i18n/page-titles";
 
 function MobileMenuButton() {
@@ -71,6 +72,8 @@ export function Header({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const isMobile = useIsMobile();
+  const { open } = useSidebar();
+  const { width } = useSidebarStore();
   const [pageGuideOpen, setPageGuideOpen] = useState(false);
   const pageTitle = getPageTitle(pathname, language as "en" | "ja");
   const pageIcon = getPageIcon(pathname);
@@ -315,7 +318,7 @@ export function Header({
     <header
       className="bg-card shadow-lg border-b border-border fixed top-0 right-0 z-[8] transition-all duration-300"
       style={{
-        left: session ? (isMobile ? "0" : "4rem") : "0",
+        left: session ? (isMobile ? "0" : open ? `${width}px` : "4rem") : "0",
       }}
     >
       {/* システムアナウンスバナー */}
