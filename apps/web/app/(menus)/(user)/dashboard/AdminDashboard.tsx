@@ -312,16 +312,16 @@ export function AdminDashboard({ language }: AdminDashboardProps) {
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         {kpiItems.map((item) => (
           <Card key={item.label}>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3">
-                <div className={`p-2 rounded-lg ${item.bg}`}>
+            <CardContent className="pt-5 pb-4">
+              <div className="flex flex-col items-center text-center gap-2">
+                <div className={`p-2.5 rounded-lg ${item.bg}`}>
                   <item.icon className={`w-5 h-5 ${item.color}`} />
                 </div>
-                <div className="min-w-0">
-                  <p className="text-xs text-muted-foreground truncate">
+                <div>
+                  <p className="text-2xl font-bold leading-tight">{item.value}</p>
+                  <p className="text-xs text-muted-foreground mt-1">
                     {item.label}
                   </p>
-                  <p className="text-xl font-bold truncate">{item.value}</p>
                 </div>
               </div>
             </CardContent>
@@ -738,12 +738,12 @@ function AdminDashboardSkeleton() {
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         {Array.from({ length: 6 }).map((_, i) => (
           <Card key={i}>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3">
-                <Skeleton className="h-9 w-9 rounded-lg" />
-                <div className="space-y-2">
-                  <Skeleton className="h-3 w-16" />
+            <CardContent className="pt-5 pb-4">
+              <div className="flex flex-col items-center gap-2">
+                <Skeleton className="h-10 w-10 rounded-lg" />
+                <div className="space-y-1.5 flex flex-col items-center">
                   <Skeleton className="h-7 w-12" />
+                  <Skeleton className="h-3 w-20" />
                 </div>
               </div>
             </CardContent>

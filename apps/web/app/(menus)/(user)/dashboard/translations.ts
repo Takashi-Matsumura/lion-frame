@@ -86,7 +86,7 @@ export const adminDashboardTranslations = {
     lastRun: "最終実行",
     neverRun: "未実行",
     autoRunning: "自動診断を実行中...",
-    allPassed: "全チェック正常",
+    allPassed: "正常",
     failCount: "件の失敗",
     warnCount: "件の警告",
     // Diagnostic statuses
