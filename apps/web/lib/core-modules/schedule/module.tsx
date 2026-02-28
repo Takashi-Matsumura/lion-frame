@@ -10,10 +10,10 @@ import type { AppModule, AppTab } from "@/types/module";
 
 const calendarManagementTabs: AppTab[] = [
   {
-    id: "holidays",
-    name: "Holiday Management",
-    nameJa: "祝日管理",
-    icon: <FaCalendarCheck className="w-5 h-5" />,
+    id: "settings",
+    name: "Calendar Settings",
+    nameJa: "カレンダー設定",
+    icon: <FaCog className="w-5 h-5" />,
     order: 1,
   },
   {
@@ -24,10 +24,10 @@ const calendarManagementTabs: AppTab[] = [
     order: 2,
   },
   {
-    id: "settings",
-    name: "Calendar Settings",
-    nameJa: "カレンダー設定",
-    icon: <FaCog className="w-5 h-5" />,
+    id: "holidays",
+    name: "Holiday Management",
+    nameJa: "祝日管理",
+    icon: <FaCalendarCheck className="w-5 h-5" />,
     order: 3,
   },
 ];

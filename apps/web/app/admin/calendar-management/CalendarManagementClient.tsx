@@ -16,7 +16,7 @@ export function CalendarManagementClient({
   language,
 }: CalendarManagementClientProps) {
   const searchParams = useSearchParams();
-  const tab = searchParams.get("tab") || "holidays";
+  const tab = searchParams.get("tab") || "settings";
   const isMobile = useIsMobile();
   const { open } = useSidebar();
   const { width } = useSidebarStore();
