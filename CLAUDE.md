@@ -116,6 +116,7 @@ cd apps/web && npx prisma db push && pnpm db:seed
 | カレンダー | CalendarEvent, Holiday |
 | 利用状況 | UsageLog, UsageStat |
 | ページガイド | PageGuide, PageGuideRevision |
+| 依存関係チェック | DependencyReport, DependencyItem |
 | システム | SystemSetting |
 
 ## 重要なルール

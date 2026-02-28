@@ -46,6 +46,7 @@ export type AuditAction =
   | "MANAGER_ASSIGN"
   | "MANAGER_AUTO_ASSIGN"
   | "SYSTEM_DIAGNOSTIC"
+  | "DEPENDENCY_CHECK"
   // MODULE
   | "MODULE_TOGGLE"
   | "MENU_TOGGLE"

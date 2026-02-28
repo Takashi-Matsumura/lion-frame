@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import type { AIConfig, LocalLLMDefaults } from "@/types/admin";
+import { DependencyHealthSection } from "./DependencyHealthSection";
 import { TutorialDocumentsManager } from "./TutorialDocumentsManager";
 
 interface SystemTabProps {
@@ -45,10 +46,14 @@ export function SystemTab({ language }: SystemTabProps) {
   } | null>(null);
   const [aiSaving, setAiSaving] = useState(false);
 
+  // システムバージョン
+  const [systemVersions, setSystemVersions] = useState<Record<string, string> | null>(null);
+  const [versionsLoading, setVersionsLoading] = useState(true);
+
   // アコーディオン開閉
   const [authSettingsOpen, setAuthSettingsOpen] = useState(false);
+  const [depHealthOpen, setDepHealthOpen] = useState(false);
   const [aiSettingsOpen, setAiSettingsOpen] = useState(false);
-  const [tutorialDocsOpen, setTutorialDocsOpen] = useState(false);
 
   // Google OAuth設定を取得
   const fetchGoogleOAuthSetting = useCallback(async () => {
@@ -188,12 +193,28 @@ export function SystemTab({ language }: SystemTabProps) {
     }
   };
 
+  // システムバージョンを取得
+  const fetchSystemVersions = useCallback(async () => {
+    try {
+      const res = await fetch("/api/admin/system-versions");
+      if (res.ok) {
+        const data = await res.json();
+        setSystemVersions(data);
+      }
+    } catch (error) {
+      console.error("Error fetching system versions:", error);
+    } finally {
+      setVersionsLoading(false);
+    }
+  }, []);
+
   // マウント時にOAuth設定とAI設定を取得
   useEffect(() => {
     fetchGoogleOAuthSetting();
     fetchGitHubOAuthSetting();
     fetchAiConfig();
-  }, [fetchGoogleOAuthSetting, fetchGitHubOAuthSetting, fetchAiConfig]);
+    fetchSystemVersions();
+  }, [fetchGoogleOAuthSetting, fetchGitHubOAuthSetting, fetchAiConfig, fetchSystemVersions]);
 
   return (
     <Card>
@@ -205,45 +226,84 @@ export function SystemTab({ language }: SystemTabProps) {
           </h2>
 
           <div className="p-6 bg-muted rounded-lg">
-            <div className="space-y-3 text-muted-foreground">
-              <div className="flex justify-between items-center py-2 border-b border-border">
-                <span className="font-medium">
-                  {t("Framework", "フレームワーク")}
+            {versionsLoading ? (
+              <div className="flex items-center justify-center py-4">
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary" />
+                <span className="ml-2 text-sm text-muted-foreground">
+                  {t("Loading...", "読み込み中...")}
                 </span>
-                <span>Next.js 15 (App Router)</span>
               </div>
-              <div className="flex justify-between items-center py-2 border-b border-border">
-                <span className="font-medium">
-                  {t("Database", "データベース")}
-                </span>
-                <span>PostgreSQL (Prisma ORM)</span>
+            ) : (
+              <div className="space-y-3 text-muted-foreground">
+                <div className="flex justify-between items-center py-2 border-b border-border">
+                  <span className="font-medium">
+                    {t("Framework", "フレームワーク")}
+                  </span>
+                  <span className="font-mono text-sm">
+                    {systemVersions?.framework ?? "Next.js (App Router)"}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center py-2 border-b border-border">
+                  <span className="font-medium">
+                    {t("Runtime", "ランタイム")}
+                  </span>
+                  <span className="font-mono text-sm">
+                    {systemVersions?.runtime ?? "React"}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center py-2 border-b border-border">
+                  <span className="font-medium">
+                    {t("Database", "データベース")}
+                  </span>
+                  <span className="font-mono text-sm">
+                    {systemVersions?.database ?? "PostgreSQL (Prisma ORM)"}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center py-2 border-b border-border">
+                  <span className="font-medium">
+                    {t("Authentication", "認証")}
+                  </span>
+                  <span className="font-mono text-sm">
+                    {systemVersions?.auth ?? "Auth.js (NextAuth.js v5)"}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center py-2 border-b border-border">
+                  <span className="font-medium">
+                    {t("Styling", "スタイリング")}
+                  </span>
+                  <span className="font-mono text-sm">
+                    {systemVersions?.styling ?? "Tailwind CSS"}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center py-2">
+                  <span className="font-medium">
+                    {t("Language", "言語")}
+                  </span>
+                  <span className="font-mono text-sm">
+                    {systemVersions?.language ?? "TypeScript"}
+                  </span>
+                </div>
               </div>
-              <div className="flex justify-between items-center py-2 border-b border-border">
-                <span className="font-medium">
-                  {t("Authentication", "認証")}
-                </span>
-                <span>Auth.js (NextAuth.js v5)</span>
-              </div>
-              <div className="flex justify-between items-center py-2 border-b border-border">
-                <span className="font-medium">
-                  {t("Auth Providers", "認証プロバイダ")}
-                </span>
-                <span>Google OAuth / GitHub OAuth</span>
-              </div>
-              <div className="flex justify-between items-center py-2 border-b border-border">
-                <span className="font-medium">
-                  {t("Styling", "スタイリング")}
-                </span>
-                <span>Tailwind CSS 4</span>
-              </div>
-              <div className="flex justify-between items-center py-2">
-                <span className="font-medium">
-                  {t("Language", "言語")}
-                </span>
-                <span>TypeScript</span>
-              </div>
-            </div>
+            )}
           </div>
+        </div>
+
+        {/* 依存関係ヘルス */}
+        <div className="mt-8">
+          <button
+            type="button"
+            onClick={() => setDepHealthOpen(!depHealthOpen)}
+            className="flex items-center gap-2 w-full text-left cursor-pointer"
+          >
+            <ChevronDown
+              className={`h-4 w-4 text-muted-foreground transition-transform ${depHealthOpen ? "" : "-rotate-90"}`}
+            />
+            <h2 className="text-base font-semibold">
+              {t("Dependency Health", "依存関係ヘルス")}
+            </h2>
+          </button>
+
+          {depHealthOpen && <DependencyHealthSection language={language} />}
         </div>
 
         {/* 認証設定 */}
@@ -740,30 +800,14 @@ export function SystemTab({ language }: SystemTabProps) {
                       </span>
                     </div>
                   </div>
+
+                  {/* チュートリアルドキュメント */}
+                  <div className="p-6 bg-muted rounded-lg">
+                    <TutorialDocumentsManager language={language} />
+                  </div>
                 </div>
               )}
             </>
-          )}
-        </div>
-        {/* AIチュートリアルドキュメント */}
-        <div className="mt-8">
-          <button
-            type="button"
-            onClick={() => setTutorialDocsOpen(!tutorialDocsOpen)}
-            className="flex items-center gap-2 w-full text-left cursor-pointer"
-          >
-            <ChevronDown
-              className={`h-4 w-4 text-muted-foreground transition-transform ${tutorialDocsOpen ? "" : "-rotate-90"}`}
-            />
-            <h2 className="text-base font-semibold">
-              {t("AI Tutorial Documents", "AIチュートリアルドキュメント")}
-            </h2>
-          </button>
-
-          {tutorialDocsOpen && (
-            <div className="mt-4 p-6 bg-muted rounded-lg">
-              <TutorialDocumentsManager language={language} />
-            </div>
           )}
         </div>
       </CardContent>

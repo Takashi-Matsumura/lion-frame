@@ -64,7 +64,8 @@ interface HeaderProps {
   accessKeyTabPermissions?: Record<string, string[]>;
 }
 
-export function Header({
+/** サイドバー状態を使ってヘッダー位置を計算する内部コンポーネント */
+function HeaderInner({
   session,
   language = "en",
   accessKeyTabPermissions = {},
@@ -269,7 +270,7 @@ export function Header({
     })) || [];
 
   // カレンダー管理タブ（レジストリから取得）
-  const calendarManagementTab = searchParams.get("tab") || "holidays";
+  const calendarManagementTab = searchParams.get("tab") || "settings";
   const registryCalendarManagementTabs = getTabsByMenuPath(
     "/admin/calendar-management",
   );
@@ -405,4 +406,34 @@ export function Header({
       />
     </header>
   );
+}
+
+/** セッションなしの場合はSidebarProvider不要のフォールバックを表示 */
+function HeaderFallback({ language = "en" }: { language?: string }) {
+  const pathname = usePathname();
+  const pageTitle = getPageTitle(pathname, language as "en" | "ja");
+
+  return (
+    <header className="bg-card shadow-lg border-b border-border fixed top-0 right-0 left-0 z-[8]">
+      <AnnouncementBanner language={language as "en" | "ja"} isAuthenticated={false} />
+      <div className="px-6 py-4">
+        <div className="flex items-center justify-between">
+          <Link href="/" className="text-xl font-bold">
+            {appConfig.name}
+          </Link>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+/**
+ * Header — セッションがある場合はSidebarProvider内で使う HeaderInner を、
+ * ない場合は SidebarProvider 不要の HeaderFallback を表示する。
+ */
+export function Header(props: HeaderProps) {
+  if (!props.session) {
+    return <HeaderFallback language={props.language} />;
+  }
+  return <HeaderInner {...props} />;
 }

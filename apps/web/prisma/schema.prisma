@@ -745,3 +745,43 @@ model PageGuideRevision {
 
   @@index([guideId, version])
 }
+
+// ========================================
+// 依存関係チェックレポート
+// ========================================
+
+model DependencyReport {
+  id           String   @id @default(cuid())
+  checkedAt    DateTime @default(now())
+  trigger      String   @default("manual") // "scheduled" | "manual"
+  triggeredBy  String?  // 手動実行時のUser ID
+  status       String   @default("running") // "running" | "completed" | "failed"
+  summary      Json?    // { total, outdated, vulnerable, critical, high, medium, low }
+  errorMessage String?
+  durationMs   Int?
+  createdAt    DateTime @default(now())
+
+  items        DependencyItem[]
+
+  @@index([checkedAt])
+  @@index([status])
+}
+
+model DependencyItem {
+  id               String  @id @default(cuid())
+  reportId         String
+  report           DependencyReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  packageName      String
+  currentVersion   String
+  latestVersion    String?
+  isOutdated       Boolean @default(false)
+  isDev            Boolean @default(false)
+  hasVulnerability Boolean @default(false)
+  vulnSeverity     String? // "critical" | "high" | "medium" | "low"
+  vulnTitle        String?
+  vulnAdvisoryUrl  String?
+
+  @@index([reportId])
+  @@index([reportId, isOutdated])
+  @@index([reportId, hasVulnerability])
+}

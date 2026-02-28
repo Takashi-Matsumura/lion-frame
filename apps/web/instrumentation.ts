@@ -4,5 +4,10 @@ export async function register() {
       "@/lib/services/system-event-service"
     );
     await SystemEventService.handleBuildIdChange();
+
+    const { startDependencyCron } = await import(
+      "@/lib/core-modules/system/services/dependency-cron"
+    );
+    startDependencyCron();
   }
 }
