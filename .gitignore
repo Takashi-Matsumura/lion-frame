@@ -90,6 +90,10 @@ chroma_data/
 .mcp.json
 .claude/memory/
 
+# IDE/Tool config
+.agent/
+.continue/
+
 # MCP servers build output
 mcp-servers/*/dist/
 
