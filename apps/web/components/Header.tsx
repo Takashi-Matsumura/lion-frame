@@ -1,10 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import type { ReactNode } from "react";
 import { appConfig } from "@/lib/config/app";
 import { getTabsByMenuPath } from "@/lib/modules/registry";
+import { PageGuideSheet } from "@/components/PageGuideSheet";
 
 /** タブアイテムの型定義 */
 interface TabItem {
@@ -69,6 +71,7 @@ export function Header({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const isMobile = useIsMobile();
+  const [pageGuideOpen, setPageGuideOpen] = useState(false);
   const pageTitle = getPageTitle(pathname, language as "en" | "ja");
   const pageIcon = getPageIcon(pathname);
 
@@ -345,6 +348,7 @@ export function Header({
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                      onClick={() => setPageGuideOpen(true)}
                     >
                       <Info className="h-5 w-5" />
                     </Button>
@@ -389,6 +393,13 @@ export function Header({
           ),
           "Calendar Management Tabs",
         )}
+      <PageGuideSheet
+        open={pageGuideOpen}
+        onOpenChange={setPageGuideOpen}
+        pathname={pathname}
+        pageTitle={pageTitle}
+        language={language as "en" | "ja"}
+      />
     </header>
   );
 }

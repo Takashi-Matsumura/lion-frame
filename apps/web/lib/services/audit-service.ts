@@ -52,6 +52,8 @@ export type AuditAction =
   | "ACCESS_KEY_PERMISSION_UPDATE"
   | "AI_CHAT_MESSAGE"
   | "ORG_CONTEXT_TOGGLE"
+  | "PAGE_GUIDE_EDIT"
+  | "PAGE_GUIDE_REVERT"
   // USAGE
   | "PAGE_ACCESS";
 

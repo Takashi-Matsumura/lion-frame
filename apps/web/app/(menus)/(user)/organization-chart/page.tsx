@@ -1,14 +1,14 @@
 import dynamic from "next/dynamic";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
-import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { getLanguage } from "@/lib/i18n/get-language";
+import { OrganizationChartSkeleton } from "./OrganizationChartSkeleton";
 import type { Language } from "./translations";
 
 // bundle-dynamic-imports: 重い組織図コンポーネントを遅延読み込み
 const OrganizationChartClient = dynamic(
   () => import("./OrganizationChartClient").then((m) => ({ default: m.OrganizationChartClient })),
-  { loading: () => <PageSkeleton /> },
+  { loading: () => <OrganizationChartSkeleton /> },
 );
 
 export default async function OrganizationChartPage() {

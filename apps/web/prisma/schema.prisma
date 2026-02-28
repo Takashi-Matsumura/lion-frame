@@ -712,3 +712,36 @@ model TutorialDocument {
 
   @@index([isEnabled, sortOrder])
 }
+
+// ========================================
+// ページガイドキャッシュ
+// ========================================
+
+model PageGuide {
+  id           String   @id @default(cuid())
+  path         String   // ページパス（例: "/dashboard"）
+  language     String   // "ja" | "en"
+  content      String   @db.Text
+  version      Int      @default(1)
+  editedBy     String?  // 最終編集者のUser ID（null = AI生成）
+  editedByName String?  // 表示名（JOINを避けるため非正規化）
+  generatedAt  DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  revisions    PageGuideRevision[]
+
+  @@unique([path, language])
+}
+
+model PageGuideRevision {
+  id           String    @id @default(cuid())
+  guideId      String
+  guide        PageGuide @relation(fields: [guideId], references: [id], onDelete: Cascade)
+  content      String    @db.Text
+  version      Int
+  editedBy     String?
+  editedByName String?
+  createdAt    DateTime  @default(now())
+
+  @@index([guideId, version])
+}
