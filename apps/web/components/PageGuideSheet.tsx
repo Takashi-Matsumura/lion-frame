@@ -76,6 +76,11 @@ const markdownComponents = {
   ),
 };
 
+const PAGE_GUIDE_WIDTH_KEY = "page-guide-width";
+const DEFAULT_PANEL_WIDTH = 448;
+const MIN_PANEL_WIDTH = 320;
+const MAX_PANEL_WIDTH = 800;
+
 interface ChatMessage {
   role: "user" | "assistant";
   content: string;
@@ -141,6 +146,19 @@ export function PageGuideSheet({
   const [chatInput, setChatInput] = useState("");
   const [isChatStreaming, setIsChatStreaming] = useState(false);
   const [chatStreamingContent, setChatStreamingContent] = useState("");
+
+  // パネル幅リサイズ
+  const [panelWidth, setPanelWidth] = useState(() => {
+    if (typeof window === "undefined") return DEFAULT_PANEL_WIDTH;
+    const saved = localStorage.getItem(PAGE_GUIDE_WIDTH_KEY);
+    if (saved) {
+      const w = parseInt(saved, 10);
+      if (w >= MIN_PANEL_WIDTH && w <= MAX_PANEL_WIDTH) return w;
+    }
+    return DEFAULT_PANEL_WIDTH;
+  });
+  const panelWidthRef = useRef(panelWidth);
+  const [isResizing, setIsResizing] = useState(false);
 
   const contentRef = useRef<HTMLDivElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -476,13 +494,67 @@ export function PageGuideSheet({
     });
   };
 
+  // パネル幅リサイズハンドル
+  const handleResizeStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsResizing(true);
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+
+    const handleMouseMove = (ev: MouseEvent) => {
+      const newWidth = Math.min(
+        MAX_PANEL_WIDTH,
+        Math.max(MIN_PANEL_WIDTH, window.innerWidth - ev.clientX),
+      );
+      panelWidthRef.current = newWidth;
+      setPanelWidth(newWidth);
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+      localStorage.setItem(
+        PAGE_GUIDE_WIDTH_KEY,
+        String(panelWidthRef.current),
+      );
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+    };
+
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+  }, []);
+
   // === レンダリング ===
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
         className="w-full sm:max-w-md flex flex-col p-0"
+        style={{ width: `${panelWidth}px`, maxWidth: `${panelWidth}px` }}
       >
+        {/* リサイズハンドル */}
+        <div
+          className="group/resize absolute -left-1.5 top-0 bottom-0 w-3 cursor-col-resize z-10"
+          onMouseDown={handleResizeStart}
+          onDoubleClick={() => {
+            setPanelWidth(DEFAULT_PANEL_WIDTH);
+            panelWidthRef.current = DEFAULT_PANEL_WIDTH;
+            localStorage.setItem(
+              PAGE_GUIDE_WIDTH_KEY,
+              String(DEFAULT_PANEL_WIDTH),
+            );
+          }}
+        >
+          <div
+            className={`w-0.5 h-full mx-auto bg-primary transition-opacity duration-200 ${
+              isResizing
+                ? "opacity-100"
+                : "opacity-0 group-hover/resize:opacity-100"
+            }`}
+          />
+        </div>
         {/* ヘッダー */}
         <SheetHeader className="px-4 pt-4 pb-2 border-b border-border">
           <SheetTitle className="text-base">
