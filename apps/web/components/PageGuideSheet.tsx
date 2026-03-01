@@ -22,6 +22,8 @@ import {
 } from "@/components/ui/sheet";
 import { pageGuideTranslations } from "./page-guide-translations";
 
+import remarkGfm from "remark-gfm";
+
 const ReactMarkdown = dynamic(() => import("react-markdown"), { ssr: false });
 
 const markdownComponents = {
@@ -53,6 +55,24 @@ const markdownComponents = {
   },
   pre: ({ children }: { children?: React.ReactNode }) => (
     <pre className="bg-muted p-3 rounded-lg overflow-x-auto">{children}</pre>
+  ),
+  table: ({ children }: { children?: React.ReactNode }) => (
+    <div className="overflow-x-auto my-2">
+      <table className="w-full text-sm border-collapse border border-border">
+        {children}
+      </table>
+    </div>
+  ),
+  thead: ({ children }: { children?: React.ReactNode }) => (
+    <thead className="bg-muted/50">{children}</thead>
+  ),
+  th: ({ children }: { children?: React.ReactNode }) => (
+    <th className="border border-border px-3 py-1.5 text-left font-medium">
+      {children}
+    </th>
+  ),
+  td: ({ children }: { children?: React.ReactNode }) => (
+    <td className="border border-border px-3 py-1.5">{children}</td>
   ),
 };
 
@@ -575,7 +595,7 @@ export function PageGuideSheet({
                 </div>
               ) : guideContent ? (
                 <div className="prose prose-sm dark:prose-invert max-w-none">
-                  <ReactMarkdown components={markdownComponents}>
+                  <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
                     {guideContent}
                   </ReactMarkdown>
                   {isStreaming && (
@@ -631,7 +651,7 @@ export function PageGuideSheet({
                         </span>
                       ) : (
                         <div className="bg-muted rounded-lg px-3 py-2">
-                          <ReactMarkdown components={markdownComponents}>
+                          <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
                             {msg.content}
                           </ReactMarkdown>
                         </div>
@@ -641,7 +661,7 @@ export function PageGuideSheet({
                   {chatStreamingContent && (
                     <div className="prose prose-sm dark:prose-invert max-w-none">
                       <div className="bg-muted rounded-lg px-3 py-2">
-                        <ReactMarkdown components={markdownComponents}>
+                        <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
                           {chatStreamingContent}
                         </ReactMarkdown>
                         <span className="inline-block w-2 h-4 bg-primary/60 animate-pulse ml-0.5" />
@@ -660,7 +680,7 @@ export function PageGuideSheet({
               <p className="text-xs text-muted-foreground">{t.markdownHelp}</p>
               {showPreview ? (
                 <div className="prose prose-sm dark:prose-invert max-w-none min-h-[200px] rounded-md border border-input bg-background p-3">
-                  <ReactMarkdown components={markdownComponents}>
+                  <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
                     {editContent}
                   </ReactMarkdown>
                 </div>
@@ -738,7 +758,7 @@ export function PageGuideSheet({
                         {selectedRevision.version} {t.preview}
                       </p>
                       <div className="prose prose-sm dark:prose-invert max-w-none rounded-md border border-input bg-background p-3 max-h-[300px] overflow-y-auto">
-                        <ReactMarkdown components={markdownComponents}>
+                        <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
                           {selectedRevisionContent}
                         </ReactMarkdown>
                       </div>
