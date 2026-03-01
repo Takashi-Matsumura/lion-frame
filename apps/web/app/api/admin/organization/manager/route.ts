@@ -1,6 +1,7 @@
 import { apiHandler, ApiError } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { AuditService } from "@/lib/services/audit-service";
+import { SupervisorService } from "@/lib/services/supervisor-service";
 
 /**
  * PATCH /api/admin/organization/manager
@@ -37,6 +38,29 @@ export const PATCH = apiHandler(async (request, session) => {
       },
     });
     result = { manager: updated.executive };
+
+    // 担当役員が設定された場合、配下社員の supervisorId を自動割り当て
+    if (managerId) {
+      const autoAssignResult = await SupervisorService.autoAssignSupervisors(id, managerId);
+      await AuditService.log({
+        action: "SUPERVISOR_AUTO_ASSIGN",
+        category: "SYSTEM_SETTING",
+        userId: session.user?.id,
+        targetId: id,
+        targetType: "department",
+        details: {
+          executiveId: managerId,
+          assignmentsCount: autoAssignResult.assignments.length,
+          skippedCount: autoAssignResult.skipped.length,
+        },
+      });
+
+      // レスポンスに自動割り当て結果を含める（後で返却時に使用）
+      (result as Record<string, unknown>).supervisorAutoAssign = {
+        assignmentsCount: autoAssignResult.assignments.length,
+        skippedCount: autoAssignResult.skipped.length,
+      };
+    }
   } else if (type === "department") {
     result = await prisma.department.update({
       where: { id },
@@ -87,5 +111,6 @@ export const PATCH = apiHandler(async (request, session) => {
     type,
     id,
     manager: result?.manager || null,
+    supervisorAutoAssign: (result as Record<string, unknown> | undefined)?.supervisorAutoAssign ?? null,
   };
 }, { admin: true });

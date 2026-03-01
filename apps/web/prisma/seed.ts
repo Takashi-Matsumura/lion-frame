@@ -36,7 +36,7 @@ async function main() {
     { code: "500", name: "Senior Staff", nameJa: "主任", level: "SENIOR", isManager: false, color: "green", displayOrder: 500, approvalLevel: 30 },
     { code: "501", name: "Leader", nameJa: "リーダー", level: "SENIOR", isManager: false, color: "green", displayOrder: 510, approvalLevel: 30 },
     { code: "000", name: "Staff", nameJa: "一般", level: "STAFF", isManager: false, color: null, displayOrder: 9999, approvalLevel: 10 },
-    { code: "900", name: "Advisor", nameJa: "顧問", level: "EXECUTIVE", isManager: false, color: "purple", displayOrder: 900, approvalLevel: 0 },
+    { code: "900", name: "Advisor", nameJa: "顧問", level: "EXECUTIVE", isManager: false, color: "purple", displayOrder: 60, approvalLevel: 0 },
   ];
 
   for (const pos of defaultPositions) {

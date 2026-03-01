@@ -14,6 +14,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { toast } from "sonner";
 import { getPositionColor } from "@/lib/core-modules/organization/position-utils";
 import { cn } from "@/lib/utils";
 import type { Language, Translations } from "../translations";
@@ -305,6 +306,15 @@ export function EmployeeDetailDialog({
           }),
         });
         if (!res.ok) throw new Error("Failed to update executive");
+        const data = await res.json();
+        if (data.supervisorAutoAssign?.assignmentsCount > 0) {
+          const count = data.supervisorAutoAssign.assignmentsCount;
+          toast.success(
+            language === "ja"
+              ? `${count}名の直属上長を仮割当しました`
+              : `Auto-assigned supervisors for ${count} employees`,
+          );
+        }
       } else {
         // supervisor / deputy を更新
         const res = await fetch("/api/admin/organization/employee-metadata", {
