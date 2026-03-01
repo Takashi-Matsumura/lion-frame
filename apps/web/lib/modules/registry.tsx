@@ -70,19 +70,24 @@ export const menuGroups: Record<string, MenuGroup> = {
  * メニュー順序と有効状態のオーバーライドをデータベースから適用
  */
 export async function getAllModules(): Promise<AppModule[]> {
-  // メニュー順序と有効状態のオーバーライドを取得
-  const menuSettings = await prisma.systemSetting.findMany({
+  // モジュール有効状態・メニュー順序・メニュー有効状態のオーバーライドを取得
+  const settings = await prisma.systemSetting.findMany({
     where: {
       OR: [
+        { key: { startsWith: "module_enabled_" } },
         { key: { startsWith: "menu_order_" } },
         { key: { startsWith: "menu_enabled_" } },
       ],
     },
   });
+  const moduleEnabledOverrides: Record<string, boolean> = {};
   const menuOrderOverrides: Record<string, number> = {};
   const menuEnabledOverrides: Record<string, boolean> = {};
-  for (const setting of menuSettings) {
-    if (setting.key.startsWith("menu_order_")) {
+  for (const setting of settings) {
+    if (setting.key.startsWith("module_enabled_")) {
+      const moduleId = setting.key.replace("module_enabled_", "");
+      moduleEnabledOverrides[moduleId] = setting.value === "true";
+    } else if (setting.key.startsWith("menu_order_")) {
       const menuId = setting.key.replace("menu_order_", "");
       menuOrderOverrides[menuId] = parseInt(setting.value, 10);
     } else if (setting.key.startsWith("menu_enabled_")) {
@@ -92,7 +97,7 @@ export async function getAllModules(): Promise<AppModule[]> {
   }
 
   return Object.values(moduleRegistry)
-    .filter((module) => module.enabled)
+    .filter((module) => moduleEnabledOverrides[module.id] ?? module.enabled)
     .map((module) => ({
       ...module,
       menus: module.menus.map((menu) => ({
