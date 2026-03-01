@@ -64,6 +64,9 @@ export const scheduleTranslations = {
     companyCategoryEvent: "Event",
     companyCategoryDeadline: "Deadline",
     companyCategoryPeriod: "Period",
+    // Calendar collapse
+    collapseCalendar: "Collapse calendar",
+    expandCalendar: "Expand calendar",
     // Timeline
     dragToCreate: "Drag to create event",
     timelineAllDay: "All day",
@@ -134,6 +137,9 @@ export const scheduleTranslations = {
     companyCategoryEvent: "イベント",
     companyCategoryDeadline: "締め切り",
     companyCategoryPeriod: "期間",
+    // Calendar collapse
+    collapseCalendar: "カレンダーを折りたたむ",
+    expandCalendar: "カレンダーを展開",
     // Timeline
     dragToCreate: "ドラッグしてイベントを作成",
     timelineAllDay: "終日",

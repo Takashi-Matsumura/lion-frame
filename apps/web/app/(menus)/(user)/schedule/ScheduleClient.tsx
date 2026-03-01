@@ -40,6 +40,9 @@ export function ScheduleClient({ language }: ScheduleClientProps) {
   const [companyEvents, setCompanyEvents] = useState<CompanyEvent[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Calendar collapse state
+  const [calendarOpen, setCalendarOpen] = useState(true);
+
   // Concierge panel state
   const [conciergeOpen, setConciergeOpen] = useState(false);
   const [portalTarget, setPortalTarget] = useState<Element | null>(null);
@@ -332,27 +335,31 @@ export function ScheduleClient({ language }: ScheduleClientProps) {
         month={month}
         viewMode={viewMode}
         language={language}
+        calendarOpen={calendarOpen}
         onPrevMonth={goToPrevMonth}
         onNextMonth={goToNextMonth}
         onToday={goToToday}
         onViewModeChange={handleViewModeChange}
+        onToggleCalendar={() => setCalendarOpen((prev) => !prev)}
         translations={t}
       />
 
-      <CalendarGrid
-        year={year}
-        month={month}
-        viewMode={viewMode}
-        language={language}
-        selectedDay={selectedDay}
-        selectedMonth={selectedMonth}
-        eventsByDate={eventsByDate}
-        holidaysByDate={holidaysByDate}
-        companyEventsByDate={companyEventsByDate}
-        todayKey={todayKey}
-        weekdays={weekdays}
-        onSelectDay={handleSelectDay}
-      />
+      {calendarOpen && (
+        <CalendarGrid
+          year={year}
+          month={month}
+          viewMode={viewMode}
+          language={language}
+          selectedDay={selectedDay}
+          selectedMonth={selectedMonth}
+          eventsByDate={eventsByDate}
+          holidaysByDate={holidaysByDate}
+          companyEventsByDate={companyEventsByDate}
+          todayKey={todayKey}
+          weekdays={weekdays}
+          onSelectDay={handleSelectDay}
+        />
+      )}
 
       {selectedDay && selectedDateKey && (
         <DayDetailPanel

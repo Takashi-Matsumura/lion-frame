@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronsUpDown } from "lucide-react";
 import type { Language } from "../translations";
 import type { Translations } from "./calendar-types";
 
@@ -9,10 +9,12 @@ interface CalendarHeaderProps {
   month: number;
   viewMode: "single" | "dual";
   language: Language;
+  calendarOpen: boolean;
   onPrevMonth: () => void;
   onNextMonth: () => void;
   onToday: () => void;
   onViewModeChange: (mode: "single" | "dual") => void;
+  onToggleCalendar: () => void;
   translations: Translations;
 }
 
@@ -21,10 +23,12 @@ export function CalendarHeader({
   month,
   viewMode,
   language,
+  calendarOpen,
   onPrevMonth,
   onNextMonth,
   onToday,
   onViewModeChange,
+  onToggleCalendar,
   translations: t,
 }: CalendarHeaderProps) {
   const nextYear = month === 11 ? year + 1 : year;
@@ -127,6 +131,15 @@ export function CalendarHeader({
           </button>
         </div>
       </div>
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={onToggleCalendar}
+        aria-label={calendarOpen ? t.collapseCalendar : t.expandCalendar}
+        title={calendarOpen ? t.collapseCalendar : t.expandCalendar}
+      >
+        <ChevronsUpDown className="h-4 w-4" />
+      </Button>
     </div>
   );
 }
