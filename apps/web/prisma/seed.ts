@@ -94,11 +94,107 @@ async function main() {
     }
   }
 
+  // Seed workflow templates
+  const workflowTemplates = [
+    {
+      type: "leave",
+      name: "Leave Request",
+      nameJa: "休暇申請",
+      description: "Request for annual leave, personal leave, etc.",
+      descriptionJa: "年次休暇・特別休暇等の申請",
+      approvalSteps: 1,
+      formSchema: {
+        fields: [
+          { name: "startDate", type: "date", label: "Start Date", labelJa: "開始日", required: true },
+          { name: "endDate", type: "date", label: "End Date", labelJa: "終了日", required: true },
+          { name: "leaveType", type: "select", label: "Leave Type", labelJa: "休暇種別", required: true, options: [
+            { value: "annual", label: "Annual Leave", labelJa: "年次休暇" },
+            { value: "special", label: "Special Leave", labelJa: "特別休暇" },
+            { value: "sick", label: "Sick Leave", labelJa: "病気休暇" },
+          ]},
+          { name: "reason", type: "textarea", label: "Reason", labelJa: "理由", required: false },
+        ],
+      },
+    },
+    {
+      type: "expense",
+      name: "Expense Report",
+      nameJa: "経費精算",
+      description: "Submit expense reports for reimbursement",
+      descriptionJa: "経費の精算申請",
+      approvalSteps: 2,
+      formSchema: {
+        fields: [
+          { name: "expenseDate", type: "date", label: "Expense Date", labelJa: "発生日", required: true },
+          { name: "amount", type: "number", label: "Amount (JPY)", labelJa: "金額（円）", required: true },
+          { name: "category", type: "select", label: "Category", labelJa: "費目", required: true, options: [
+            { value: "transportation", label: "Transportation", labelJa: "交通費" },
+            { value: "meal", label: "Meal / Entertainment", labelJa: "飲食・接待費" },
+            { value: "supplies", label: "Office Supplies", labelJa: "事務用品費" },
+            { value: "other", label: "Other", labelJa: "その他" },
+          ]},
+          { name: "description", type: "textarea", label: "Description", labelJa: "内容", required: true },
+        ],
+      },
+    },
+    {
+      type: "purchase",
+      name: "Purchase Request",
+      nameJa: "購買申請",
+      description: "Request for purchasing items or services",
+      descriptionJa: "物品・サービスの購入申請",
+      approvalSteps: 2,
+      formSchema: {
+        fields: [
+          { name: "itemName", type: "text", label: "Item Name", labelJa: "品名", required: true },
+          { name: "quantity", type: "number", label: "Quantity", labelJa: "数量", required: true },
+          { name: "unitPrice", type: "number", label: "Unit Price (JPY)", labelJa: "単価（円）", required: true },
+          { name: "purpose", type: "textarea", label: "Purpose", labelJa: "用途", required: true },
+          { name: "supplier", type: "text", label: "Supplier", labelJa: "仕入先", required: false },
+        ],
+      },
+    },
+    {
+      type: "overtime",
+      name: "Overtime Request",
+      nameJa: "残業申請",
+      description: "Request for overtime work approval",
+      descriptionJa: "残業の事前申請",
+      approvalSteps: 1,
+      formSchema: {
+        fields: [
+          { name: "overtimeDate", type: "date", label: "Date", labelJa: "残業日", required: true },
+          { name: "startTime", type: "time", label: "Start Time", labelJa: "開始時刻", required: true },
+          { name: "endTime", type: "time", label: "End Time", labelJa: "終了時刻", required: true },
+          { name: "reason", type: "textarea", label: "Reason", labelJa: "理由", required: true },
+        ],
+      },
+    },
+  ];
+
+  let workflowTemplateCount = 0;
+  for (const tmpl of workflowTemplates) {
+    await prisma.workflowTemplate.upsert({
+      where: { type: tmpl.type },
+      update: {
+        name: tmpl.name,
+        nameJa: tmpl.nameJa,
+        description: tmpl.description,
+        descriptionJa: tmpl.descriptionJa,
+        approvalSteps: tmpl.approvalSteps,
+        formSchema: tmpl.formSchema,
+      },
+      create: tmpl,
+    });
+    workflowTemplateCount++;
+  }
+
   console.log("✅ Database seeded successfully!");
   console.log("Created admin user:");
   console.log(`  - ${admin.email} (${admin.role})`);
   console.log(`Seeded ${defaultPositions.length} position master records`);
   console.log(`Seeded ${companyEventCount} company events`);
+  console.log(`Seeded ${workflowTemplateCount} workflow templates`);
   console.log("\nCredentials login:");
   console.log("  - Email: admin@lionframe.local");
   console.log("  - Password: admin");

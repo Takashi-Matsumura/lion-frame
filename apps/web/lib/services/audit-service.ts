@@ -6,7 +6,8 @@ export type AuditCategory =
   | "USER_MANAGEMENT"
   | "SYSTEM_SETTING"
   | "MODULE"
-  | "USAGE";
+  | "USAGE"
+  | "WORKFLOW";
 
 // 監査ログのアクション
 export type AuditAction =
@@ -58,7 +59,12 @@ export type AuditAction =
   | "PAGE_GUIDE_EDIT"
   | "PAGE_GUIDE_REVERT"
   // USAGE
-  | "PAGE_ACCESS";
+  | "PAGE_ACCESS"
+  // WORKFLOW
+  | "WORKFLOW_SUBMIT"
+  | "WORKFLOW_APPROVE"
+  | "WORKFLOW_REJECT"
+  | "WORKFLOW_CANCEL";
 
 export interface AuditLogInput {
   action: AuditAction;

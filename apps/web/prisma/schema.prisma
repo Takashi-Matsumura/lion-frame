@@ -413,6 +413,11 @@ model Employee {
   executiveDepartments Department[]    @relation("DepartmentExecutive")
   histories          EmployeeHistory[] @relation("EmployeeHistories")
 
+  // === ワークフロー ===
+  workflowRequests   WorkflowRequest[]  @relation("WorkflowRequester")
+  workflowApprovals  WorkflowApproval[] @relation("WorkflowApprover")
+  workflowDecisions  WorkflowApproval[] @relation("WorkflowDecider")
+
   @@index([positionCode])
   @@index([supervisorId])
   @@index([deputyId])
@@ -801,4 +806,66 @@ model DependencyItem {
   @@index([reportId])
   @@index([reportId, isOutdated])
   @@index([reportId, hasVulnerability])
+}
+
+// ========================================
+// ワークフロー（申請・承認）
+// ========================================
+
+model WorkflowTemplate {
+  id              String   @id @default(cuid())
+  type            String   @unique
+  name            String
+  nameJa          String
+  description     String?
+  descriptionJa   String?
+  approvalSteps   Int      @default(1)
+  formSchema      Json
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  requests        WorkflowRequest[]
+
+  @@index([isActive])
+}
+
+model WorkflowRequest {
+  id              String   @id @default(cuid())
+  requestNumber   String   @unique
+  templateId      String
+  template        WorkflowTemplate @relation(fields: [templateId], references: [id])
+  requesterId     String
+  requester       Employee @relation("WorkflowRequester", fields: [requesterId], references: [id])
+  title           String
+  formData        Json
+  status          String   @default("draft")
+  currentStep     Int      @default(0)
+  totalSteps      Int
+  submittedAt     DateTime?
+  completedAt     DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  approvals       WorkflowApproval[]
+
+  @@index([requesterId, status])
+  @@index([status, submittedAt])
+}
+
+model WorkflowApproval {
+  id              String   @id @default(cuid())
+  requestId       String
+  request         WorkflowRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  step            Int
+  approverId      String
+  approver        Employee @relation("WorkflowApprover", fields: [approverId], references: [id])
+  decidedById     String?
+  decidedBy       Employee? @relation("WorkflowDecider", fields: [decidedById], references: [id])
+  status          String   @default("pending")
+  comment         String?
+  decidedAt       DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([requestId, step])
+  @@index([approverId, status])
 }

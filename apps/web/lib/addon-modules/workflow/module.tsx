@@ -1,8 +1,8 @@
 /**
  * ワークフロー（申請・承認）アドオンモジュール
  *
- * 申請・承認ワークフローを提供するサンプルアドオンモジュール。
- * DBスキーマ・API実装は持たず、UIモック画面のみの最小構成。
+ * レポートライン基盤（supervisorIdチェーン）を活用した
+ * 申請・承認ワークフローを提供するアドオンモジュール。
  */
 
 import { getMenuIcon, getModuleIcon } from "@/lib/modules/icons";
@@ -58,7 +58,10 @@ export const workflowModule: AppModule = {
       nameJa: "ワークフロー申請",
       description: "CRUD operations for workflow requests",
       descriptionJa: "ワークフロー申請のCRUD操作",
-      apiEndpoints: ["/api/workflow/requests"],
+      apiEndpoints: [
+        "/api/workflow/requests",
+        "/api/workflow/templates",
+      ],
       enabled: true,
     },
     {
@@ -68,7 +71,10 @@ export const workflowModule: AppModule = {
       nameJa: "ワークフロー承認",
       description: "Approval operations for workflow requests",
       descriptionJa: "ワークフロー申請の承認操作",
-      apiEndpoints: ["/api/workflow/approvals"],
+      apiEndpoints: [
+        "/api/workflow/approvals",
+        "/api/workflow/approvals/history",
+      ],
       enabled: true,
     },
   ],
