@@ -24,19 +24,19 @@ async function main() {
 
   // Seed default position master data
   const defaultPositions = [
-    { code: "001", name: "President", nameJa: "社長", level: "EXECUTIVE", isManager: true, color: "purple", displayOrder: 10 },
-    { code: "005", name: "Director", nameJa: "取締役", level: "EXECUTIVE", isManager: true, color: "purple", displayOrder: 50 },
-    { code: "010", name: "Executive Officer", nameJa: "執行役員", level: "EXECUTIVE", isManager: true, color: "purple", displayOrder: 70 },
-    { code: "100", name: "Division Head", nameJa: "本部長", level: "DEPARTMENT", isManager: true, color: "purple", displayOrder: 100 },
-    { code: "200", name: "Department Head", nameJa: "部長", level: "SECTION", isManager: true, color: "purple", displayOrder: 200 },
-    { code: "201", name: "Office Head", nameJa: "室長", level: "SECTION", isManager: true, color: "purple", displayOrder: 210 },
-    { code: "300", name: "Section Chief", nameJa: "課長", level: "COURSE", isManager: true, color: "cyan", displayOrder: 300 },
-    { code: "301", name: "Group Leader", nameJa: "グループ長", level: "COURSE", isManager: true, color: "cyan", displayOrder: 310 },
-    { code: "400", name: "Team Leader", nameJa: "チーム長", level: "COURSE", isManager: true, color: "cyan", displayOrder: 350 },
-    { code: "500", name: "Senior Staff", nameJa: "主任", level: "SENIOR", isManager: false, color: "green", displayOrder: 500 },
-    { code: "501", name: "Leader", nameJa: "リーダー", level: "SENIOR", isManager: false, color: "green", displayOrder: 510 },
-    { code: "000", name: "Staff", nameJa: "一般", level: "STAFF", isManager: false, color: null, displayOrder: 9999 },
-    { code: "900", name: "Advisor", nameJa: "顧問", level: "EXECUTIVE", isManager: false, color: "purple", displayOrder: 900 },
+    { code: "001", name: "President", nameJa: "社長", level: "EXECUTIVE", isManager: true, color: "purple", displayOrder: 10, approvalLevel: 100 },
+    { code: "005", name: "Director", nameJa: "取締役", level: "EXECUTIVE", isManager: true, color: "purple", displayOrder: 50, approvalLevel: 90 },
+    { code: "010", name: "Executive Officer", nameJa: "執行役員", level: "EXECUTIVE", isManager: true, color: "purple", displayOrder: 70, approvalLevel: 80 },
+    { code: "100", name: "Division Head", nameJa: "本部長", level: "DEPARTMENT", isManager: true, color: "purple", displayOrder: 100, approvalLevel: 70 },
+    { code: "200", name: "Department Head", nameJa: "部長", level: "SECTION", isManager: true, color: "purple", displayOrder: 200, approvalLevel: 60 },
+    { code: "201", name: "Office Head", nameJa: "室長", level: "SECTION", isManager: true, color: "purple", displayOrder: 210, approvalLevel: 60 },
+    { code: "300", name: "Section Chief", nameJa: "課長", level: "COURSE", isManager: true, color: "cyan", displayOrder: 300, approvalLevel: 50 },
+    { code: "301", name: "Group Leader", nameJa: "グループ長", level: "COURSE", isManager: true, color: "cyan", displayOrder: 310, approvalLevel: 50 },
+    { code: "400", name: "Team Leader", nameJa: "チーム長", level: "COURSE", isManager: true, color: "cyan", displayOrder: 350, approvalLevel: 40 },
+    { code: "500", name: "Senior Staff", nameJa: "主任", level: "SENIOR", isManager: false, color: "green", displayOrder: 500, approvalLevel: 30 },
+    { code: "501", name: "Leader", nameJa: "リーダー", level: "SENIOR", isManager: false, color: "green", displayOrder: 510, approvalLevel: 30 },
+    { code: "000", name: "Staff", nameJa: "一般", level: "STAFF", isManager: false, color: null, displayOrder: 9999, approvalLevel: 10 },
+    { code: "900", name: "Advisor", nameJa: "顧問", level: "EXECUTIVE", isManager: false, color: "purple", displayOrder: 900, approvalLevel: 0 },
   ];
 
   for (const pos of defaultPositions) {
@@ -49,6 +49,7 @@ async function main() {
         isManager: pos.isManager,
         color: pos.color,
         displayOrder: pos.displayOrder,
+        approvalLevel: pos.approvalLevel,
       },
       create: pos,
     });

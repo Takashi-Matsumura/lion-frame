@@ -15,8 +15,8 @@ export const PATCH = apiHandler(async (request, session) => {
     throw ApiError.badRequest("Type and ID are required");
   }
 
-  if (!["department", "section", "course"].includes(type)) {
-    throw ApiError.badRequest("Invalid type. Must be department, section, or course");
+  if (!["department", "section", "course", "department-executive"].includes(type)) {
+    throw ApiError.badRequest("Invalid type. Must be department, section, course, or department-executive");
   }
 
   // Update the manager based on type
@@ -26,7 +26,18 @@ export const PATCH = apiHandler(async (request, session) => {
       }
     | undefined;
 
-  if (type === "department") {
+  if (type === "department-executive") {
+    const updated = await prisma.department.update({
+      where: { id },
+      data: { executiveId: managerId || null },
+      include: {
+        executive: {
+          select: { id: true, name: true, position: true },
+        },
+      },
+    });
+    result = { manager: updated.executive };
+  } else if (type === "department") {
     result = await prisma.department.update({
       where: { id },
       data: { managerId: managerId || null },

@@ -317,16 +317,19 @@ model Department {
   description    String?
   organizationId String
   managerId      String?
+  executiveId    String?
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   manager        Employee?    @relation("DepartmentManager", fields: [managerId], references: [id])
+  executive      Employee?    @relation("DepartmentExecutive", fields: [executiveId], references: [id])
   employees      Employee[]   @relation("DepartmentEmployees")
   sections       Section[]
   companyEvents  CompanyEvent[]
 
   @@unique([organizationId, name])
   @@index([managerId])
+  @@index([executiveId])
 }
 
 // 部（Section）
@@ -388,6 +391,16 @@ model Employee {
   departmentId       String
   sectionId          String?
   courseId           String?
+
+  // === 承認基盤メタデータ ===
+  supervisorId       String?
+  supervisor         Employee?         @relation("Supervisor", fields: [supervisorId], references: [id])
+  subordinates       Employee[]        @relation("Supervisor")
+
+  deputyId           String?
+  deputy             Employee?         @relation("Deputy", fields: [deputyId], references: [id])
+  deputyFor          Employee[]        @relation("Deputy")
+
   createdAt          DateTime          @default(now())
   updatedAt          DateTime          @updatedAt
   organization       Organization      @relation(fields: [organizationId], references: [id])
@@ -397,9 +410,12 @@ model Employee {
   managedDepartments Department[]      @relation("DepartmentManager")
   managedSections    Section[]         @relation("SectionManager")
   managedCourses     Course[]          @relation("CourseManager")
+  executiveDepartments Department[]    @relation("DepartmentExecutive")
   histories          EmployeeHistory[] @relation("EmployeeHistories")
 
   @@index([positionCode])
+  @@index([supervisorId])
+  @@index([deputyId])
 }
 
 // ========================================
@@ -598,17 +614,18 @@ model CalendarEvent {
 // ========================================
 
 model PositionMaster {
-  id           String   @id @default(cuid())
-  code         String   @unique           // 役職コード（Employee.positionCodeに対応）
-  name         String                      // 英語名
-  nameJa       String                      // 日本語名
-  level        String   @default("STAFF")  // EXECUTIVE|DEPARTMENT|SECTION|COURSE|SENIOR|STAFF
-  isManager    Boolean  @default(false)    // 管理職フラグ
-  color        String?                     // 表示色名 ("purple","cyan","green" 等)
-  displayOrder Int      @default(0)        // 表示順序（小さい順）
-  isActive     Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id            String   @id @default(cuid())
+  code          String   @unique           // 役職コード（Employee.positionCodeに対応）
+  name          String                      // 英語名
+  nameJa        String                      // 日本語名
+  level         String   @default("STAFF")  // EXECUTIVE|DEPARTMENT|SECTION|COURSE|SENIOR|STAFF
+  isManager     Boolean  @default(false)    // 管理職フラグ
+  color         String?                     // 表示色名 ("purple","cyan","green" 等)
+  displayOrder  Int      @default(0)        // 表示順序（小さい順）
+  approvalLevel Int      @default(0)        // 承認レベル（大きいほど上位）
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   @@index([level])
   @@index([isActive, displayOrder])

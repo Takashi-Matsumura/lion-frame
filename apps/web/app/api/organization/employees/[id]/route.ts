@@ -29,7 +29,16 @@ export async function GET(
             manager: {
               select: { id: true, name: true, position: true },
             },
+            executive: {
+              select: { id: true, name: true, position: true },
+            },
           },
+        },
+        supervisor: {
+          select: { id: true, name: true, position: true, positionCode: true },
+        },
+        deputy: {
+          select: { id: true, name: true, position: true, positionCode: true },
         },
         section: {
           select: {
@@ -87,6 +96,8 @@ export async function GET(
         department: employee.department,
         section: employee.section,
         course: employee.course,
+        supervisor: employee.supervisor,
+        deputy: employee.deputy,
         joinDate: employee.joinDate,
         birthDate: employee.birthDate,
         isActive: employee.isActive,

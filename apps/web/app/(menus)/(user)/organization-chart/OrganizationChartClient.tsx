@@ -86,10 +86,12 @@ interface Employee {
 
 interface OrganizationChartClientProps {
   language: Language;
+  userRole?: string;
 }
 
 export function OrganizationChartClient({
   language,
+  userRole,
 }: OrganizationChartClientProps) {
   const t: Translations = translations[language];
 
@@ -630,6 +632,7 @@ export function OrganizationChartClient({
         onClose={() => setSelectedEmployeeId(null)}
         t={t}
         language={language}
+        isAdmin={userRole === "ADMIN"}
       />
     </div>
   );

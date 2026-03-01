@@ -19,6 +19,7 @@ export default async function OrganizationChartPage() {
   }
 
   const language = (await getLanguage()) as Language;
+  const userRole = session.user?.role ?? "USER";
 
-  return <OrganizationChartClient language={language} />;
+  return <OrganizationChartClient language={language} userRole={userRole} />;
 }

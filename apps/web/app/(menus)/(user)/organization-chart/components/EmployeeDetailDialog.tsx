@@ -13,14 +13,26 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { getPositionColor } from "@/lib/core-modules/organization/position-utils";
 import { cn } from "@/lib/utils";
 import type { Language, Translations } from "../translations";
+import {
+  EmployeePickerDialog,
+  type PickerContext,
+} from "./EmployeePickerDialog";
 
 interface Manager {
   id: string;
   name: string;
   position: string;
+}
+
+interface ReportLinePerson {
+  id: string;
+  name: string;
+  position: string;
+  positionCode: string | null;
 }
 
 interface EmployeeDetail {
@@ -43,6 +55,7 @@ interface EmployeeDetail {
     name: string;
     code: string | null;
     manager: Manager | null;
+    executive: Manager | null;
   } | null;
   section: {
     id: string;
@@ -56,6 +69,8 @@ interface EmployeeDetail {
     code: string | null;
     manager: Manager | null;
   } | null;
+  supervisor: ReportLinePerson | null;
+  deputy: ReportLinePerson | null;
   joinDate: string | null;
   birthDate: string | null;
   isActive: boolean;
@@ -95,6 +110,7 @@ interface EmployeeDetailDialogProps {
   onClose: () => void;
   t: Translations;
   language: Language;
+  isAdmin?: boolean;
 }
 
 // 変更タイプに基づいて色を決定
@@ -174,6 +190,7 @@ export function EmployeeDetailDialog({
   onClose,
   t,
   language,
+  isAdmin = false,
 }: EmployeeDetailDialogProps) {
   const [employee, setEmployee] = useState<EmployeeDetail | null>(null);
   const [histories, setHistories] = useState<EmployeeHistory[]>([]);
@@ -181,6 +198,10 @@ export function EmployeeDetailDialog({
   const [historyLoading, setHistoryLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("basic");
+  const [pickerContext, setPickerContext] = useState<PickerContext | null>(null);
+  const [pickerAction, setPickerAction] = useState<{
+    type: "supervisor" | "deputy" | "executive";
+  } | null>(null);
 
   // 社員詳細を取得
   useEffect(() => {
@@ -230,6 +251,81 @@ export function EmployeeDetailDialog({
       setHistoryLoading(false);
     }
   }, [employeeId]);
+
+  // 社員詳細を再取得（メタデータ更新後）
+  const refetchEmployee = useCallback(async () => {
+    if (!employeeId) return;
+    try {
+      const response = await fetch(
+        `/api/organization/employees/${employeeId}`,
+      );
+      if (!response.ok) throw new Error("Failed to fetch employee");
+      const data = await response.json();
+      setEmployee(data.employee);
+    } catch (err) {
+      console.error("Error refetching employee:", err);
+    }
+  }, [employeeId]);
+
+  // ピッカーを開く
+  const openPicker = (type: "supervisor" | "deputy" | "executive") => {
+    if (!employee) return;
+    const titles: Record<typeof type, string> = {
+      supervisor: t.selectSupervisor,
+      deputy: t.selectDeputy,
+      executive: t.selectExecutive,
+    };
+    const currentIds: Record<typeof type, string | null> = {
+      supervisor: employee.supervisor?.id ?? null,
+      deputy: employee.deputy?.id ?? null,
+      executive: employee.department?.executive?.id ?? null,
+    };
+    setPickerAction({ type });
+    setPickerContext({
+      title: titles[type],
+      currentId: currentIds[type],
+      excludeId: type !== "executive" ? employee.id : undefined,
+    });
+  };
+
+  // ピッカーで選択した時のAPI呼び出し
+  const handlePickerSelect = async (selectedId: string | null) => {
+    if (!employee || !pickerAction) return;
+    try {
+      if (pickerAction.type === "executive") {
+        // 本部の担当役員を更新
+        if (!employee.department) return;
+        const res = await fetch("/api/admin/organization/manager", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            type: "department-executive",
+            id: employee.department.id,
+            managerId: selectedId,
+          }),
+        });
+        if (!res.ok) throw new Error("Failed to update executive");
+      } else {
+        // supervisor / deputy を更新
+        const res = await fetch("/api/admin/organization/employee-metadata", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            employeeId: employee.id,
+            field: pickerAction.type === "supervisor" ? "supervisorId" : "deputyId",
+            value: selectedId,
+          }),
+        });
+        if (!res.ok) throw new Error("Failed to update metadata");
+      }
+      await refetchEmployee();
+    } catch (err) {
+      console.error("Error updating report line:", err);
+    } finally {
+      setPickerContext(null);
+      setPickerAction(null);
+    }
+  };
 
   // タブが履歴に切り替わった時に履歴を取得
   useEffect(() => {
@@ -456,6 +552,151 @@ export function EmployeeDetailDialog({
                       </dl>
                     </div>
 
+                    {/* レポートライン */}
+                    {(isAdmin || employee.supervisor || employee.deputy || employee.department?.executive) && (
+                      <>
+                        <Separator />
+                        <div>
+                          <h3 className="text-sm font-semibold text-foreground mb-3">
+                            {t.reportLine}
+                          </h3>
+                          <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                            {/* 直属上長 */}
+                            {(employee.supervisor || isAdmin) && (
+                              <>
+                                <dt className="text-muted-foreground">
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <span className="cursor-help border-b border-dashed border-muted-foreground/50">
+                                        {t.supervisor}
+                                      </span>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="top">
+                                      {t.supervisorWithDesc}
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </dt>
+                                <dd className="text-foreground">
+                                  {employee.supervisor ? (
+                                    <div className="flex items-center gap-1">
+                                      <span>{employee.supervisor.name}</span>
+                                      <span className="text-xs text-muted-foreground">({employee.supervisor.position})</span>
+                                      {isAdmin && (
+                                        <button
+                                          type="button"
+                                          onClick={() => openPicker("supervisor")}
+                                          className="ml-1 p-0.5 text-muted-foreground hover:text-primary transition-colors"
+                                        >
+                                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                          </svg>
+                                        </button>
+                                      )}
+                                    </div>
+                                  ) : isAdmin ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => openPicker("supervisor")}
+                                      className="text-xs text-primary hover:underline"
+                                    >
+                                      {t.assign}
+                                    </button>
+                                  ) : (
+                                    <span className="text-muted-foreground">-</span>
+                                  )}
+                                </dd>
+                              </>
+                            )}
+
+                            {/* 代行者 */}
+                            {(employee.deputy || isAdmin) && (
+                              <>
+                                <dt className="text-muted-foreground">
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <span className="cursor-help border-b border-dashed border-muted-foreground/50">
+                                        {t.deputy}
+                                      </span>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="top">
+                                      {t.deputyWithDesc}
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </dt>
+                                <dd className="text-foreground">
+                                  {employee.deputy ? (
+                                    <div className="flex items-center gap-1">
+                                      <span>{employee.deputy.name}</span>
+                                      <span className="text-xs text-muted-foreground">({employee.deputy.position})</span>
+                                      {isAdmin && (
+                                        <button
+                                          type="button"
+                                          onClick={() => openPicker("deputy")}
+                                          className="ml-1 p-0.5 text-muted-foreground hover:text-primary transition-colors"
+                                        >
+                                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                          </svg>
+                                        </button>
+                                      )}
+                                    </div>
+                                  ) : isAdmin ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => openPicker("deputy")}
+                                      className="text-xs text-primary hover:underline"
+                                    >
+                                      {t.assign}
+                                    </button>
+                                  ) : (
+                                    <span className="text-muted-foreground">-</span>
+                                  )}
+                                </dd>
+                              </>
+                            )}
+
+                            {/* 担当役員 */}
+                            {(employee.department?.executive || (isAdmin && employee.department)) && (
+                              <>
+                                <dt className="text-muted-foreground">
+                                  {t.executive}
+                                </dt>
+                                <dd className="text-foreground">
+                                  {employee.department?.executive ? (
+                                    <div className="flex items-center gap-1">
+                                      <span>{employee.department.executive.name}</span>
+                                      <span className="text-xs text-muted-foreground">({employee.department.executive.position})</span>
+                                      {isAdmin && (
+                                        <button
+                                          type="button"
+                                          onClick={() => openPicker("executive")}
+                                          className="ml-1 p-0.5 text-muted-foreground hover:text-primary transition-colors"
+                                        >
+                                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                          </svg>
+                                        </button>
+                                      )}
+                                    </div>
+                                  ) : isAdmin ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => openPicker("executive")}
+                                      className="text-xs text-primary hover:underline"
+                                    >
+                                      {t.assign}
+                                    </button>
+                                  ) : (
+                                    <span className="text-muted-foreground">-</span>
+                                  )}
+                                </dd>
+                              </>
+                            )}
+                          </dl>
+                        </div>
+                      </>
+                    )}
+
                     <Separator />
 
                     {/* 連絡先情報 */}
@@ -660,6 +901,19 @@ export function EmployeeDetailDialog({
           </div>
         )}
       </DialogContent>
+
+      {/* 社員選択ダイアログ（レポートライン編集用） */}
+      {isAdmin && (
+        <EmployeePickerDialog
+          context={pickerContext}
+          t={t}
+          onSelect={handlePickerSelect}
+          onClose={() => {
+            setPickerContext(null);
+            setPickerAction(null);
+          }}
+        />
+      )}
     </Dialog>
   );
 }
