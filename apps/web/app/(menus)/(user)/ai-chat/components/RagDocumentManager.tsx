@@ -1,6 +1,6 @@
 "use client";
 
-import { Database, Trash2, Upload } from "lucide-react";
+import { ClipboardPaste, Database, Loader2, Trash2, Upload } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { aiChatTranslations } from "../translations";
 
 interface RagDocument {
@@ -46,6 +48,10 @@ export function RagDocumentManager({
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [isDragOver, setIsDragOver] = useState(false);
+  const [pasteFilename, setPasteFilename] = useState("");
+  const [pasteText, setPasteText] = useState("");
+  const [submittingText, setSubmittingText] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchDocuments = useCallback(async () => {
@@ -72,6 +78,11 @@ export function RagDocumentManager({
   }, [open, fetchDocuments]);
 
   const handleUpload = async (file: File) => {
+    if (!file.name.toLowerCase().endsWith(".md") && !file.name.toLowerCase().endsWith(".markdown")) {
+      alert(t.ragDialog.invalidFileType);
+      return;
+    }
+
     try {
       setUploading(true);
       const formData = new FormData();
@@ -94,6 +105,61 @@ export function RagDocumentManager({
     }
   };
 
+  const handleTextSubmit = async () => {
+    if (!pasteFilename.trim() || !pasteText.trim()) return;
+
+    try {
+      setSubmittingText(true);
+      const response = await fetch("/api/ai/rag-documents/upload-text", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          filename: pasteFilename.trim(),
+          text: pasteText,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Upload failed");
+      }
+
+      setPasteFilename("");
+      setPasteText("");
+      await fetchDocuments();
+    } catch {
+      alert(t.ragDialog.uploadError);
+    } finally {
+      setSubmittingText(false);
+    }
+  };
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent<HTMLDivElement>) => {
+      e.preventDefault();
+      setIsDragOver(false);
+      const file = e.dataTransfer.files[0];
+      if (file) {
+        if (!file.name.toLowerCase().endsWith(".md") && !file.name.toLowerCase().endsWith(".markdown")) {
+          alert(t.ragDialog.invalidFileType);
+          return;
+        }
+        handleUpload(file);
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [t],
+  );
+
+  const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragOver(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragOver(false);
+  }, []);
+
   const handleDelete = async (filename: string) => {
     if (!window.confirm(t.ragDialog.deleteConfirm)) return;
 
@@ -114,6 +180,8 @@ export function RagDocumentManager({
     }
   };
 
+  const compact = documents.length > 0;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
@@ -127,28 +195,87 @@ export function RagDocumentManager({
           </DialogDescription>
         </DialogHeader>
 
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".md"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) handleUpload(file);
+            e.target.value = "";
+          }}
+        />
+
         <div className="space-y-4">
-          {/* Upload button */}
-          <div className="flex justify-end">
-            <Button
-              size="sm"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={uploading}
+          {/* Upload zones side-by-side */}
+          <div className="grid grid-cols-2 gap-3">
+            {/* Drop zone */}
+            <div
+              onDrop={handleDrop}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onClick={() => !uploading && fileInputRef.current?.click()}
+              className={`border-2 border-dashed rounded-lg text-center transition-colors flex flex-col items-center justify-center ${
+                compact ? "p-4" : "p-6"
+              } ${uploading ? "pointer-events-none opacity-70" : "cursor-pointer"} ${
+                isDragOver
+                  ? "border-primary bg-primary/5"
+                  : "border-border hover:border-primary/50"
+              }`}
             >
-              <Upload className="w-4 h-4 mr-1" />
-              {uploading ? t.ragDialog.uploading : t.ragDialog.upload}
-            </Button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".md"
-              className="hidden"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) handleUpload(file);
-                e.target.value = "";
-              }}
-            />
+              {uploading ? (
+                <Loader2 className={`text-primary animate-spin mb-2 ${compact ? "w-5 h-5" : "w-7 h-7"}`} />
+              ) : (
+                <Upload className={`text-muted-foreground/50 mb-2 ${compact ? "w-5 h-5" : "w-7 h-7"}`} />
+              )}
+              <p className={`font-medium text-muted-foreground ${compact ? "text-xs" : "text-sm"}`}>
+                {uploading
+                  ? t.ragDialog.uploading
+                  : isDragOver
+                    ? t.ragDialog.dropActive
+                    : t.ragDialog.noDocumentsHint}
+              </p>
+              {!uploading && (
+                <p className={`text-muted-foreground/70 mt-1 ${compact ? "text-[10px]" : "text-xs"}`}>
+                  {t.ragDialog.dropHere}
+                </p>
+              )}
+            </div>
+
+            {/* Paste zone */}
+            <div className={`border-2 border-dashed border-border rounded-lg ${compact ? "p-3" : "p-4"} flex flex-col`}>
+              <div className="flex items-center gap-1.5 mb-2">
+                <ClipboardPaste className={`text-muted-foreground/50 ${compact ? "w-3.5 h-3.5" : "w-4 h-4"}`} />
+                <span className={`font-medium text-muted-foreground ${compact ? "text-xs" : "text-sm"}`}>
+                  {t.ragDialog.pasteText}
+                </span>
+              </div>
+              <Input
+                value={pasteFilename}
+                onChange={(e) => setPasteFilename(e.target.value)}
+                placeholder={t.ragDialog.filenameLabel}
+                className={`mb-2 ${compact ? "h-7 text-xs" : "h-8 text-sm"}`}
+              />
+              <Textarea
+                value={pasteText}
+                onChange={(e) => setPasteText(e.target.value)}
+                placeholder={t.ragDialog.textPlaceholder}
+                className={`flex-1 min-h-0 resize-none ${compact ? "text-xs" : "text-sm"}`}
+                rows={compact ? 2 : 3}
+              />
+              <Button
+                size="sm"
+                className="mt-2 self-end"
+                onClick={handleTextSubmit}
+                disabled={!pasteFilename.trim() || !pasteText.trim() || submittingText}
+              >
+                {submittingText && (
+                  <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
+                )}
+                {submittingText ? t.ragDialog.uploading : t.ragDialog.submit}
+              </Button>
+            </div>
           </div>
 
           {/* Document list */}
@@ -157,10 +284,10 @@ export function RagDocumentManager({
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto" />
             </div>
           ) : documents.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <Database className="w-8 h-8 mx-auto mb-2 opacity-50" />
-              <p className="text-sm font-medium">{t.ragDialog.noDocuments}</p>
-              <p className="text-xs mt-1">{t.ragDialog.noDocumentsHint}</p>
+            <div className="text-center py-2">
+              <p className="text-xs text-muted-foreground">
+                {t.ragDialog.noDocuments}
+              </p>
             </div>
           ) : (
             <div className="space-y-2 max-h-[300px] overflow-y-auto">

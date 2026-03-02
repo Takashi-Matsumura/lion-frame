@@ -117,15 +117,20 @@ async def upload_document(
 
 
 @router.post("/upload-text", response_model=DocumentUploadResponse)
-async def upload_text(request: TextUploadRequest):
+async def upload_text(
+    request: TextUploadRequest,
+    user_id: Optional[str] = Query(default=None, description="User ID for personal documents"),
+):
     """
     Upload text directly to RAG.
 
     Args:
         request: Text and filename
+        user_id: Optional user ID (defaults to "shared")
     """
     try:
-        logger.info(f"Uploading text as: {request.filename}")
+        doc_user_id = user_id or "shared"
+        logger.info(f"Uploading text as: {request.filename} (user_id: {doc_user_id})")
 
         text = clean_text(request.text)
 
@@ -147,6 +152,10 @@ async def upload_text(request: TextUploadRequest):
             file_type="markdown",
         )
 
+        # Add user_id to all chunk metadata
+        for m in metadatas:
+            m["user_id"] = doc_user_id
+
         # Generate embeddings for chunks
         logger.info(f"Generating embeddings for {len(chunks)} chunks...")
         embeddings = embedding_model.encode_documents(chunks)
@@ -161,7 +170,7 @@ async def upload_text(request: TextUploadRequest):
 
         logger.info(
             f"Successfully uploaded text as {filename}: "
-            f"{len(chunks)} chunks indexed"
+            f"{len(chunks)} chunks indexed (user_id: {doc_user_id})"
         )
 
         return DocumentUploadResponse(

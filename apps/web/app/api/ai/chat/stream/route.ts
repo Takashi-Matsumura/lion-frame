@@ -78,14 +78,23 @@ export async function POST(request: Request) {
     }
 
     // RAGコンテキストの構築（ユーザーIDで個人+共有ドキュメントをスコープ）
+    // 直近の会話コンテキストを含めて検索クエリを構築し、フォローアップ質問の精度を向上
     if (useRagContext) {
-      const userMessages = messages.filter(
+      const recentMessages = messages.slice(-6); // 直近3ターン（user+assistant）
+      const lastUserMsg = [...messages].reverse().find(
         (m: ChatMessage) => m.role === "user",
-      );
-      const lastUserMsg = userMessages[userMessages.length - 1]?.content;
+      )?.content;
 
       if (lastUserMsg) {
-        const ragContext = await buildRagContext(lastUserMsg, session.user.id);
+        // 直近の会話からコンテキストを抽出して検索クエリを拡張
+        const contextParts = recentMessages
+          .filter((m: ChatMessage) => m.role === "user")
+          .map((m: ChatMessage) => m.content);
+        const searchQuery = contextParts.length > 1
+          ? contextParts.join(" ")
+          : lastUserMsg;
+
+        const ragContext = await buildRagContext(searchQuery, session.user.id);
         if (ragContext) {
           finalSystemPrompt += RAG_CONTEXT_SYSTEM_ADDITION;
           finalSystemPrompt += `\n\n${ragContext}`;

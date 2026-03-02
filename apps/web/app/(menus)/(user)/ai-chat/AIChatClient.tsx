@@ -1,12 +1,21 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Database } from "lucide-react";
 import {
   RiBarChartBoxLine,
   RiDeleteBinLine,
   RiRobot2Line,
 } from "react-icons/ri";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   estimateMessagesTokens,
   estimateTokens,
@@ -15,7 +24,6 @@ import {
 import type { ChatMessage, TokenStats, TutorialDocument } from "@/types/ai-chat";
 import { ChatInput } from "./components/ChatInput";
 import { ChatMessageList } from "./components/ChatMessageList";
-import { RagDocumentManager } from "./components/RagDocumentManager";
 import { TokenStatsPanel } from "./components/TokenStatsPanel";
 import { TutorialDocumentPanel } from "./components/TutorialDocumentPanel";
 import { AIChatSkeleton } from "./AIChatSkeleton";
@@ -48,9 +56,8 @@ export function AIChatClient({ language, userName }: AIChatClientProps) {
   const [docPanelOpen, setDocPanelOpen] = useState(false);
   const [ragAvailable, setRagAvailable] = useState(false);
   const [ragDocumentCount, setRagDocumentCount] = useState(0);
-  const [userRagDocumentCount, setUserRagDocumentCount] = useState(0);
   const [useRagContext, setUseRagContext] = useState(false);
-  const [ragManagerOpen, setRagManagerOpen] = useState(false);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [streamingContent, setStreamingContent] = useState("");
   const [showStats, setShowStats] = useState(true);
   const [tokenStats, setTokenStats] = useState<TokenStats>({
@@ -98,7 +105,6 @@ export function AIChatClient({ language, userName }: AIChatClientProps) {
         if (chatData.ragAvailable) {
           setRagAvailable(true);
           setRagDocumentCount(chatData.ragDocumentCount || 0);
-          setUserRagDocumentCount(chatData.userRagDocumentCount || 0);
         }
       })
       .catch(() => {
@@ -296,7 +302,6 @@ export function AIChatClient({ language, userName }: AIChatClientProps) {
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
     setUseOrgContext(false);
-    setUseRagContext(false);
     setMentionPopupOpen(false);
     setIsLoading(true);
     setError(null);
@@ -348,17 +353,17 @@ export function AIChatClient({ language, userName }: AIChatClientProps) {
   };
 
   const handleClearChat = () => {
-    if (window.confirm(t.clearConfirm)) {
-      setMessages([]);
-      setError(null);
-      setTokenStats((prev) => ({
-        ...prev,
-        inputTokens: 0,
-        outputTokens: 0,
-        tokensPerSecond: 0,
-        generationStartTime: null,
-      }));
-    }
+    setMessages([]);
+    setError(null);
+    setUseRagContext(false);
+    setTokenStats((prev) => ({
+      ...prev,
+      inputTokens: 0,
+      outputTokens: 0,
+      tokensPerSecond: 0,
+      generationStartTime: null,
+    }));
+    setShowClearConfirm(false);
   };
 
   const handleCopy = async (id: string, content: string) => {
@@ -488,6 +493,17 @@ export function AIChatClient({ language, userName }: AIChatClientProps) {
             )}
           </div>
           <div className="flex items-center gap-2">
+            {ragAvailable && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setUseRagContext(!useRagContext)}
+                className={`text-muted-foreground ${useRagContext ? "bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300" : ""}`}
+                title={`RAG ${useRagContext ? "ON" : "OFF"}`}
+              >
+                <Database className="w-4 h-4" />
+              </Button>
+            )}
             <Button
               variant="ghost"
               size="sm"
@@ -501,11 +517,11 @@ export function AIChatClient({ language, userName }: AIChatClientProps) {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={handleClearChat}
+                onClick={() => setShowClearConfirm(true)}
                 className="text-muted-foreground hover:text-destructive"
+                title={t.clearChat}
               >
-                <RiDeleteBinLine className="w-4 h-4 mr-1" />
-                {t.clearChat}
+                <RiDeleteBinLine className="w-4 h-4" />
               </Button>
             )}
           </div>
@@ -561,12 +577,9 @@ export function AIChatClient({ language, userName }: AIChatClientProps) {
           tutorialDocsAvailable={tutorialDocsAvailable}
           docPanelOpen={docPanelOpen}
           onToggleDocPanel={() => setDocPanelOpen(!docPanelOpen)}
-          ragAvailable={ragAvailable}
-          ragDocumentCount={ragDocumentCount}
           useRagContext={useRagContext}
           onSetUseRagContext={setUseRagContext}
-          userRagDocumentCount={userRagDocumentCount}
-          onOpenRagManager={() => setRagManagerOpen(true)}
+          ragDocumentCount={ragDocumentCount}
         />
       </div>
 
@@ -581,15 +594,23 @@ export function AIChatClient({ language, userName }: AIChatClientProps) {
         </div>
       )}
 
-      {/* RAG Document Manager Dialog */}
-      {ragAvailable && (
-        <RagDocumentManager
-          open={ragManagerOpen}
-          onOpenChange={setRagManagerOpen}
-          language={language}
-          onDocumentCountChange={setUserRagDocumentCount}
-        />
-      )}
+      {/* Clear chat confirmation dialog */}
+      <Dialog open={showClearConfirm} onOpenChange={setShowClearConfirm}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{t.clearChat}</DialogTitle>
+            <DialogDescription>{t.clearConfirm}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setShowClearConfirm(false)}>
+              {language === "ja" ? "キャンセル" : "Cancel"}
+            </Button>
+            <Button variant="destructive" onClick={handleClearChat}>
+              {t.clearChat}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

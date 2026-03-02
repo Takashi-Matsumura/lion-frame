@@ -1,7 +1,7 @@
 "use client";
 
 import { RefObject, useState } from "react";
-import { BookOpen, Database, FolderOpen, PanelRight } from "lucide-react";
+import { BookOpen, Database, PanelRight } from "lucide-react";
 import {
   RiRefreshLine,
   RiSendPlane2Line,
@@ -35,12 +35,9 @@ interface ChatInputProps {
   tutorialDocsAvailable: boolean;
   docPanelOpen?: boolean;
   onToggleDocPanel?: () => void;
-  ragAvailable?: boolean;
-  ragDocumentCount?: number;
   useRagContext?: boolean;
   onSetUseRagContext?: (value: boolean) => void;
-  userRagDocumentCount?: number;
-  onOpenRagManager?: () => void;
+  ragDocumentCount?: number;
 }
 
 function OrgIcon({ className }: { className?: string }) {
@@ -89,12 +86,9 @@ export function ChatInput({
   tutorialDocsAvailable,
   docPanelOpen,
   onToggleDocPanel,
-  ragAvailable,
-  ragDocumentCount,
   useRagContext,
   onSetUseRagContext,
-  userRagDocumentCount,
-  onOpenRagManager,
+  ragDocumentCount,
 }: ChatInputProps) {
   const t = aiChatTranslations[language];
   const [isComposing, setIsComposing] = useState(false);
@@ -248,43 +242,6 @@ export function ChatInput({
           </Button>
         )}
 
-        {/* RAG button */}
-        {ragAvailable && (
-          <Button
-            variant="outline"
-            size="icon"
-            type="button"
-            onClick={() => onSetUseRagContext?.(!useRagContext)}
-            className={`h-12 w-12 rounded-xl flex-shrink-0 ${
-              useRagContext
-                ? "border-amber-400 dark:border-amber-600 text-amber-600 dark:text-amber-400"
-                : ""
-            }`}
-            title={t.ragButton}
-          >
-            <Database className="w-5 h-5" />
-          </Button>
-        )}
-
-        {/* RAG Document Manager button */}
-        {ragAvailable && onOpenRagManager && (
-          <Button
-            variant="outline"
-            size="icon"
-            type="button"
-            onClick={onOpenRagManager}
-            className="h-12 w-12 rounded-xl flex-shrink-0 relative"
-            title={t.ragManage}
-          >
-            <FolderOpen className="w-5 h-5" />
-            {(userRagDocumentCount ?? 0) > 0 && (
-              <span className="absolute -top-1 -right-1 bg-amber-500 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center">
-                {userRagDocumentCount}
-              </span>
-            )}
-          </Button>
-        )}
-
         {/* Tutorial button */}
         {tutorialDocsAvailable && (
           <div className="relative">
@@ -324,21 +281,6 @@ export function ChatInput({
                 <OrgIcon className="w-4 h-4 text-green-600 dark:text-green-400" />
                 <span>@{t.orgMention}</span>
               </button>
-              {ragAvailable && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    onSetUseRagContext?.(true);
-                    onMentionPopupChange(false);
-                    onInputChange(input.replace(/@$/, ""));
-                    textareaRef.current?.focus();
-                  }}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-muted transition-colors cursor-pointer"
-                >
-                  <Database className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-                  <span>@{t.ragMention}</span>
-                </button>
-              )}
             </div>
           )}
 
@@ -354,7 +296,7 @@ export function ChatInput({
                 ? `${t.placeholder} (${t.orgMentionHint})`
                 : t.placeholder
             }
-            className="w-full resize-none rounded-xl border border-input bg-background px-4 py-3 pr-12 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 min-h-[48px] max-h-[200px]"
+            className="w-full resize-none rounded-xl border border-input bg-background px-4 py-[14px] pr-12 text-sm leading-5 ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 max-h-[200px]"
             rows={1}
             disabled={isLoading}
           />

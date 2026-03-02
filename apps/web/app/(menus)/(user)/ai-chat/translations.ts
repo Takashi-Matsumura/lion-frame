@@ -61,6 +61,16 @@ export const aiChatTranslations = {
       uploadError: "Failed to upload document",
       deleteError: "Failed to delete document",
       close: "Close",
+      dropHere: "Drop .md files here or click to select",
+      dropActive: "Drop file here...",
+      pasteText: "Paste Text",
+      pasteTextTitle: "Paste Text as Document",
+      filenameLabel: "Filename",
+      filenamePlaceholder: "e.g. meeting-notes",
+      textLabel: "Text Content",
+      textPlaceholder: "Paste your markdown text here...",
+      invalidFileType: "Only .md (Markdown) files are supported",
+      submit: "Submit",
     },
     // Tutorial panel labels
     tutorialPanel: {
@@ -151,6 +161,16 @@ export const aiChatTranslations = {
       uploadError: "ドキュメントのアップロードに失敗しました",
       deleteError: "ドキュメントの削除に失敗しました",
       close: "閉じる",
+      dropHere: ".mdファイルをドラッグ＆ドロップまたはクリックして選択",
+      dropActive: "ここにファイルをドロップ...",
+      pasteText: "テキスト貼り付け",
+      pasteTextTitle: "テキストをドキュメントとして登録",
+      filenameLabel: "ファイル名",
+      filenamePlaceholder: "例: 議事録メモ",
+      textLabel: "テキスト内容",
+      textPlaceholder: "マークダウンテキストを貼り付けてください...",
+      invalidFileType: ".md（マークダウン）ファイルのみ対応しています",
+      submit: "登録",
     },
     // Tutorial panel labels
     tutorialPanel: {
