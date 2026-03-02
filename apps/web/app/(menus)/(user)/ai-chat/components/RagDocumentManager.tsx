@@ -141,7 +141,7 @@ export function RagDocumentManager({
             <input
               ref={fileInputRef}
               type="file"
-              accept=".txt,.md,.pdf,.json"
+              accept=".md"
               className="hidden"
               onChange={(e) => {
                 const file = e.target.files?.[0];

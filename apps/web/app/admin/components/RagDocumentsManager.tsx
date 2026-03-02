@@ -155,7 +155,7 @@ export function RagDocumentsManager({
         <input
           ref={fileInputRef}
           type="file"
-          accept=".txt,.md,.pdf,.json"
+          accept=".md"
           className="hidden"
           onChange={(e) => {
             const file = e.target.files?.[0];
@@ -238,8 +238,8 @@ export function RagDocumentsManager({
                 "ドキュメントがありません",
               )}
               description={t(
-                "Upload .txt, .md, .pdf, or .json files for RAG search",
-                ".txt, .md, .pdf, .json ファイルをアップロードしてRAG検索を利用できます",
+                "Upload .md (Markdown) files for RAG search",
+                ".md（マークダウン）ファイルをアップロードしてRAG検索を利用できます",
               )}
             />
           ) : (

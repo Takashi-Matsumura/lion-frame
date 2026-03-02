@@ -39,18 +39,26 @@ async def upload_document(
     """
     Upload and process a document for RAG.
 
-    Supports: .txt, .md, .json, .pdf
+    Supports: .md (Markdown) only
     If user_id is provided, the document is tagged as personal.
     If user_id is not provided, the document is tagged as shared.
     """
     try:
+        # Validate file extension (.md only)
+        filename = file.filename or ""
+        if not filename.lower().endswith((".md", ".markdown")):
+            raise HTTPException(
+                status_code=400,
+                detail="Only .md (Markdown) files are supported"
+            )
+
         logger.info(f"Uploading document: {file.filename} (user_id: {user_id or 'shared'})")
 
         # Read file content
         content = await file.read()
 
-        # Determine file type
-        file_type = file.content_type or file.filename.split(".")[-1]
+        # Markdown files are always text/plain
+        file_type = "text/plain"
 
         # Extract text from file
         text = extract_text_from_file(content, file_type, file.filename)
@@ -129,7 +137,7 @@ async def upload_text(request: TextUploadRequest):
 
         # Add .md extension if not present
         filename = request.filename
-        if not filename.endswith(('.md', '.txt')):
+        if not filename.endswith(('.md', '.markdown')):
             filename = f"{filename}.md"
 
         # Create chunks with metadata
