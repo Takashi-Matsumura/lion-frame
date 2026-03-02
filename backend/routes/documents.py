@@ -1,8 +1,8 @@
 """Document management API routes."""
 
 import logging
-from typing import List
-from fastapi import APIRouter, UploadFile, File, HTTPException
+from typing import List, Optional
+from fastapi import APIRouter, UploadFile, File, HTTPException, Query
 from pydantic import BaseModel
 
 from models import DocumentUploadResponse, DocumentListResponse
@@ -32,14 +32,19 @@ class DocumentCreateRequest(BaseModel):
 
 
 @router.post("/upload", response_model=DocumentUploadResponse)
-async def upload_document(file: UploadFile = File(...)):
+async def upload_document(
+    file: UploadFile = File(...),
+    user_id: Optional[str] = Query(default=None, description="User ID for personal documents"),
+):
     """
     Upload and process a document for RAG.
 
     Supports: .txt, .md, .json, .pdf
+    If user_id is provided, the document is tagged as personal.
+    If user_id is not provided, the document is tagged as shared.
     """
     try:
-        logger.info(f"Uploading document: {file.filename}")
+        logger.info(f"Uploading document: {file.filename} (user_id: {user_id or 'shared'})")
 
         # Read file content
         content = await file.read()
@@ -64,6 +69,11 @@ async def upload_document(file: UploadFile = File(...)):
             file_type=file_type,
         )
 
+        # Add user_id to all chunk metadata
+        doc_user_id = user_id or "shared"
+        for m in metadatas:
+            m["user_id"] = doc_user_id
+
         # Generate embeddings for chunks
         logger.info(f"Generating embeddings for {len(chunks)} chunks...")
         embeddings = embedding_model.encode_documents(chunks)
@@ -78,7 +88,7 @@ async def upload_document(file: UploadFile = File(...)):
 
         logger.info(
             f"Successfully uploaded {file.filename}: "
-            f"{len(chunks)} chunks indexed"
+            f"{len(chunks)} chunks indexed (user_id: {doc_user_id})"
         )
 
         return DocumentUploadResponse(
@@ -164,13 +174,18 @@ async def upload_text(request: TextUploadRequest):
 
 
 @router.get("/list", response_model=DocumentListResponse)
-async def list_documents():
-    """Get list of all uploaded documents."""
+async def list_documents(
+    user_id: Optional[str] = Query(default=None, description="Filter by user_id (omit for all)"),
+):
+    """Get list of uploaded documents, optionally filtered by user_id."""
     try:
-        logger.info("Listing documents...")
+        logger.info(f"Listing documents (user_id filter: {user_id or 'all'})")
 
-        # Get all documents from vector database
-        results = vector_db.get_all_documents()
+        # Get documents from vector database
+        if user_id:
+            results = vector_db.get_by_metadata({"user_id": user_id})
+        else:
+            results = vector_db.get_all_documents()
 
         # Group chunks by filename
         documents_map = {}
@@ -185,6 +200,7 @@ async def list_documents():
                     "chunk_count": 0,
                     "upload_timestamp": metadata.get("upload_timestamp", ""),
                     "total_chars": 0,
+                    "user_id": metadata.get("user_id", "shared"),
                 }
 
             documents_map[filename]["chunk_count"] += 1
@@ -255,13 +271,19 @@ async def get_document_content(filename: str):
 
 
 @router.delete("/{filename}")
-async def delete_document(filename: str):
-    """Delete a document and all its chunks."""
+async def delete_document(
+    filename: str,
+    user_id: Optional[str] = Query(default=None, description="User ID to scope deletion"),
+):
+    """Delete a document and all its chunks, optionally scoped by user_id."""
     try:
-        logger.info(f"Deleting document: {filename}")
+        logger.info(f"Deleting document: {filename} (user_id: {user_id or 'any'})")
 
-        # Delete all chunks for this filename
-        deleted_count = vector_db.delete_by_filename(filename)
+        # Delete chunks scoped by user_id if provided
+        if user_id:
+            deleted_count = vector_db.delete_by_filename_and_user(filename, user_id)
+        else:
+            deleted_count = vector_db.delete_by_filename(filename)
 
         if deleted_count == 0:
             raise HTTPException(

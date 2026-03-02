@@ -427,49 +427,41 @@ export function ModulesTab({ language }: ModulesTabProps) {
                           {/* コンテナステータス */}
                           {module.containers &&
                             module.containers.length > 0 &&
-                            (() => {
-                              const allRunning =
-                                module.containers.every(
-                                  (c) => c.isRunning,
-                                );
-                              const hasRequiredStopped =
-                                module.containers.some(
-                                  (c) => !c.isRunning && c.required,
-                                );
-                              return (
-                                <div className="flex items-center gap-1.5 text-xs">
-                                  <svg
-                                    className="w-3.5 h-3.5 text-muted-foreground"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                  >
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth={2}
-                                      d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2"
-                                    />
-                                  </svg>
-                                  <span className="text-muted-foreground">
-                                    {t("Container", "コンテナ")}
-                                  </span>
+                            module.containers.map((container) => (
+                              <div key={container.id} className="flex items-center gap-1.5 text-xs">
+                                <svg
+                                  className="w-3.5 h-3.5 text-muted-foreground"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2"
+                                  />
+                                </svg>
+                                <span className="text-muted-foreground">
+                                  {language === "ja" && container.nameJa
+                                    ? container.nameJa
+                                    : container.name}
+                                </span>
+                                <span
+                                  className={`flex items-center gap-1 ${container.isRunning ? "text-green-600" : "text-amber-600"}`}
+                                >
                                   <span
-                                    className={`flex items-center gap-1 ${allRunning ? "text-green-600" : "text-amber-600"}`}
-                                  >
-                                    <span
-                                      className={`w-1.5 h-1.5 rounded-full ${allRunning ? "bg-green-500" : "bg-amber-500"}`}
-                                    />
-                                    {allRunning
-                                      ? t("Running", "稼働中")
-                                      : t("Stopped", "停止中")}
-                                    {hasRequiredStopped && (
-                                      <span>⚠️</span>
-                                    )}
-                                  </span>
-                                </div>
-                              );
-                            })()}
+                                    className={`w-1.5 h-1.5 rounded-full ${container.isRunning ? "bg-green-500" : "bg-amber-500"}`}
+                                  />
+                                  {container.isRunning
+                                    ? t("Running", "稼働中")
+                                    : t("Stopped", "停止中")}
+                                  {!container.isRunning && container.required && (
+                                    <span>⚠️</span>
+                                  )}
+                                </span>
+                              </div>
+                            ))}
 
                           {/* MCPサーバー */}
                           {module.mcpServer && (

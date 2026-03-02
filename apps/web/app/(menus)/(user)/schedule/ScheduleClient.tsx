@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
-import { PageSkeleton } from "@/components/ui/page-skeleton";
+import { ScheduleSkeleton } from "./ScheduleSkeleton";
 import { Bot } from "lucide-react";
 import { scheduleTranslations, type Language } from "./translations";
 import { ScheduleConcierge } from "./ScheduleConcierge";
@@ -325,7 +325,7 @@ export function ScheduleClient({ language }: ScheduleClientProps) {
 
   // --- Render ---
   if (loading && events.length === 0) {
-    return <PageSkeleton />;
+    return <ScheduleSkeleton />;
   }
 
   return (

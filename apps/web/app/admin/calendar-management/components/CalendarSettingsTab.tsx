@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { LoadingSpinner } from "@/components/ui/Icons";
-import { PageSkeleton } from "@/components/ui/page-skeleton";
+import { CalendarSettingsSkeleton } from "../CalendarManagementSkeleton";
 import { calendarManagementTranslations } from "../translations";
 import { EventCategoriesTab } from "./EventCategoriesTab";
 
@@ -89,9 +89,7 @@ export function CalendarSettingsTab({ language }: CalendarSettingsTabProps) {
   }, [settings, t]);
 
   if (loading) {
-    return (
-      <PageSkeleton contentHeight="h-[300px]" className="max-w-5xl mx-auto" />
-    );
+    return <CalendarSettingsSkeleton />;
   }
 
   const tc = calendarManagementTranslations[language].categories;

@@ -56,6 +56,7 @@ class RAGQueryRequest(BaseModel):
     query: str = Field(..., description="Query text")
     top_k: Optional[int] = Field(default=3, description="Number of results to retrieve")
     threshold: Optional[float] = Field(default=0.5, description="Similarity threshold")
+    user_id: Optional[str] = Field(default=None, description="User ID for filtering personal + shared documents")
 
 
 class ContextItem(BaseModel):

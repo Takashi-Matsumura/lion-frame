@@ -17,6 +17,7 @@ import { Switch } from "@/components/ui/switch";
 import type { AIConfig, LocalLLMDefaults } from "@/types/admin";
 import { DependencyHealthSection } from "./DependencyHealthSection";
 import { ModuleHealthOverview } from "./ModuleHealthOverview";
+import { RagDocumentsManager } from "./RagDocumentsManager";
 import { TutorialDocumentsManager } from "./TutorialDocumentsManager";
 
 interface SystemTabProps {
@@ -813,6 +814,11 @@ export function SystemTab({ language }: SystemTabProps) {
                   {/* チュートリアルドキュメント */}
                   <div className="p-6 bg-muted rounded-lg">
                     <TutorialDocumentsManager language={language} />
+                  </div>
+
+                  {/* RAGドキュメント */}
+                  <div className="p-6 bg-muted rounded-lg">
+                    <RagDocumentsManager language={language} />
                   </div>
                 </div>
               )}

@@ -1,7 +1,7 @@
 "use client";
 
 import { RefObject, useState } from "react";
-import { BookOpen, PanelRight } from "lucide-react";
+import { BookOpen, Database, FolderOpen, PanelRight } from "lucide-react";
 import {
   RiRefreshLine,
   RiSendPlane2Line,
@@ -35,6 +35,12 @@ interface ChatInputProps {
   tutorialDocsAvailable: boolean;
   docPanelOpen?: boolean;
   onToggleDocPanel?: () => void;
+  ragAvailable?: boolean;
+  ragDocumentCount?: number;
+  useRagContext?: boolean;
+  onSetUseRagContext?: (value: boolean) => void;
+  userRagDocumentCount?: number;
+  onOpenRagManager?: () => void;
 }
 
 function OrgIcon({ className }: { className?: string }) {
@@ -83,6 +89,12 @@ export function ChatInput({
   tutorialDocsAvailable,
   docPanelOpen,
   onToggleDocPanel,
+  ragAvailable,
+  ragDocumentCount,
+  useRagContext,
+  onSetUseRagContext,
+  userRagDocumentCount,
+  onOpenRagManager,
 }: ChatInputProps) {
   const t = aiChatTranslations[language];
   const [isComposing, setIsComposing] = useState(false);
@@ -145,8 +157,24 @@ export function ChatInput({
   return (
     <div className="flex-shrink-0 border-t px-4 py-4">
       {/* Context chips */}
-      {(useOrgContext || selectedTutorialDoc) && (
+      {(useOrgContext || selectedTutorialDoc || useRagContext) && (
         <div className="flex items-center gap-2 mb-2 px-1 flex-wrap">
+          {useRagContext && (
+            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300">
+              <Database className="w-3 h-3" />
+              @{t.ragMention}
+              <span className="text-amber-500 dark:text-amber-400">
+                {ragDocumentCount}{t.ragDocCount}
+              </span>
+              <button
+                type="button"
+                onClick={() => onSetUseRagContext?.(false)}
+                className="ml-0.5 hover:text-amber-900 dark:hover:text-amber-100 cursor-pointer"
+              >
+                &times;
+              </button>
+            </span>
+          )}
           {useOrgContext && (
             <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300">
               <OrgIcon className="w-3 h-3" />
@@ -220,6 +248,43 @@ export function ChatInput({
           </Button>
         )}
 
+        {/* RAG button */}
+        {ragAvailable && (
+          <Button
+            variant="outline"
+            size="icon"
+            type="button"
+            onClick={() => onSetUseRagContext?.(!useRagContext)}
+            className={`h-12 w-12 rounded-xl flex-shrink-0 ${
+              useRagContext
+                ? "border-amber-400 dark:border-amber-600 text-amber-600 dark:text-amber-400"
+                : ""
+            }`}
+            title={t.ragButton}
+          >
+            <Database className="w-5 h-5" />
+          </Button>
+        )}
+
+        {/* RAG Document Manager button */}
+        {ragAvailable && onOpenRagManager && (
+          <Button
+            variant="outline"
+            size="icon"
+            type="button"
+            onClick={onOpenRagManager}
+            className="h-12 w-12 rounded-xl flex-shrink-0 relative"
+            title={t.ragManage}
+          >
+            <FolderOpen className="w-5 h-5" />
+            {(userRagDocumentCount ?? 0) > 0 && (
+              <span className="absolute -top-1 -right-1 bg-amber-500 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center">
+                {userRagDocumentCount}
+              </span>
+            )}
+          </Button>
+        )}
+
         {/* Tutorial button */}
         {tutorialDocsAvailable && (
           <div className="relative">
@@ -259,6 +324,21 @@ export function ChatInput({
                 <OrgIcon className="w-4 h-4 text-green-600 dark:text-green-400" />
                 <span>@{t.orgMention}</span>
               </button>
+              {ragAvailable && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onSetUseRagContext?.(true);
+                    onMentionPopupChange(false);
+                    onInputChange(input.replace(/@$/, ""));
+                    textareaRef.current?.focus();
+                  }}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-muted transition-colors cursor-pointer"
+                >
+                  <Database className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                  <span>@{t.ragMention}</span>
+                </button>
+              )}
             </div>
           )}
 

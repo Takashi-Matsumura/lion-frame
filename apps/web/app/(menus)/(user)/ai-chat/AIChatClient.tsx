@@ -15,8 +15,10 @@ import {
 import type { ChatMessage, TokenStats, TutorialDocument } from "@/types/ai-chat";
 import { ChatInput } from "./components/ChatInput";
 import { ChatMessageList } from "./components/ChatMessageList";
+import { RagDocumentManager } from "./components/RagDocumentManager";
 import { TokenStatsPanel } from "./components/TokenStatsPanel";
 import { TutorialDocumentPanel } from "./components/TutorialDocumentPanel";
+import { AIChatSkeleton } from "./AIChatSkeleton";
 import { aiChatTranslations } from "./translations";
 
 interface AIChatClientProps {
@@ -44,6 +46,11 @@ export function AIChatClient({ language, userName }: AIChatClientProps) {
   const [selectedTutorialDoc, setSelectedTutorialDoc] = useState<TutorialDocument | null>(null);
   const [tutorialSelectorOpen, setTutorialSelectorOpen] = useState(false);
   const [docPanelOpen, setDocPanelOpen] = useState(false);
+  const [ragAvailable, setRagAvailable] = useState(false);
+  const [ragDocumentCount, setRagDocumentCount] = useState(0);
+  const [userRagDocumentCount, setUserRagDocumentCount] = useState(0);
+  const [useRagContext, setUseRagContext] = useState(false);
+  const [ragManagerOpen, setRagManagerOpen] = useState(false);
   const [streamingContent, setStreamingContent] = useState("");
   const [showStats, setShowStats] = useState(true);
   const [tokenStats, setTokenStats] = useState<TokenStats>({
@@ -88,6 +95,11 @@ export function AIChatClient({ language, userName }: AIChatClientProps) {
             setTutorialDocuments(tutorialData.documents);
           }
         }
+        if (chatData.ragAvailable) {
+          setRagAvailable(true);
+          setRagDocumentCount(chatData.ragDocumentCount || 0);
+          setUserRagDocumentCount(chatData.userRagDocumentCount || 0);
+        }
       })
       .catch(() => {
         setAiEnabled(false);
@@ -125,6 +137,7 @@ export function AIChatClient({ language, userName }: AIChatClientProps) {
     conversationHistory: { role: string; content: string }[],
     orgContext: boolean,
     tutorialDocId?: string,
+    ragContext?: boolean,
   ) => {
     const inputTokens = estimateMessagesTokens(conversationHistory);
     const startTime = Date.now();
@@ -159,6 +172,7 @@ export function AIChatClient({ language, userName }: AIChatClientProps) {
         messages: conversationHistory,
         useOrgContext: orgContext,
         ...(tutorialDocId && { tutorialDocId }),
+        ...(ragContext && { useRagContext: true }),
       }),
       signal: abortControllerRef.current!.signal,
     });
@@ -253,6 +267,7 @@ export function AIChatClient({ language, userName }: AIChatClientProps) {
     suggestionText?: string,
     forceOrgContext?: boolean,
     forceTutorialDoc?: TutorialDocument | null,
+    forceRagContext?: boolean,
   ) => {
     e?.preventDefault();
     const text = suggestionText || input.trim();
@@ -260,6 +275,7 @@ export function AIChatClient({ language, userName }: AIChatClientProps) {
 
     const orgContextForThisMessage = forceOrgContext ?? useOrgContext;
     const tutorialDocForThisMessage = forceTutorialDoc !== undefined ? forceTutorialDoc : selectedTutorialDoc;
+    const ragContextForThisMessage = forceRagContext ?? useRagContext;
 
     const userMessage: ChatMessage = {
       id: crypto.randomUUID(),
@@ -274,11 +290,13 @@ export function AIChatClient({ language, userName }: AIChatClientProps) {
             ? tutorialDocForThisMessage.titleJa
             : tutorialDocForThisMessage.title)
         : undefined,
+      ragContext: ragContextForThisMessage,
     };
 
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
     setUseOrgContext(false);
+    setUseRagContext(false);
     setMentionPopupOpen(false);
     setIsLoading(true);
     setError(null);
@@ -298,6 +316,7 @@ export function AIChatClient({ language, userName }: AIChatClientProps) {
         conversationHistory,
         orgContextForThisMessage,
         tutorialDocForThisMessage?.id,
+        ragContextForThisMessage,
       );
     } catch (err) {
       if (err instanceof Error && err.name === "AbortError") {
@@ -363,6 +382,7 @@ export function AIChatClient({ language, userName }: AIChatClientProps) {
     if (lastUserMessage?.role === "user") {
       const regenerateOrgContext = lastUserMessage.orgContext ?? false;
       const regenerateTutorialDocId = lastUserMessage.tutorialDocId;
+      const regenerateRagContext = lastUserMessage.ragContext ?? false;
       setIsLoading(true);
       setError(null);
       setStreamingContent("");
@@ -377,6 +397,7 @@ export function AIChatClient({ language, userName }: AIChatClientProps) {
           conversationHistory,
           regenerateOrgContext,
           regenerateTutorialDocId,
+          regenerateRagContext,
         );
       } catch (err) {
         if (err instanceof Error && err.name === "AbortError") {
@@ -440,11 +461,7 @@ export function AIChatClient({ language, userName }: AIChatClientProps) {
 
   // Loading state
   if (aiEnabled === null) {
-    return (
-      <div className="flex-1 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-      </div>
-    );
+    return <AIChatSkeleton />;
   }
 
   const showPanel = selectedTutorialDoc && docPanelOpen;
@@ -544,6 +561,12 @@ export function AIChatClient({ language, userName }: AIChatClientProps) {
           tutorialDocsAvailable={tutorialDocsAvailable}
           docPanelOpen={docPanelOpen}
           onToggleDocPanel={() => setDocPanelOpen(!docPanelOpen)}
+          ragAvailable={ragAvailable}
+          ragDocumentCount={ragDocumentCount}
+          useRagContext={useRagContext}
+          onSetUseRagContext={setUseRagContext}
+          userRagDocumentCount={userRagDocumentCount}
+          onOpenRagManager={() => setRagManagerOpen(true)}
         />
       </div>
 
@@ -556,6 +579,16 @@ export function AIChatClient({ language, userName }: AIChatClientProps) {
             language={language}
           />
         </div>
+      )}
+
+      {/* RAG Document Manager Dialog */}
+      {ragAvailable && (
+        <RagDocumentManager
+          open={ragManagerOpen}
+          onOpenChange={setRagManagerOpen}
+          language={language}
+          onDocumentCountChange={setUserRagDocumentCount}
+        />
       )}
     </div>
   );

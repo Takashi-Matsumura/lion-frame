@@ -1,9 +1,16 @@
 import type { Metadata } from "next";
+import dynamic from "next/dynamic";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { getLanguage } from "@/lib/i18n/get-language";
-import { AIChatClient } from "./AIChatClient";
+import { AIChatSkeleton } from "./AIChatSkeleton";
 import { aiChatTranslations } from "./translations";
+
+// bundle-dynamic-imports: 重いAIチャットコンポーネントを遅延読み込み
+const AIChatClient = dynamic(
+  () => import("./AIChatClient").then((m) => ({ default: m.AIChatClient })),
+  { loading: () => <AIChatSkeleton /> },
+);
 
 export async function generateMetadata(): Promise<Metadata> {
   const language = await getLanguage();

@@ -5,6 +5,10 @@ import {
   buildOrgContext,
   ORG_CONTEXT_SYSTEM_ADDITION,
 } from "@/lib/core-modules/ai/services/org-context";
+import {
+  buildRagContext,
+  RAG_CONTEXT_SYSTEM_ADDITION,
+} from "@/lib/core-modules/ai/services/rag-context";
 import { prisma } from "@/lib/prisma";
 import { AuditService } from "@/lib/services/audit-service";
 
@@ -20,7 +24,7 @@ export async function POST(request: Request) {
     const session = await requireAuth();
 
     const body = await request.json();
-    const { messages, systemPrompt, useOrgContext, tutorialDocId } = body;
+    const { messages, systemPrompt, useOrgContext, tutorialDocId, useRagContext } = body;
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return new Response(JSON.stringify({ error: "Messages are required" }), {
@@ -69,6 +73,22 @@ export async function POST(request: Request) {
         if (orgContext) {
           finalSystemPrompt += ORG_CONTEXT_SYSTEM_ADDITION;
           finalSystemPrompt += `\n\n${orgContext}`;
+        }
+      }
+    }
+
+    // RAGコンテキストの構築（ユーザーIDで個人+共有ドキュメントをスコープ）
+    if (useRagContext) {
+      const userMessages = messages.filter(
+        (m: ChatMessage) => m.role === "user",
+      );
+      const lastUserMsg = userMessages[userMessages.length - 1]?.content;
+
+      if (lastUserMsg) {
+        const ragContext = await buildRagContext(lastUserMsg, session.user.id);
+        if (ragContext) {
+          finalSystemPrompt += RAG_CONTEXT_SYSTEM_ADDITION;
+          finalSystemPrompt += `\n\n${ragContext}`;
         }
       }
     }

@@ -22,6 +22,7 @@ import {
 import { EXECUTIVES_DEPARTMENT_NAME } from "@/lib/importers/organization/parser";
 import { cn } from "@/lib/utils";
 import { EmployeeDetailDialog } from "./components/EmployeeDetailDialog";
+import { OrganizationChartSkeleton } from "./OrganizationChartSkeleton";
 import { type Language, type Translations, translations } from "./translations";
 
 // 型定義
@@ -342,17 +343,7 @@ export function OrganizationChartClient({
   );
 
   if (orgLoading) {
-    return (
-      <div className="max-w-7xl mx-auto">
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
+    return <OrganizationChartSkeleton />;
   }
 
   if (orgError) {

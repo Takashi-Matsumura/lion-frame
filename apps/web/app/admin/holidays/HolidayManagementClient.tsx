@@ -23,7 +23,7 @@ import {
 import { LoadingSpinner } from "@/components/ui/Icons";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
-import { PageSkeleton } from "@/components/ui/page-skeleton";
+import { HolidayManagementSkeleton } from "@/app/admin/calendar-management/CalendarManagementSkeleton";
 import {
   Table,
   TableBody,
@@ -268,9 +268,7 @@ export function HolidayManagementClient({
   );
 
   if (loading && holidays.length === 0) {
-    return (
-      <PageSkeleton contentHeight="h-[300px]" className="max-w-5xl mx-auto" />
-    );
+    return <HolidayManagementSkeleton />;
   }
 
   return (

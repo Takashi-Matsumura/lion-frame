@@ -140,6 +140,54 @@ class VectorDB:
             logger.error(f"Failed to delete documents: {e}")
             raise
 
+    def get_by_metadata(self, where: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Get documents filtered by metadata.
+
+        Args:
+            where: Metadata filter dictionary
+
+        Returns:
+            Filtered documents with their metadata
+        """
+        try:
+            results = self.collection.get(where=where)
+            logger.info(f"Retrieved {len(results['ids'])} documents by metadata filter")
+            return results
+
+        except Exception as e:
+            logger.error(f"Failed to get documents by metadata: {e}")
+            raise
+
+    def delete_by_filename_and_user(self, filename: str, user_id: str) -> int:
+        """
+        Delete all documents associated with a filename and user_id.
+
+        Args:
+            filename: Filename to delete
+            user_id: User ID owner of the document
+
+        Returns:
+            Number of documents deleted
+        """
+        try:
+            results = self.collection.get(
+                where={"$and": [{"filename": filename}, {"user_id": user_id}]}
+            )
+
+            if results['ids']:
+                self.collection.delete(ids=results['ids'])
+                count = len(results['ids'])
+                logger.info(f"Deleted {count} chunks for file: {filename} (user: {user_id})")
+                return count
+            else:
+                logger.info(f"No documents found for file: {filename} (user: {user_id})")
+                return 0
+
+        except Exception as e:
+            logger.error(f"Failed to delete by filename and user: {e}")
+            raise
+
     def delete_by_filename(self, filename: str) -> int:
         """
         Delete all documents associated with a filename.

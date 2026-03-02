@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
-import { PageSkeleton } from "@/components/ui/page-skeleton";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -206,7 +206,29 @@ export function EventCategoriesTab({ language }: EventCategoriesTabProps) {
 
   if (loading && categories.length === 0) {
     return (
-      <PageSkeleton contentHeight="h-[300px]" />
+      <div className="flex flex-col gap-4">
+        <div className="flex justify-end">
+          <Skeleton className="h-8 w-28 rounded-md" />
+        </div>
+        <div className="border rounded-lg">
+          <div className="flex items-center gap-4 p-3 border-b bg-muted/50">
+            <Skeleton className="h-4 w-8" />
+            <Skeleton className="h-4 w-20" />
+            <Skeleton className="h-4 w-20 ml-auto" />
+            <Skeleton className="h-4 w-12" />
+            <Skeleton className="h-4 w-12" />
+          </div>
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="flex items-center gap-4 p-3 border-b last:border-b-0">
+              <Skeleton className="h-6 w-6 rounded" />
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-4 w-20 ml-auto" />
+              <Skeleton className="h-5 w-9 rounded-full" />
+              <Skeleton className="h-4 w-10" />
+            </div>
+          ))}
+        </div>
+      </div>
     );
   }
 

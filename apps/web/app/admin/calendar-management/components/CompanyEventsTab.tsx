@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/select";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
-import { PageSkeleton } from "@/components/ui/page-skeleton";
+import { CompanyEventsSkeleton } from "../CalendarManagementSkeleton";
 import {
   Table,
   TableBody,
@@ -252,9 +252,7 @@ export function CompanyEventsTab({ language }: CompanyEventsTabProps) {
   );
 
   if (loading && events.length === 0) {
-    return (
-      <PageSkeleton contentHeight="h-[300px]" className="max-w-5xl mx-auto" />
-    );
+    return <CompanyEventsSkeleton />;
   }
 
   return (

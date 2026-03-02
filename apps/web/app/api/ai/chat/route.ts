@@ -1,6 +1,10 @@
 import { ApiError, apiHandler } from "@/lib/api";
 import { AIService } from "@/lib/core-modules/ai";
 import { isOrgContextEnabled } from "@/lib/core-modules/ai/services/org-context";
+import {
+  isRagAvailable,
+  getUserRagDocumentCount,
+} from "@/lib/core-modules/ai/services/rag-context";
 import { prisma } from "@/lib/prisma";
 import { AuditService } from "@/lib/services/audit-service";
 
@@ -8,7 +12,7 @@ import { AuditService } from "@/lib/services/audit-service";
  * GET /api/ai/chat
  * AIチャットの利用可否とプロバイダ情報を取得
  */
-export const GET = apiHandler(async () => {
+export const GET = apiHandler(async (_request, session) => {
   const available = await AIService.isAvailable();
   const config = await AIService.getConfig();
 
@@ -46,6 +50,15 @@ export const GET = apiHandler(async () => {
   });
   const tutorialDocsAvailable = tutorialDocCount > 0;
 
+  // RAGバックエンドの利用可能性を確認（バックエンド起動中ならドキュメント0件でもtrue）
+  const ragStatus = await isRagAvailable();
+
+  // ユーザー個人のRAGドキュメント数を取得
+  let userRagDocumentCount = 0;
+  if (ragStatus.available) {
+    userRagDocumentCount = await getUserRagDocumentCount(session.user.id);
+  }
+
   return {
     available,
     provider: config.provider,
@@ -53,6 +66,9 @@ export const GET = apiHandler(async () => {
     modelName,
     orgContextAvailable,
     tutorialDocsAvailable,
+    ragAvailable: ragStatus.available,
+    ragDocumentCount: ragStatus.documentCount,
+    userRagDocumentCount,
   };
 });
 

@@ -1,9 +1,19 @@
 import type { Metadata } from "next";
+import dynamic from "next/dynamic";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { getLanguage } from "@/lib/i18n/get-language";
-import { AuditLogsClient } from "./AuditLogsClient";
+import { AuditLogsSkeleton } from "./AuditLogsSkeleton";
 import { auditLogsTranslations } from "./translations";
+
+// bundle-dynamic-imports: 重い監査ログコンポーネントを遅延読み込み
+const AuditLogsClient = dynamic(
+  () =>
+    import("./AuditLogsClient").then((m) => ({
+      default: m.AuditLogsClient,
+    })),
+  { loading: () => <AuditLogsSkeleton /> },
+);
 
 export async function generateMetadata(): Promise<Metadata> {
   const language = await getLanguage();

@@ -1,11 +1,10 @@
 "use client";
 
 import {
+  Activity,
   AlertTriangle,
   CheckCircle,
-  Clock,
-  Loader2,
-  Play,
+  RefreshCw,
   ShieldAlert,
   XCircle,
 } from "lucide-react";
@@ -138,37 +137,86 @@ export function DependencyHealthSection({
     return t("Patch", "パッチ");
   };
 
+  // 初期ロード中
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-8">
-        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-        <span className="ml-2 text-sm text-muted-foreground">
+      <div className="flex items-center justify-center rounded-lg border bg-muted/30 px-4 py-4 mt-4">
+        <RefreshCw className="mr-2 h-4 w-4 animate-spin text-muted-foreground" />
+        <span className="text-sm text-muted-foreground">
           {t("Loading...", "読み込み中...")}
         </span>
       </div>
     );
   }
 
+  // 未実行状態
+  if (!report && !checking) {
+    return (
+      <div className="flex items-center justify-between rounded-lg border bg-muted/30 px-4 py-3 mt-4">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Activity className="h-4 w-4" />
+          <span>{t("Dependency check not yet run", "依存関係チェック未実行")}</span>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleRunCheck}
+          disabled={checking}
+        >
+          <Activity className="mr-1.5 h-3.5 w-3.5" />
+          {t("Run Check", "チェック実行")}
+        </Button>
+      </div>
+    );
+  }
+
+  // チェック実行中（レポートなし）
+  if (checking && !report) {
+    return (
+      <div className="flex items-center justify-center rounded-lg border bg-muted/30 px-4 py-4 mt-4">
+        <RefreshCw className="mr-2 h-4 w-4 animate-spin text-muted-foreground" />
+        <span className="text-sm text-muted-foreground">
+          {t("Running dependency check...", "依存関係チェック実行中...")}
+        </span>
+      </div>
+    );
+  }
+
+  const hasVulnerabilities = summary && (summary.critical > 0 || summary.high > 0);
+  const hasOutdated = summary && summary.outdated > 0;
+  const barColor = hasVulnerabilities
+    ? "border-red-200 bg-red-50"
+    : hasOutdated
+      ? "border-amber-200 bg-amber-50"
+      : "border-green-200 bg-green-50";
+
   return (
-    <div className="space-y-4 mt-4">
-      {/* ヘッダ: 最終チェック日時 + 実行ボタン */}
-      <div className="flex items-center justify-between">
-        <div className="text-sm text-muted-foreground flex items-center gap-2">
-          <Clock className="h-4 w-4" />
-          {report ? (
-            <>
-              {t("Last checked: ", "最終チェック: ")}
-              {new Date(report.checkedAt).toLocaleString(
-                language === "ja" ? "ja-JP" : "en-US",
-              )}
-              {report.durationMs != null && (
-                <span className="text-xs">
-                  ({(report.durationMs / 1000).toFixed(1)}s)
-                </span>
-              )}
-            </>
-          ) : (
-            t("No checks have been run yet", "まだチェックが実行されていません")
+    <div className="space-y-3 mt-4">
+      {/* サマリーバー（モジュールヘルスと同一フォーマット） */}
+      <div
+        className={`flex items-center justify-between rounded-lg border px-4 py-3 ${barColor}`}
+      >
+        <div className="flex items-center gap-4 text-sm">
+          <span className="flex items-center gap-1.5 text-green-700">
+            <CheckCircle className="h-4 w-4" />
+            {summary ? summary.total - summary.outdated - summary.vulnerable : 0} {t("Up to date", "最新")}
+          </span>
+          {summary && summary.outdated > 0 && (
+            <span className="flex items-center gap-1.5 text-amber-700">
+              <AlertTriangle className="h-4 w-4" />
+              {summary.outdated} {t("Outdated", "更新あり")}
+            </span>
+          )}
+          {summary && (summary.critical > 0 || summary.high > 0) && (
+            <span className="flex items-center gap-1.5 text-red-700">
+              <ShieldAlert className="h-4 w-4" />
+              {summary.critical + summary.high} {t("Vulnerabilities", "脆弱性")}
+            </span>
+          )}
+          {report?.durationMs != null && (
+            <span className="text-muted-foreground text-xs">
+              ({(report.durationMs / 1000).toFixed(1)}s)
+            </span>
           )}
         </div>
         <Button
@@ -177,17 +225,8 @@ export function DependencyHealthSection({
           onClick={handleRunCheck}
           disabled={checking}
         >
-          {checking ? (
-            <>
-              <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-              {t("Checking...", "チェック中...")}
-            </>
-          ) : (
-            <>
-              <Play className="h-4 w-4 mr-1" />
-              {t("Run Check", "今すぐチェック")}
-            </>
-          )}
+          <RefreshCw className={`mr-1.5 h-3.5 w-3.5 ${checking ? "animate-spin" : ""}`} />
+          {t("Re-check", "再チェック")}
         </Button>
       </div>
 
@@ -203,52 +242,6 @@ export function DependencyHealthSection({
               {report.errorMessage}
             </p>
           )}
-        </div>
-      )}
-
-      {/* サマリカード */}
-      {summary && (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {/* 重大 */}
-          <div className="p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-center">
-            <ShieldAlert className="h-5 w-5 mx-auto text-red-600 dark:text-red-400" />
-            <div className="text-2xl font-bold text-red-600 dark:text-red-400 mt-1">
-              {summary.critical}
-            </div>
-            <div className="text-xs text-red-600/80 dark:text-red-400/80">
-              {t("Critical", "重大")}
-            </div>
-          </div>
-          {/* 高 */}
-          <div className="p-3 rounded-lg bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 text-center">
-            <AlertTriangle className="h-5 w-5 mx-auto text-orange-600 dark:text-orange-400" />
-            <div className="text-2xl font-bold text-orange-600 dark:text-orange-400 mt-1">
-              {summary.high}
-            </div>
-            <div className="text-xs text-orange-600/80 dark:text-orange-400/80">
-              {t("High", "高")}
-            </div>
-          </div>
-          {/* 更新あり */}
-          <div className="p-3 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 text-center">
-            <Clock className="h-5 w-5 mx-auto text-yellow-600 dark:text-yellow-400" />
-            <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-400 mt-1">
-              {summary.outdated}
-            </div>
-            <div className="text-xs text-yellow-600/80 dark:text-yellow-400/80">
-              {t("Outdated", "更新あり")}
-            </div>
-          </div>
-          {/* 最新 */}
-          <div className="p-3 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-center">
-            <CheckCircle className="h-5 w-5 mx-auto text-green-600 dark:text-green-400" />
-            <div className="text-2xl font-bold text-green-600 dark:text-green-400 mt-1">
-              {summary.total - summary.outdated}
-            </div>
-            <div className="text-xs text-green-600/80 dark:text-green-400/80">
-              {t("Up to date", "最新")}
-            </div>
-          </div>
         </div>
       )}
 
@@ -382,18 +375,6 @@ export function DependencyHealthSection({
         </div>
       )}
 
-      {/* すべて最新の場合 */}
-      {report && summary && summary.outdated === 0 && summary.vulnerable === 0 && (
-        <div className="flex items-center gap-2 p-4 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
-          <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
-          <span className="text-sm text-green-700 dark:text-green-400">
-            {t(
-              "All monitored packages are up to date with no known vulnerabilities.",
-              "監視対象パッケージはすべて最新で、既知の脆弱性はありません。",
-            )}
-          </span>
-        </div>
-      )}
     </div>
   );
 }

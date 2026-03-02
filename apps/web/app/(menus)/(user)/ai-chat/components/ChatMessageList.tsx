@@ -2,6 +2,7 @@
 
 import { RefObject } from "react";
 import dynamic from "next/dynamic";
+import { Database } from "lucide-react";
 import {
   RiCheckLine,
   RiFileCopyLine,
@@ -196,6 +197,12 @@ export function ChatMessageList({
                   {message.tutorialDocTitle && (
                     <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300">
                       {t.tutorialBadge}
+                    </span>
+                  )}
+                  {message.ragContext && (
+                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300">
+                      <Database className="w-2.5 h-2.5" />
+                      {t.ragBadge}
                     </span>
                   )}
                   <span className="text-xs text-muted-foreground">

@@ -20,8 +20,8 @@ export const aiModule: AppModule = {
   containers: [
     {
       id: "airag-backend",
-      name: "AI RAG Backend",
-      nameJa: "AI RAGバックエンド",
+      name: "RAG Container",
+      nameJa: "RAGコンテナ",
       healthCheckUrl: "/api/rag-backend-health",
       required: false, // RAGはオプション機能
     },

@@ -45,10 +45,21 @@ async def query_rag(request: RAGQueryRequest):
         logger.debug("Generating query embedding...")
         query_embedding = embedding_model.encode_query(request.query)
 
+        # Build metadata filter for user-scoped search
+        where_filter = None
+        if request.user_id:
+            where_filter = {
+                "$or": [
+                    {"user_id": request.user_id},
+                    {"user_id": "shared"},
+                ]
+            }
+
         # Query vector database
         results = vector_db.query(
             query_embeddings=[query_embedding],
             n_results=top_k,
+            where=where_filter,
         )
 
         # Process results

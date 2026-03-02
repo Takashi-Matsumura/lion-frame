@@ -55,6 +55,7 @@ export const GET = apiHandler(async () => {
   // コンテナステータスをチェックする関数
   const checkContainerStatus = async (
     containerId: string,
+    healthCheckUrl?: string,
   ): Promise<boolean> => {
     try {
       // コンテナIDに基づいて適切なヘルスチェックを実行
@@ -65,9 +66,20 @@ export const GET = apiHandler(async () => {
           await prisma.$queryRaw`SELECT 1`;
           return true;
         }
-        default:
-          // 未知のコンテナは稼働中と仮定
+        default: {
+          // healthCheckUrlが定義されている場合はHTTPチェック
+          if (healthCheckUrl) {
+            const url = healthCheckUrl.startsWith("http")
+              ? healthCheckUrl
+              : `${process.env.NEXTAUTH_URL || "http://localhost:3000"}${healthCheckUrl}`;
+            const res = await fetch(url, {
+              signal: AbortSignal.timeout(5000),
+            });
+            return res.ok;
+          }
+          // healthCheckUrlがない場合は稼働中と仮定
           return true;
+        }
       }
     } catch {
       return false;
@@ -90,7 +102,7 @@ export const GET = apiHandler(async () => {
               required: container.required,
               description: container.description,
               descriptionJa: container.descriptionJa,
-              isRunning: await checkContainerStatus(container.id),
+              isRunning: await checkContainerStatus(container.id, container.healthCheckUrl),
             })),
           )
         : [];

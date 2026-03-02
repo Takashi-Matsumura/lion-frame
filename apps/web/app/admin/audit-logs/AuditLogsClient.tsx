@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
-import { PageSkeleton } from "@/components/ui/page-skeleton";
+import { AuditLogsTableSkeleton } from "./AuditLogsSkeleton";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -362,7 +362,7 @@ export function AuditLogsClient({ language }: AuditLogsClientProps) {
 
           {/* ローディング */}
           {loading && (
-            <PageSkeleton contentHeight="h-[400px]" />
+            <AuditLogsTableSkeleton />
           )}
 
           {/* ログテーブル */}

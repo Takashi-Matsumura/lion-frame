@@ -10,6 +10,7 @@ export interface ChatMessage {
   orgContext?: boolean;
   tutorialDocId?: string;
   tutorialDocTitle?: string;
+  ragContext?: boolean;
 }
 
 /**
