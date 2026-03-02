@@ -16,6 +16,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import type { AIConfig, LocalLLMDefaults } from "@/types/admin";
 import { DependencyHealthSection } from "./DependencyHealthSection";
+import { ModuleHealthOverview } from "./ModuleHealthOverview";
 import { TutorialDocumentsManager } from "./TutorialDocumentsManager";
 
 interface SystemTabProps {
@@ -286,6 +287,14 @@ export function SystemTab({ language }: SystemTabProps) {
               </div>
             )}
           </div>
+        </div>
+
+        {/* モジュールヘルスチェック */}
+        <div className="mt-8 space-y-2">
+          <h2 className="text-base font-semibold">
+            {t("Module Health", "モジュールヘルス")}
+          </h2>
+          <ModuleHealthOverview language={language} />
         </div>
 
         {/* 依存関係ヘルス */}

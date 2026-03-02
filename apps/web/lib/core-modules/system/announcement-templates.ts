@@ -222,6 +222,46 @@ const BUILTIN_TEMPLATES: AnnouncementTemplate[] = [
     ],
   },
   {
+    id: "module-disruption",
+    category: "maintenance",
+    name: "Module Disruption Notice",
+    nameJa: "モジュール障害通知",
+    title: "{{moduleName}} Service Disruption",
+    titleJa: "{{moduleName}} サービス障害のお知らせ",
+    message:
+      "The {{moduleName}} module is currently {{status}}. Affected features: {{affectedFeatures}}. {{additionalInfo}}",
+    messageJa:
+      "{{moduleName}} モジュールが現在{{status}}です。影響を受ける機能: {{affectedFeatures}}。{{additionalInfo}}",
+    level: "warning",
+    notifyUsers: true,
+    placeholders: [
+      {
+        key: "moduleName",
+        label: "Module Name",
+        labelJa: "モジュール名",
+        type: "text",
+      },
+      {
+        key: "status",
+        label: "Status",
+        labelJa: "状態",
+        type: "text",
+      },
+      {
+        key: "affectedFeatures",
+        label: "Affected Features",
+        labelJa: "影響を受ける機能",
+        type: "text",
+      },
+      {
+        key: "additionalInfo",
+        label: "Additional Info",
+        labelJa: "補足情報",
+        type: "text",
+      },
+    ],
+  },
+  {
     id: "general-notice",
     category: "general",
     name: "General Notice",

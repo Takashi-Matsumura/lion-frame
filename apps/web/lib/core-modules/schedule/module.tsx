@@ -41,7 +41,7 @@ export const scheduleModule: AppModule = {
   icon: getModuleIcon("schedule"),
   enabled: true,
   order: 15,
-  dependencies: [],
+  dependencies: ["ai", "organization"],
   menus: [
     {
       id: "myCalendar",

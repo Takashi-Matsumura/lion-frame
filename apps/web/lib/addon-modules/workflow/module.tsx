@@ -17,7 +17,7 @@ export const workflowModule: AppModule = {
   icon: getModuleIcon("workflow"),
   enabled: true,
   order: 25,
-  dependencies: ["system"],
+  dependencies: ["system", "organization"],
   menus: [
     {
       id: "requests",

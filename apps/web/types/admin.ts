@@ -113,6 +113,7 @@ export interface ModuleInfo {
     apiEndpoints: string[];
     enabled: boolean;
   }>;
+  dependencies: string[];
   containers: ContainerStatus[];
   mcpServer: McpServerInfo | null;
 }
@@ -237,6 +238,79 @@ export interface RetiredAccount {
   role: string;
   department: string;
   position: string;
+}
+
+// ============================================================
+// Module Health Check Types
+// ============================================================
+
+/**
+ * Module health status
+ */
+export type ModuleHealthStatus = "healthy" | "degraded" | "stopped";
+
+/**
+ * Per-module health check result
+ */
+export interface ModuleHealthResult {
+  moduleId: string;
+  moduleName: string;
+  moduleNameJa: string;
+  status: ModuleHealthStatus;
+  enabled: boolean;
+  type: "core" | "addon";
+  reasonJa: string;
+  reason: string;
+  containers: ContainerHealthDetail[];
+  checkedAt: string;
+  durationMs: number;
+}
+
+/**
+ * Container health detail (extends ContainerStatus with response time)
+ */
+export interface ContainerHealthDetail {
+  id: string;
+  name: string;
+  nameJa: string;
+  required: boolean;
+  isRunning: boolean;
+  responseTimeMs: number;
+}
+
+/**
+ * Impact analysis result for a non-healthy module
+ */
+export interface ModuleImpact {
+  sourceModuleId: string;
+  sourceModuleNameJa: string;
+  sourceStatus: ModuleHealthStatus;
+  affectedModules: Array<{ id: string; nameJa: string }>;
+  affectedMenus: Array<{
+    id: string;
+    nameJa: string;
+    path: string;
+    menuGroup: string;
+  }>;
+  affectedServices: Array<{ id: string; nameJa: string }>;
+  summaryJa: string;
+  summary: string;
+}
+
+/**
+ * Module health check API response
+ */
+export interface ModuleHealthCheckResponse {
+  modules: ModuleHealthResult[];
+  impacts: ModuleImpact[];
+  summary: {
+    total: number;
+    healthy: number;
+    degraded: number;
+    stopped: number;
+  };
+  timestamp: string;
+  totalDurationMs: number;
 }
 
 /**

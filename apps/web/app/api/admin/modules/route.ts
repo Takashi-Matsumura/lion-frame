@@ -1,4 +1,5 @@
 import { ApiError, apiHandler } from "@/lib/api";
+import { CORE_MODULE_IDS } from "@/lib/modules/constants";
 import { moduleRegistry } from "@/lib/modules/registry";
 import { prisma } from "@/lib/prisma";
 import { AuditService } from "@/lib/services/audit-service";
@@ -77,7 +78,7 @@ export const GET = apiHandler(async () => {
   // 依存関係がないモジュールをcoreとして扱う
   const modules = await Promise.all(
     Object.values(moduleRegistry).map(async (module) => {
-      const isCore = !module.dependencies || module.dependencies.length === 0;
+      const isCore = CORE_MODULE_IDS.has(module.id);
 
       // コンテナステータスをチェック
       const containersWithStatus = module.containers
@@ -105,6 +106,7 @@ export const GET = apiHandler(async () => {
         descriptionJa: module.descriptionJa,
         enabled: isEnabled,
         type: isCore ? ("core" as const) : ("addon" as const),
+        dependencies: module.dependencies ?? [],
         menuCount: module.menus.filter(
           (m) => menuEnabledOverrides[m.id] ?? m.enabled,
         ).length,

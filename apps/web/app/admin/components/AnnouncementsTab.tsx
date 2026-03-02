@@ -118,6 +118,41 @@ export function AnnouncementsTab({ language }: AnnouncementsTabProps) {
     fetchAnnouncements();
   }, [fetchAnnouncements]);
 
+  // ヘルスチェックからのプリフィルデータを読み込み
+  useEffect(() => {
+    const PREFILL_KEY = "module-health-announcement-prefill";
+    const raw = sessionStorage.getItem(PREFILL_KEY);
+    if (!raw) return;
+    sessionStorage.removeItem(PREFILL_KEY);
+    try {
+      const prefill = JSON.parse(raw) as {
+        templateId: string;
+        placeholderValues: Record<string, string>;
+      };
+      const template = getTemplateById(prefill.templateId);
+      if (!template) return;
+      setEditingAnnouncement(null);
+      setSelectedTemplateId(template.id);
+      setPlaceholderValues(prefill.placeholderValues);
+      setAnnouncementForm({
+        title: applyPlaceholders(template.title, prefill.placeholderValues, "en"),
+        titleJa: applyPlaceholders(template.titleJa, prefill.placeholderValues, "ja"),
+        message: applyPlaceholders(template.message, prefill.placeholderValues, "en"),
+        messageJa: applyPlaceholders(template.messageJa, prefill.placeholderValues, "ja"),
+        level: template.level,
+        startAt: formatLocalDateTime(new Date()),
+        endAt: "",
+        notifyUsers: template.notifyUsers,
+      });
+      setShowAnnouncementModal(true);
+      checkAiTranslation().then((available) => {
+        if (available) setUseAiTranslation(true);
+      });
+    } catch {
+      // invalid JSON — ignore
+    }
+  }, []);
+
   // AI翻訳の利用可否をチェック
   const checkAiTranslation = async () => {
     try {

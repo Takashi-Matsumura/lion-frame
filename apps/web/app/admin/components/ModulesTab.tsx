@@ -601,14 +601,54 @@ export function ModulesTab({ language }: ModulesTabProps) {
               </div>
             </div>
 
-            {/* モジュールID */}
+            {/* モジュールID・依存モジュール */}
             <div className="mb-6">
-              <h3 className="text-sm font-medium text-muted-foreground mb-2">
-                {t("Module ID", "モジュールID")}
-              </h3>
-              <code className="text-sm bg-muted px-3 py-2 rounded block">
-                {selectedModule.id}
-              </code>
+              {selectedModule.dependencies && selectedModule.dependencies.length > 0 ? (
+                <div className="flex items-start gap-8">
+                  <div className="flex-1">
+                    <h3 className="text-sm font-medium text-muted-foreground mb-2">
+                      {t("Module ID", "モジュールID")}
+                    </h3>
+                    <code className="text-sm bg-muted px-3 py-2 rounded block">
+                      {selectedModule.id}
+                    </code>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-sm font-medium text-muted-foreground mb-2">
+                      {t("Dependencies", "依存モジュール")}
+                    </h3>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedModule.dependencies.map((depId) => {
+                        const depModule = modulesData?.modules.find((m) => m.id === depId);
+                        return (
+                          <span
+                            key={depId}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-muted text-sm"
+                          >
+                            <span
+                              className={`w-2 h-2 rounded-full ${
+                                depModule?.enabled ? "bg-green-500" : "bg-gray-400"
+                              }`}
+                            />
+                            {depModule
+                              ? (language === "ja" ? depModule.nameJa : depModule.name)
+                              : depId}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <h3 className="text-sm font-medium text-muted-foreground mb-2">
+                    {t("Module ID", "モジュールID")}
+                  </h3>
+                  <code className="text-sm bg-muted px-3 py-2 rounded block">
+                    {selectedModule.id}
+                  </code>
+                </>
+              )}
             </div>
 
             {/* MCPサーバー詳細（折り畳み可能） */}
