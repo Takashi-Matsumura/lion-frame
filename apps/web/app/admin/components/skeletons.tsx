@@ -153,42 +153,55 @@ export function AnnouncementsTabSkeleton() {
  * ModulesTab のスケルトン
  * Card(h-full flex flex-col) 内にカードgrid(1/2/3cols) × 6枚
  */
+/**
+ * ModulesTab のスケルトン内部コンテンツ（Card外側なし）
+ * ModulesTab 内部でのローディング表示に使用
+ */
+export function ModulesTabSkeletonContent() {
+  return (
+    <div className="flex-1 overflow-y-auto p-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <Card key={i}>
+            <CardHeader className="pb-3">
+              {/* トグル + バッジ */}
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-5 w-9 rounded-full" />
+                  <Skeleton className="h-4 w-8" />
+                </div>
+                <Skeleton className="h-5 w-12 rounded-full" />
+              </div>
+              {/* アイコン + テキスト */}
+              <div className="flex items-start gap-3">
+                <Skeleton className="w-10 h-10 rounded-lg" />
+                <div>
+                  <Skeleton className="h-5 w-28 mb-1" />
+                  <Skeleton className="h-4 w-20" />
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <Skeleton className="h-4 w-full mb-2" />
+              <div className="flex items-center gap-4 mt-3">
+                <Skeleton className="h-4 w-20" />
+                <Skeleton className="h-4 w-20" />
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * ModulesTab のスケルトン（dynamic import 用、外側Card付き）
+ */
 export function ModulesTabSkeleton() {
   return (
     <Card className="h-full flex flex-col">
-      <div className="flex-1 overflow-y-auto p-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Card key={i}>
-              <CardHeader className="pb-3">
-                {/* トグル + バッジ */}
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <Skeleton className="h-5 w-9 rounded-full" />
-                    <Skeleton className="h-4 w-8" />
-                  </div>
-                  <Skeleton className="h-5 w-12 rounded-full" />
-                </div>
-                {/* アイコン + テキスト */}
-                <div className="flex items-start gap-3">
-                  <Skeleton className="w-10 h-10 rounded-lg" />
-                  <div>
-                    <Skeleton className="h-5 w-28 mb-1" />
-                    <Skeleton className="h-4 w-20" />
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <Skeleton className="h-4 w-full mb-2" />
-                <div className="flex items-center gap-4 mt-3">
-                  <Skeleton className="h-4 w-20" />
-                  <Skeleton className="h-4 w-20" />
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
+      <ModulesTabSkeletonContent />
     </Card>
   );
 }

@@ -20,6 +20,7 @@ import type {
   ModulesData,
   ModuleInfo,
 } from "@/types/admin";
+import { ModulesTabSkeletonContent } from "./skeletons";
 
 interface ModulesTabProps {
   language: "en" | "ja";
@@ -30,7 +31,7 @@ export function ModulesTab({ language }: ModulesTabProps) {
 
   // モジュール管理の状態
   const [modulesData, setModulesData] = useState<ModulesData | null>(null);
-  const [modulesLoading, setModulesLoading] = useState(false);
+  const [modulesLoading, setModulesLoading] = useState(true);
   const [selectedModule, setSelectedModule] = useState<ModuleInfo | null>(null);
   const [expandedServices, setExpandedServices] = useState<
     Record<string, boolean>
@@ -302,8 +303,9 @@ export function ModulesTab({ language }: ModulesTabProps) {
       {/* モジュール一覧画面 */}
       {!selectedModule && (
         <>
-          {/* ローディング */}
-          {modulesLoading && (
+          {/* ローディング：初回はスケルトン、再読み込み時はスピナー */}
+          {modulesLoading && !modulesData && <ModulesTabSkeletonContent />}
+          {modulesLoading && modulesData && (
             <div className="flex-1 flex items-center justify-center">
               <div className="text-center">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto" />
