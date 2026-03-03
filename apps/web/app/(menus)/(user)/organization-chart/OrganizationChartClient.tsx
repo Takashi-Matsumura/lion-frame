@@ -19,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { DatePicker } from "@/components/ui/date-picker";
 import { EXECUTIVES_DEPARTMENT_NAME } from "@/lib/importers/organization/parser";
 import { cn } from "@/lib/utils";
 import { EmployeeDetailDialog } from "./components/EmployeeDetailDialog";
@@ -106,6 +107,10 @@ export function OrganizationChartClient({
   const [loadingEmployees, setLoadingEmployees] = useState(false);
   const [positions, setPositions] = useState<string[]>([]);
 
+  // 基準日
+  const [referenceDate, setReferenceDate] = useState("");
+  const todayStr = new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Tokyo" }).format(new Date());
+
   // フィルター
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -135,7 +140,9 @@ export function OrganizationChartClient({
     try {
       setOrgLoading(true);
       setOrgError(null);
-      const response = await fetch("/api/organization");
+      const params = new URLSearchParams();
+      if (referenceDate) params.set("referenceDate", referenceDate);
+      const response = await fetch(`/api/organization?${params}`);
       if (!response.ok) throw new Error("Failed to fetch organization data");
       const data: OrganizationData = await response.json();
       setOrgData(data);
@@ -154,7 +161,7 @@ export function OrganizationChartClient({
     } finally {
       setOrgLoading(false);
     }
-  }, [t.error]);
+  }, [t.error, referenceDate]);
 
   // 社員データの取得（全件）
   const fetchAllEmployees = useCallback(async () => {
@@ -162,6 +169,7 @@ export function OrganizationChartClient({
       setLoadingEmployees(true);
       const params = new URLSearchParams({ pageSize: "500", page: "1" });
       if (showInactive) params.set("isActive", "all");
+      if (referenceDate) params.set("referenceDate", referenceDate);
       const response = await fetch(`/api/organization/employees?${params}`);
       if (!response.ok) throw new Error("Failed to fetch employees");
       const data = await response.json();
@@ -174,7 +182,7 @@ export function OrganizationChartClient({
     } finally {
       setLoadingEmployees(false);
     }
-  }, [showInactive]);
+  }, [showInactive, referenceDate]);
 
   useEffect(() => {
     fetchOrgData();
@@ -310,6 +318,9 @@ export function OrganizationChartClient({
     );
   };
 
+  // 基準日が今日以外かどうか
+  const isReferenceDateMode = referenceDate !== "";
+
   // 責任者をレンダリング
   const renderManager = (manager: Manager | null) => (
     <span className="text-xs shrink-0 flex items-center gap-1 text-muted-foreground">
@@ -334,7 +345,7 @@ export function OrganizationChartClient({
         >
           {manager.name} ({manager.position})
         </button>
-      ) : (
+      ) : isReferenceDateMode ? null : (
         <span className="text-orange-500">
           {language === "ja" ? "責任者未設定" : "No manager"}
         </span>
@@ -410,7 +421,48 @@ export function OrganizationChartClient({
             >
               {showInactive ? t.showAll : t.activeOnly}
             </Button>
+            <div className="flex items-center gap-1.5 shrink-0 ml-auto">
+              <label className="text-xs text-muted-foreground shrink-0">
+                {t.referenceDate}
+              </label>
+              <DatePicker
+                value={referenceDate || todayStr}
+                onChange={(val) => {
+                  setReferenceDate(val === todayStr ? "" : val);
+                }}
+                className="w-[120px]"
+              />
+              {referenceDate && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setReferenceDate("")}
+                  className="text-xs h-7 px-2"
+                >
+                  {t.referenceDateToday}
+                </Button>
+              )}
+            </div>
           </div>
+
+          {/* 基準日バナー */}
+          {isReferenceDateMode && (
+            <div
+              className={cn(
+                "flex items-center gap-2 px-3 py-2 rounded-md text-sm mb-4",
+                referenceDate < todayStr
+                  ? "bg-amber-50 text-amber-800 dark:bg-amber-900/20 dark:text-amber-300"
+                  : "bg-blue-50 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300",
+              )}
+            >
+              <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              {referenceDate < todayStr
+                ? t.referenceDatePastBanner
+                : t.referenceDateFutureBanner}
+            </div>
+          )}
 
           {/* コントロール + 合計 */}
           <div className="flex items-center gap-2 mb-4">

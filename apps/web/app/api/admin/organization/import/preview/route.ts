@@ -167,6 +167,22 @@ export const POST = apiHandler(async (request) => {
         }
       }
 
+      // 退職日の変更検出
+      const oldRetirement = existing.retirementDate
+        ? existing.retirementDate.toISOString().split("T")[0]
+        : "";
+      const newRetirement = processed.retirementDate
+        ? processed.retirementDate.toISOString().split("T")[0]
+        : "";
+      if (oldRetirement !== newRetirement) {
+        changes.push({
+          fieldName: "retirementDate",
+          fieldNameJa: "退職日",
+          oldValue: oldRetirement || "(なし)",
+          newValue: newRetirement || "(なし)",
+        });
+      }
+
       // 所属変更の検出
       const oldDepartment = existing.department?.name || "";
       const newDepartment = processed.department || "";

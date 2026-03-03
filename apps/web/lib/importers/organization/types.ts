@@ -23,6 +23,8 @@ export interface ImportRow {
   資格等級コード?: string;
   雇用区分?: string;
   雇用区分コード?: string;
+  発令日?: string;
+  退職日?: string;
 }
 
 /**
@@ -45,6 +47,8 @@ export interface ProcessedEmployee {
   qualificationGradeCode?: string;
   employmentType?: string;
   employmentTypeCode?: string;
+  effectiveDate?: Date;
+  retirementDate?: Date;
 }
 
 /**

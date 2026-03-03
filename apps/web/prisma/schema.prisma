@@ -386,6 +386,7 @@ model Employee {
   departmentCode     String?
   joinDate           DateTime?
   birthDate          DateTime?
+  retirementDate     DateTime?
   isActive           Boolean           @default(true)
   organizationId     String
   departmentId       String
@@ -461,6 +462,7 @@ model EmployeeHistory {
   departmentCode     String?
   joinDate           DateTime?
   birthDate          DateTime?
+  retirementDate     DateTime?
   isActive           Boolean      @default(true)
   organizationId     String
   departmentId       String

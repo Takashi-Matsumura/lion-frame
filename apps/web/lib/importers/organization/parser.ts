@@ -217,6 +217,8 @@ export function processEmployeeData(rows: ImportRow[]): ProcessedEmployee[] {
         qualificationGradeCode: row.資格等級コード?.trim(),
         employmentType: row.雇用区分?.trim(),
         employmentTypeCode: row.雇用区分コード?.trim(),
+        effectiveDate: parseDate(row.発令日),
+        retirementDate: parseDate(row.退職日),
       };
     });
 }

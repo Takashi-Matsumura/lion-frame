@@ -28,6 +28,9 @@ export function ImportTab({ organizationId, language, t }: ImportTabProps) {
   const [success, setSuccess] = useState<string | null>(null);
   const [warnings, setWarnings] = useState<string[]>([]);
   const [markMissingAsRetired, setMarkMissingAsRetired] = useState(false);
+  const [defaultEffectiveDate, setDefaultEffectiveDate] = useState(
+    () => new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Tokyo" }).format(new Date()),
+  );
 
   const handleFileChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -101,6 +104,7 @@ export function ImportTab({ organizationId, language, t }: ImportTabProps) {
       formData.append("file", file);
       formData.append("organizationId", organizationId);
       formData.append("markMissingAsRetired", String(markMissingAsRetired));
+      formData.append("defaultEffectiveDate", defaultEffectiveDate);
 
       const response = await fetch("/api/admin/organization/import", {
         method: "POST",
@@ -237,7 +241,26 @@ export function ImportTab({ organizationId, language, t }: ImportTabProps) {
 
       {/* Options */}
       {file && (
-        <div className="mt-4 p-4 bg-muted rounded-lg">
+        <div className="mt-4 p-4 bg-muted rounded-lg space-y-4">
+          {/* デフォルト発令日 */}
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-1">
+              {language === "ja" ? "デフォルト発令日" : "Default Effective Date"}
+            </label>
+            <p className="text-xs text-muted-foreground mb-2">
+              {language === "ja"
+                ? "CSV行に「発令日」カラムがない場合、この日付が適用されます"
+                : "Used when rows don't have an 'Effective Date' column"}
+            </p>
+            <input
+              type="date"
+              value={defaultEffectiveDate}
+              onChange={(e) => setDefaultEffectiveDate(e.target.value)}
+              className="px-3 py-1.5 text-sm border border-input rounded-md bg-background text-foreground"
+            />
+          </div>
+
+          {/* 退職処理オプション */}
           <label className="flex items-start gap-3 cursor-pointer">
             <input
               type="checkbox"

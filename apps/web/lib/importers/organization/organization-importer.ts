@@ -311,6 +311,7 @@ export class OrganizationImporter extends BaseImporter<
         departmentCode: employee.departmentCode,
         joinDate: employee.joinDate,
         birthDate: employee.birthDate,
+        retirementDate: (employee as any).retirementDate ?? null,
         isActive: employee.isActive,
         organizationId: employee.organizationId,
         departmentId: employee.departmentId,

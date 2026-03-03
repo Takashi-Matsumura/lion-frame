@@ -22,6 +22,8 @@ export const STANDARD_COLUMNS = {
   qualificationGradeCode: "資格等級コード",
   employmentType: "雇用区分",
   employmentTypeCode: "雇用区分コード",
+  effectiveDate: "発令日",
+  retirementDate: "退職日",
 } as const;
 
 /** 必須カラム */
@@ -51,6 +53,9 @@ export const COLUMN_ALIASES: Record<string, string> = {
   入社年月日: "入社日",
   セクション: "部",
   コース: "課",
+  "Effective Date": "発令日",
+  適用日: "発令日",
+  "Retirement Date": "退職日",
 };
 
 /**
@@ -256,6 +261,22 @@ export const TEMPLATE_COLUMNS: TemplateColumn[] = [
     description: "Employment type code",
     descriptionJa: "雇用区分コード",
     example: "04",
+    required: false,
+    width: 14,
+  },
+  {
+    name: "発令日",
+    description: "Effective date (YYYY/MM/DD)",
+    descriptionJa: "この人事情報の適用日（未指定時はデフォルト発令日を使用）",
+    example: "2026/04/01",
+    required: false,
+    width: 14,
+  },
+  {
+    name: "退職日",
+    description: "Retirement date (YYYY/MM/DD)",
+    descriptionJa: "退職日（指定時は退職扱いに自動設定）",
+    example: "2026/03/31",
     required: false,
     width: 14,
   },

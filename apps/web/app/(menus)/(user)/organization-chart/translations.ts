@@ -73,6 +73,12 @@ export const translations = {
     exclusiveMode: "Exclusive",
     exclusiveModeTooltip:
       "Show employees only at their direct level (no duplicates)",
+    // Reference date
+    referenceDate: "Reference Date",
+    referenceDateToday: "Today",
+    referenceDateLabel: "As of",
+    referenceDatePastBanner: "This organization chart is a past snapshot (read-only).",
+    referenceDateFutureBanner: "This organization chart shows a planned future state.",
   },
   ja: {
     title: "組織図",
@@ -143,6 +149,12 @@ export const translations = {
     // Display mode
     exclusiveMode: "重複しない",
     exclusiveModeTooltip: "各社員を所属階層のみに表示（評価関係表示）",
+    // Reference date
+    referenceDate: "基準日",
+    referenceDateToday: "今日",
+    referenceDateLabel: "時点の組織図",
+    referenceDatePastBanner: "過去の基準日の組織図です（読み取り専用）",
+    referenceDateFutureBanner: "未来の基準日の組織図です（予定）",
   },
 } as const;
 

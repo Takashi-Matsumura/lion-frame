@@ -28,6 +28,11 @@ export const GET = apiHandler(async (request) => {
   const exclusiveMode = searchParams.get("exclusiveMode") === "true";
   const page = parseInt(searchParams.get("page") || "1", 10);
   const limit = parseInt(searchParams.get("limit") || "50", 10);
+  const referenceDateStr = searchParams.get("referenceDate");
+
+  // 基準日が今日かどうかを判定（JST基準）
+  const todayJSTStr = new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Tokyo" }).format(new Date());
+  const isToday = !referenceDateStr || referenceDateStr === todayJSTStr;
 
   // 公開済み組織を取得（PUBLISHED優先、SCHEDULED自動昇格）
   // PUBLISHED/SCHEDULED検索を並列実行（async-parallel）
@@ -70,6 +75,105 @@ export const GET = apiHandler(async (request) => {
     };
   }
 
+  // === 基準日モード: EmployeeHistory からスナップショットを復元 ===
+  if (!isToday && referenceDateStr) {
+    // 基準日をJSTの日境界で解析（サーバーTZに依存しない）
+    const refDateStartJST = new Date(referenceDateStr + "T00:00:00+09:00");
+    const refDateEndJST = new Date(referenceDateStr + "T23:59:59.999+09:00");
+
+    const histories = await prisma.employeeHistory.findMany({
+      where: {
+        organizationId: organization.id,
+        validFrom: { lte: refDateEndJST },
+        OR: [
+          { validTo: null },
+          { validTo: { gt: refDateEndJST } },
+        ],
+      },
+    });
+
+    // 退職日による在籍判定（退職日 = 最終在籍日）
+    let filteredHistories = histories.filter((h) => {
+      if (!h.retirementDate) return true;
+      return h.retirementDate >= refDateStartJST;
+    });
+
+    // isActive フィルター
+    if (isActiveParam === "false") {
+      filteredHistories = filteredHistories.filter((h) => !h.isActive);
+    } else if (isActiveParam !== "all") {
+      filteredHistories = filteredHistories.filter((h) => h.isActive);
+    }
+
+    // 検索フィルター
+    if (search) {
+      const q = search.toLowerCase();
+      filteredHistories = filteredHistories.filter((h) =>
+        h.name.toLowerCase().includes(q) ||
+        (h.nameKana && h.nameKana.toLowerCase().includes(q)) ||
+        h.email.toLowerCase().includes(q),
+      );
+    }
+
+    // 役職フィルター
+    if (position) {
+      filteredHistories = filteredHistories.filter((h) => h.position === position);
+    }
+
+    // PositionMasterでソート
+    const positionMasters = await prisma.positionMaster.findMany({
+      where: { isActive: true },
+      select: { code: true, displayOrder: true, color: true },
+    });
+    const positionOrderMap = new Map<string, number>();
+    const positionColorMap = new Map<string, string | null>();
+    for (const pm of positionMasters) {
+      positionOrderMap.set(pm.code, pm.displayOrder);
+      positionColorMap.set(pm.code, pm.color);
+    }
+
+    const sorted = filteredHistories.sort((a, b) => {
+      const orderA = a.positionCode != null ? (positionOrderMap.get(a.positionCode) ?? 99999) : 99999;
+      const orderB = b.positionCode != null ? (positionOrderMap.get(b.positionCode) ?? 99999) : 99999;
+      if (orderA !== orderB) return orderA - orderB;
+      const nameA = a.nameKana || a.name || "";
+      const nameB = b.nameKana || b.name || "";
+      return nameA.localeCompare(nameB, "ja");
+    });
+
+    const total = sorted.length;
+    const paged = sorted.slice((page - 1) * limit, page * limit);
+
+    // 役職リスト
+    const posSet = new Set<string>();
+    for (const h of filteredHistories) posSet.add(h.position);
+
+    return {
+      employees: paged.map((h) => ({
+        id: h.employeeId, // History にはEmployee.idが入っている
+        employeeId: h.employeeId,
+        name: h.name,
+        nameKana: h.nameKana,
+        email: h.email,
+        phone: h.phone,
+        position: h.position,
+        positionCode: h.positionCode,
+        positionColor: h.positionCode != null ? (positionColorMap.get(h.positionCode) ?? null) : null,
+        department: h.departmentId ? { id: h.departmentId, name: h.departmentName } : null,
+        section: h.sectionId ? { id: h.sectionId, name: h.sectionName || "" } : null,
+        course: h.courseId ? { id: h.courseId, name: h.courseName || "" } : null,
+        isActive: h.isActive,
+        joinDate: h.joinDate,
+      })),
+      total,
+      page,
+      totalPages: Math.ceil(total / limit),
+      positions: Array.from(posSet),
+      referenceDate: referenceDateStr,
+    };
+  }
+
+  // === 通常モード（今日の組織） ===
   // フィルター条件を構築
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const where: any = {

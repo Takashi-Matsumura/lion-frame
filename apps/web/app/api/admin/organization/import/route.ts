@@ -19,6 +19,7 @@ export const POST = apiHandler(async (request, session) => {
   const organizationId = formData.get("organizationId") as string | null;
   const markMissingAsRetired =
     formData.get("markMissingAsRetired") === "true";
+  const defaultEffectiveDateStr = formData.get("defaultEffectiveDate") as string | null;
 
   if (!file || !(file instanceof File)) {
     throw ApiError.badRequest("ファイルがアップロードされていません");
@@ -65,6 +66,16 @@ export const POST = apiHandler(async (request, session) => {
   const { employees: processedData, excludedDuplicates } =
     processEmployeeDataWithDeduplication(rows);
 
+  // デフォルト発令日をJSTでパース（未指定時はJST今日）
+  const todayJSTStr = new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Tokyo" }).format(new Date());
+  const defaultEffectiveDate = defaultEffectiveDateStr
+    ? new Date(defaultEffectiveDateStr + "T00:00:00+09:00")
+    : new Date(todayJSTStr + "T00:00:00+09:00");
+  // 日付が不正な場合は今日にフォールバック
+  if (Number.isNaN(defaultEffectiveDate.getTime())) {
+    defaultEffectiveDate.setTime(new Date(todayJSTStr + "T00:00:00+09:00").getTime());
+  }
+
   // バッチIDを生成
   const batchId = HistoryRecorder.generateBatchId();
   const changedBy = session.user.id || "system";
@@ -100,8 +111,15 @@ export const POST = apiHandler(async (request, session) => {
     async (tx) => {
       const importedIds = new Set<string>();
 
+      // JST今日の開始時刻（サーバーTZに依存しない）
+      const todayJST = new Date(todayJSTStr + "T00:00:00+09:00");
+
       for (const processed of processedData) {
         try {
+          // 発令日を決定: CSV行の発令日 > デフォルト発令日
+          const effectiveDate = processed.effectiveDate || defaultEffectiveDate;
+          const isFutureEffective = effectiveDate > todayJST;
+
           // 本部（Department）を取得または作成（キャッシュ利用）
           const deptKey = processed.department;
           let department = departmentCache.get(deptKey);
@@ -206,6 +224,10 @@ export const POST = apiHandler(async (request, session) => {
             include: { department: true, section: true, course: true },
           });
 
+          // 退職日の処理: 退職日 ≤ 今日なら退職済み、未来なら在籍中のまま
+          const retirementDate = processed.retirementDate || null;
+          const isRetired = retirementDate !== null && retirementDate < todayJST;
+
           if (existing) {
             // 既存社員を更新
             const oldDepartmentId = existing.departmentId;
@@ -232,37 +254,42 @@ export const POST = apiHandler(async (request, session) => {
                 validTo: null,
               },
               data: {
-                validTo: now,
+                validTo: effectiveDate,
               },
             });
 
-            await tx.employee.update({
-              where: { id: existing.id },
-              data: {
-                name: processed.name,
-                nameKana: processed.nameKana,
-                email: emailToUse,
-                phone: processed.phone,
-                position: processed.position,
-                positionCode: processed.positionCode,
-                departmentId: department.id,
-                sectionId: section?.id || null,
-                courseId: course?.id || null,
-                qualificationGrade: processed.qualificationGrade,
-                qualificationGradeCode: processed.qualificationGradeCode,
-                employmentType: processed.employmentType,
-                employmentTypeCode: processed.employmentTypeCode,
-                joinDate: processed.joinDate,
-                birthDate: processed.birthDate,
-                isActive: true,
-              },
-            });
+            // 未来の発令日の場合、Employeeテーブルは更新しない
+            if (!isFutureEffective) {
+              await tx.employee.update({
+                where: { id: existing.id },
+                data: {
+                  name: processed.name,
+                  nameKana: processed.nameKana,
+                  email: emailToUse,
+                  phone: processed.phone,
+                  position: processed.position,
+                  positionCode: processed.positionCode,
+                  departmentId: department.id,
+                  sectionId: section?.id || null,
+                  courseId: course?.id || null,
+                  qualificationGrade: processed.qualificationGrade,
+                  qualificationGradeCode: processed.qualificationGradeCode,
+                  employmentType: processed.employmentType,
+                  employmentTypeCode: processed.employmentTypeCode,
+                  joinDate: processed.joinDate,
+                  birthDate: processed.birthDate,
+                  retirementDate,
+                  isActive: !isRetired,
+                },
+              });
+            }
 
-            // 履歴スナップショットを作成
+            // 履歴スナップショットを作成（未来日付でもHistoryには記録）
+            const changeType = isRetired ? "RETIREMENT" : (isTransfer ? "TRANSFER" : "UPDATE");
             await tx.employeeHistory.create({
               data: {
                 employeeId: existing.id,
-                validFrom: now,
+                validFrom: effectiveDate,
                 name: processed.name,
                 nameKana: processed.nameKana,
                 email: emailToUse || "",
@@ -275,7 +302,8 @@ export const POST = apiHandler(async (request, session) => {
                 employmentTypeCode: processed.employmentTypeCode,
                 joinDate: processed.joinDate,
                 birthDate: processed.birthDate,
-                isActive: true,
+                retirementDate,
+                isActive: !isRetired,
                 organizationId,
                 departmentId: department.id,
                 departmentName: department.name,
@@ -283,15 +311,19 @@ export const POST = apiHandler(async (request, session) => {
                 sectionName: section?.name,
                 courseId: course?.id,
                 courseName: course?.name,
-                changeType: isTransfer ? "TRANSFER" : "UPDATE",
-                changeReason: isTransfer
-                  ? "インポートによる異動"
-                  : "インポートによる更新",
+                changeType,
+                changeReason: isRetired
+                  ? "インポートによる退職"
+                  : isTransfer
+                    ? "インポートによる異動"
+                    : "インポートによる更新",
                 changedBy,
               },
             });
 
-            if (isTransfer) {
+            if (isRetired) {
+              statistics.retired++;
+            } else if (isTransfer) {
               statistics.transferred++;
             } else {
               statistics.updated++;
@@ -308,26 +340,29 @@ export const POST = apiHandler(async (request, session) => {
               }
             }
 
+            // 未来の発令日の場合、Employeeテーブルは作成しない（Historyのみ記録）
+            // ただし新規社員の場合は未来でもEmployee作成が必要（参照先がないとHistory作れない）
             const newEmployee = await tx.employee.create({
               data: {
                 employeeId: processed.employeeId,
-                name: processed.name,
-                nameKana: processed.nameKana,
-                email: emailToUse,
-                phone: processed.phone,
-                position: processed.position,
-                positionCode: processed.positionCode,
+                name: isFutureEffective ? "" : processed.name, // 未来の場合は仮データ
+                nameKana: isFutureEffective ? null : processed.nameKana,
+                email: isFutureEffective ? null : emailToUse,
+                phone: isFutureEffective ? null : processed.phone,
+                position: isFutureEffective ? "一般" : processed.position,
+                positionCode: isFutureEffective ? null : processed.positionCode,
                 organizationId,
-                departmentId: department.id,
-                sectionId: section?.id || null,
-                courseId: course?.id || null,
-                qualificationGrade: processed.qualificationGrade,
-                qualificationGradeCode: processed.qualificationGradeCode,
-                employmentType: processed.employmentType,
-                employmentTypeCode: processed.employmentTypeCode,
+                departmentId: isFutureEffective ? (departmentCache.values().next().value?.id || department.id) : department.id,
+                sectionId: isFutureEffective ? null : (section?.id || null),
+                courseId: isFutureEffective ? null : (course?.id || null),
+                qualificationGrade: isFutureEffective ? null : processed.qualificationGrade,
+                qualificationGradeCode: isFutureEffective ? null : processed.qualificationGradeCode,
+                employmentType: isFutureEffective ? null : processed.employmentType,
+                employmentTypeCode: isFutureEffective ? null : processed.employmentTypeCode,
                 joinDate: processed.joinDate,
-                birthDate: processed.birthDate,
-                isActive: true,
+                birthDate: isFutureEffective ? null : processed.birthDate,
+                retirementDate,
+                isActive: isFutureEffective ? false : !isRetired,
               },
             });
 
@@ -335,7 +370,7 @@ export const POST = apiHandler(async (request, session) => {
             await tx.employeeHistory.create({
               data: {
                 employeeId: newEmployee.id,
-                validFrom: now,
+                validFrom: effectiveDate,
                 name: processed.name,
                 nameKana: processed.nameKana,
                 email: emailToUse || "",
@@ -348,7 +383,8 @@ export const POST = apiHandler(async (request, session) => {
                 employmentTypeCode: processed.employmentTypeCode,
                 joinDate: processed.joinDate,
                 birthDate: processed.birthDate,
-                isActive: true,
+                retirementDate,
+                isActive: !isRetired,
                 organizationId,
                 departmentId: department.id,
                 departmentName: department.name,
@@ -357,7 +393,9 @@ export const POST = apiHandler(async (request, session) => {
                 courseId: course?.id,
                 courseName: course?.name,
                 changeType: "CREATE",
-                changeReason: "インポートによる新規登録",
+                changeReason: isFutureEffective
+                  ? "インポートによる新規登録（未来発令）"
+                  : "インポートによる新規登録",
                 changedBy,
               },
             });
@@ -397,15 +435,28 @@ export const POST = apiHandler(async (request, session) => {
               },
             });
 
+            await tx.employeeHistory.updateMany({
+              where: {
+                employeeId: existing.id,
+                validTo: null,
+              },
+              data: {
+                validTo: defaultEffectiveDate,
+              },
+            });
+
             await tx.employee.update({
               where: { id: existing.id },
-              data: { isActive: false },
+              data: {
+                isActive: false,
+                retirementDate: defaultEffectiveDate,
+              },
             });
 
             await tx.employeeHistory.create({
               data: {
                 employeeId: existing.id,
-                validFrom: now,
+                validFrom: defaultEffectiveDate,
                 name: existing.name,
                 nameKana: existing.nameKana,
                 email: existing.email || "",
@@ -418,6 +469,7 @@ export const POST = apiHandler(async (request, session) => {
                 employmentTypeCode: existing.employmentTypeCode,
                 joinDate: existing.joinDate,
                 birthDate: existing.birthDate,
+                retirementDate: defaultEffectiveDate,
                 isActive: false,
                 organizationId,
                 departmentId: existing.departmentId,
