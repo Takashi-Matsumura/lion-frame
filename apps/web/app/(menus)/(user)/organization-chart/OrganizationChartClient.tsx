@@ -483,6 +483,9 @@ export function OrganizationChartClient({
               {t.collapseAll}
             </Button>
             <div className="flex-1" />
+            <span className="text-sm font-medium text-foreground">
+              {orgData.organization.name}
+            </span>
             <span className="text-sm text-muted-foreground">
               {t.total}: {filteredEmployees.length}
               {language === "ja" ? t.employees : ` ${t.employees}`}

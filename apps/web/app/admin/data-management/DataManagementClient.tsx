@@ -53,6 +53,41 @@ export function DataManagementClient({
   const [newOrgName, setNewOrgName] = useState("");
   const [isCreatingOrg, setIsCreatingOrg] = useState(false);
 
+  // Group Name (2組織以上の場合のみ)
+  const [groupName, setGroupName] = useState("");
+  const [groupNameOriginal, setGroupNameOriginal] = useState("");
+  const [isSavingGroupName, setIsSavingGroupName] = useState(false);
+
+  useEffect(() => {
+    if (organizations.length >= 2) {
+      fetch("/api/admin/organization/group-name")
+        .then((res) => res.json())
+        .then((data) => {
+          setGroupName(data.groupName || "");
+          setGroupNameOriginal(data.groupName || "");
+        })
+        .catch(() => {});
+    }
+  }, [organizations.length]);
+
+  const handleSaveGroupName = async () => {
+    setIsSavingGroupName(true);
+    try {
+      const res = await fetch("/api/admin/organization/group-name", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ groupName }),
+      });
+      if (res.ok) {
+        setGroupNameOriginal(groupName);
+      }
+    } catch (error) {
+      console.error("Failed to save group name:", error);
+    } finally {
+      setIsSavingGroupName(false);
+    }
+  };
+
   const handleCreateOrganization = async () => {
     if (!newOrgName.trim()) return;
 
@@ -126,6 +161,30 @@ export function DataManagementClient({
                 <FaPlus className="w-3 h-3" />
                 {t.createOrganization}
               </button>
+
+              {/* Group Name (2組織以上の場合のみ、右端に配置) */}
+              {organizations.length >= 2 && (
+                <div className="flex items-center gap-2 ml-auto">
+                  <label className="text-sm font-medium text-foreground whitespace-nowrap">
+                    {t.groupName}:
+                  </label>
+                  <input
+                    type="text"
+                    value={groupName}
+                    onChange={(e) => setGroupName(e.target.value)}
+                    placeholder={t.groupNamePlaceholder}
+                    className="px-3 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500 w-48"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleSaveGroupName}
+                    disabled={isSavingGroupName || groupName === groupNameOriginal}
+                    className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm whitespace-nowrap"
+                  >
+                    {isSavingGroupName ? t.loading : t.save}
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Create Organization Form */}

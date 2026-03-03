@@ -74,6 +74,9 @@ export const dataManagementTranslations = {
     createOrganization: "Create Organization",
     organizationName: "Organization Name",
     noOrganization: "No organization available. Please create one first.",
+    groupName: "Group Name",
+    groupNamePlaceholder: "e.g. ABC Group",
+    groupNameSaved: "Group name saved",
 
     // Table Headers
     employeeId: "Employee ID",
@@ -253,6 +256,9 @@ export const dataManagementTranslations = {
     createOrganization: "組織を作成",
     organizationName: "組織名",
     noOrganization: "組織がありません。先に組織を作成してください。",
+    groupName: "グループ名",
+    groupNamePlaceholder: "例：ABCグループ",
+    groupNameSaved: "グループ名を保存しました",
 
     // Table Headers
     employeeId: "社員番号",
