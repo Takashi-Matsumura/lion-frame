@@ -30,9 +30,10 @@ interface OrganizeTabProps {
   organizationId: string;
   language: "en" | "ja";
   t: DataManagementTranslation;
+  isGroupMode?: boolean;
 }
 
-export function OrganizeTab({ organizationId, language, t }: OrganizeTabProps) {
+export function OrganizeTab({ organizationId, language, t, isGroupMode }: OrganizeTabProps) {
   const [orgData, setOrgData] = useState<OrganizationData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -86,9 +87,10 @@ export function OrganizeTab({ organizationId, language, t }: OrganizeTabProps) {
         setLoading(true);
       }
       setError(null);
-      const response = await fetch(
-        `/api/organization?organizationId=${organizationId}`,
-      );
+      const url = isGroupMode
+        ? "/api/organization"
+        : `/api/organization?organizationId=${organizationId}`;
+      const response = await fetch(url);
       if (!response.ok) throw new Error("Failed to fetch organization data");
       const data: OrganizationData = await response.json();
       setOrgData(data);
@@ -99,20 +101,25 @@ export function OrganizeTab({ organizationId, language, t }: OrganizeTabProps) {
       hasLoadedRef.current = true;
       setLoading(false);
     }
-  }, [organizationId]);
+  }, [organizationId, isGroupMode]);
 
   // Fetch all employees for the organization (single call)
   const fetchAllEmployees = useCallback(async () => {
     try {
       setLoadingEmployees(true);
-      const params = new URLSearchParams({
-        organizationId,
-        pageSize: "200",
-        page: "1",
-      });
-      const response = await fetch(
-        `/api/admin/organization/employees?${params}`,
-      );
+      let response: Response;
+      if (isGroupMode) {
+        response = await fetch("/api/organization/employees?limit=200");
+      } else {
+        const params = new URLSearchParams({
+          organizationId,
+          pageSize: "200",
+          page: "1",
+        });
+        response = await fetch(
+          `/api/admin/organization/employees?${params}`,
+        );
+      }
       if (!response.ok) throw new Error("Failed to fetch employees");
       const data = await response.json();
       setAllEmployees(data.employees || []);
@@ -121,7 +128,7 @@ export function OrganizeTab({ organizationId, language, t }: OrganizeTabProps) {
     } finally {
       setLoadingEmployees(false);
     }
-  }, [organizationId]);
+  }, [organizationId, isGroupMode]);
 
   // Fetch publish settings
   const fetchPublishSettings = useCallback(async () => {
@@ -217,14 +224,27 @@ export function OrganizeTab({ organizationId, language, t }: OrganizeTabProps) {
     }
   };
 
+  // Reset loaded state when organizationId or mode changes
+  useEffect(() => {
+    hasLoadedRef.current = false;
+  }, [organizationId, isGroupMode]);
+
   useEffect(() => {
     fetchOrgData();
     fetchAllEmployees();
-    fetchPublishSettings();
-    fetchCancelStatus();
-    fetchPendingCount();
-    fetchGroupManagers();
-  }, [fetchOrgData, fetchAllEmployees, fetchPublishSettings, fetchCancelStatus, fetchPendingCount, fetchGroupManagers]);
+    if (!isGroupMode) {
+      fetchPublishSettings();
+      fetchCancelStatus();
+      fetchPendingCount();
+      fetchGroupManagers();
+    } else {
+      // グループモードでは不要なステートをクリア
+      setGroupManagers(null);
+      setPublishSettings(null);
+      setCancelStatus(null);
+      setPendingCount(0);
+    }
+  }, [fetchOrgData, fetchAllEmployees, fetchPublishSettings, fetchCancelStatus, fetchPendingCount, fetchGroupManagers, isGroupMode]);
 
   // Cancel scheduled publish
   const handleCancelSchedule = async () => {
@@ -252,15 +272,12 @@ export function OrganizeTab({ organizationId, language, t }: OrganizeTabProps) {
 
   // Refresh all data (called by child components after mutations)
   const refreshAllData = useCallback(async () => {
-    await Promise.all([
-      fetchOrgData(),
-      fetchAllEmployees(),
-      fetchPublishSettings(),
-      fetchCancelStatus(),
-      fetchPendingCount(),
-      fetchGroupManagers(),
-    ]);
-  }, [fetchOrgData, fetchAllEmployees, fetchPublishSettings, fetchCancelStatus, fetchPendingCount, fetchGroupManagers]);
+    const promises: Promise<void>[] = [fetchOrgData(), fetchAllEmployees()];
+    if (!isGroupMode) {
+      promises.push(fetchPublishSettings(), fetchCancelStatus(), fetchPendingCount(), fetchGroupManagers());
+    }
+    await Promise.all(promises);
+  }, [fetchOrgData, fetchAllEmployees, fetchPublishSettings, fetchCancelStatus, fetchPendingCount, fetchGroupManagers, isGroupMode]);
 
   // Get status badge color
   const getStatusBadgeClass = (status: OrganizationStatus) => {
@@ -338,15 +355,15 @@ export function OrganizeTab({ organizationId, language, t }: OrganizeTabProps) {
       <div className="flex items-center justify-between mb-4">
         <div>
           <h2 className="text-lg font-semibold text-foreground">
-            {t.organizeTitle}
+            {isGroupMode ? t.groupMergedView : t.organizeTitle}
           </h2>
           <p className="text-sm text-muted-foreground">
-            {t.organizeDescription}
+            {isGroupMode ? t.groupModeDescription : t.organizeDescription}
           </p>
         </div>
         <div className="flex items-center gap-3">
-          {/* Apply Pending Imports Button */}
-          {pendingCount > 0 && (
+          {/* Apply Pending Imports Button (hidden in group mode) */}
+          {!isGroupMode && pendingCount > 0 && (
             <Button
               variant="outline"
               size="sm"
@@ -360,7 +377,7 @@ export function OrganizeTab({ organizationId, language, t }: OrganizeTabProps) {
               </Badge>
             </Button>
           )}
-        {publishSettings && (
+        {!isGroupMode && publishSettings && (
           <>
             {/* Status Badge */}
             <div className="flex items-center gap-2">
@@ -453,8 +470,8 @@ export function OrganizeTab({ organizationId, language, t }: OrganizeTabProps) {
           onUnitClick={(unit) => setSelectedUnit(unit)}
           loadingEmployees={loadingEmployees}
           isDraft={publishSettings?.status === "DRAFT"}
-          onAutoAssignClick={() => setShowAutoAssignDialog(true)}
-          groupManagers={groupManagers}
+          onAutoAssignClick={isGroupMode ? undefined : () => setShowAutoAssignDialog(true)}
+          groupManagers={isGroupMode ? null : groupManagers}
         />
       )}
 
@@ -466,6 +483,7 @@ export function OrganizeTab({ organizationId, language, t }: OrganizeTabProps) {
         t={t}
         onClose={() => setSelectedUnit(null)}
         onAssigned={refreshAllData}
+        isGroupMode={isGroupMode}
       />
 
       {/* Publish Settings Dialog */}

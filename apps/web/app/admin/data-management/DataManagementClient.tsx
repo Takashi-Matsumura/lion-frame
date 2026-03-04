@@ -26,6 +26,8 @@ interface DataManagementClientProps {
   organizations: Organization[];
 }
 
+const GROUP_MODE_ID = "__group__";
+
 export function DataManagementClient({
   language,
   organizations,
@@ -39,6 +41,11 @@ export function DataManagementClient({
   const { open } = useSidebar();
   const { width } = useSidebarStore();
 
+  const [selectedOrgId, setSelectedOrgId] = useState<string>(
+    organizations[0]?.id || "",
+  );
+  const isGroupMode = selectedOrgId === GROUP_MODE_ID;
+
   // Redirect ?tab=employees to ?tab=organize
   useEffect(() => {
     if (rawTab === "employees") {
@@ -46,9 +53,12 @@ export function DataManagementClient({
     }
   }, [rawTab, router]);
 
-  const [selectedOrgId, setSelectedOrgId] = useState<string>(
-    organizations[0]?.id || "",
-  );
+  // グループモード時: インポート・履歴タブからは組織整備タブにリダイレクト
+  useEffect(() => {
+    if (isGroupMode && (tab === "import" || tab === "history")) {
+      router.replace("?tab=organize");
+    }
+  }, [isGroupMode, tab, router]);
   const [showCreateOrg, setShowCreateOrg] = useState(false);
   const [newOrgName, setNewOrgName] = useState("");
   const [isCreatingOrg, setIsCreatingOrg] = useState(false);
@@ -139,7 +149,14 @@ export function DataManagementClient({
               {organizations.length > 0 ? (
                 <select
                   value={selectedOrgId}
-                  onChange={(e) => setSelectedOrgId(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setSelectedOrgId(val);
+                    // グループモード選択時はorganizeタブに強制遷移
+                    if (val === GROUP_MODE_ID && tab !== "organize") {
+                      router.replace("?tab=organize");
+                    }
+                  }}
                   className="px-3 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   {organizations.map((org) => (
@@ -147,6 +164,12 @@ export function DataManagementClient({
                       {org.name} ({org._count.employees}名)
                     </option>
                   ))}
+                  {organizations.length >= 2 && (
+                    <option value={GROUP_MODE_ID}>
+                      {groupName || (language === "ja" ? "グループ" : "Group")}
+                      {language === "ja" ? "（統合）" : " (Merged)"}
+                    </option>
+                  )}
                 </select>
               ) : (
                 <span className="text-muted-foreground text-sm">
@@ -232,21 +255,22 @@ export function DataManagementClient({
                   </div>
                 ) : (
                   <>
-                    {tab === "import" && (
+                    {tab === "import" && !isGroupMode && (
                       <ImportTab
                         organizationId={selectedOrgId}
                         language={language}
                         t={t}
                       />
                     )}
-                    {tab === "organize" && (
+                    {(tab === "organize" || isGroupMode) && (
                       <OrganizeTab
                         organizationId={selectedOrgId}
                         language={language}
                         t={t}
+                        isGroupMode={isGroupMode}
                       />
                     )}
-                    {tab === "history" && (
+                    {tab === "history" && !isGroupMode && (
                       <HistoryTab
                         organizationId={selectedOrgId}
                         language={language}

@@ -37,7 +37,7 @@ export async function GET(
       throw ApiError.notFound("Employee not found");
     }
 
-    // 履歴を取得（時系列昇順）
+    // 履歴を取得（時系列昇順で比較用、最終的にはdescで返す）
     const histories = await prisma.employeeHistory.findMany({
       where: { employeeId: id },
       orderBy: { validFrom: "asc" },
@@ -51,12 +51,49 @@ export async function GET(
         entityId: id,
       },
       orderBy: { changedAt: "asc" },
-      take: limit * 5, // 履歴1件に複数のフィールド変更があるため多めに取得
+      take: limit * 5,
     });
 
+    // 変化なしの更新エントリをフィルタリング
+    // CREATE, TRANSFER, PROMOTION, RETIREMENT, REJOINING は常に表示
+    // UPDATE, IMPORT, BULK_UPDATE は前回と比較して差分がある場合のみ表示
+    const noChangeFilterTypes = new Set(["UPDATE", "IMPORT", "BULK_UPDATE"]);
+    const compareFields = [
+      "departmentId", "departmentName", "sectionId", "sectionName",
+      "courseId", "courseName", "position", "positionCode",
+      "qualificationGrade", "qualificationGradeCode",
+      "employmentType", "employmentTypeCode", "isActive", "retirementDate",
+    ] as const;
+
+    type HistoryRecord = typeof histories[number];
+    const hasChanges = (current: HistoryRecord, previous: HistoryRecord): boolean => {
+      for (const field of compareFields) {
+        const cur = current[field];
+        const prev = previous[field];
+        // DateTime比較
+        if (cur instanceof Date && prev instanceof Date) {
+          if (cur.getTime() !== prev.getTime()) return true;
+        } else if (String(cur ?? "") !== String(prev ?? "")) {
+          return true;
+        }
+      }
+      return false;
+    };
+
+    const filteredHistories: typeof histories = [];
+    for (let i = 0; i < histories.length; i++) {
+      const history = histories[i];
+      if (noChangeFilterTypes.has(history.changeType) && i > 0) {
+        if (!hasChanges(history, histories[i - 1])) continue;
+      }
+      filteredHistories.push(history);
+    }
+
+    // 最新順に並び替え
+    filteredHistories.reverse();
+
     // 履歴をフォーマット
-    const formattedHistories = histories.map((history) => {
-      // この履歴に関連する変更ログを取得
+    const formattedHistories = filteredHistories.map((history) => {
       const relatedLogs = changeLogs.filter(
         (log) =>
           log.changedAt.getTime() >= history.validFrom.getTime() - 1000 &&
@@ -71,29 +108,22 @@ export async function GET(
         changeTypeJa:
           changeTypeMapping[history.changeType] || history.changeType,
         changeReason: history.changeReason,
-        // 所属情報
         department: history.departmentName,
         section: history.sectionName,
         course: history.courseName,
-        // 役職情報
         position: history.position,
         positionCode: history.positionCode,
-        // 資格等級
         qualificationGrade: history.qualificationGrade,
         qualificationGradeCode: history.qualificationGradeCode,
-        // 雇用区分
         employmentType: history.employmentType,
         employmentTypeCode: history.employmentTypeCode,
-        // 在籍状況
         isActive: history.isActive,
-        // 変更詳細
         changes: relatedLogs.map((log) => ({
           fieldName: log.fieldName,
           oldValue: log.oldValue,
           newValue: log.newValue,
           description: log.changeDescription,
         })),
-        // メタ情報
         changedBy: history.changedBy,
         changedAt: history.changedAt,
       };
@@ -107,7 +137,7 @@ export async function GET(
         nameKana: employee.nameKana,
       },
       histories: formattedHistories,
-      total: histories.length,
+      total: filteredHistories.length,
     });
   } catch (error) {
     if (error instanceof ApiError) {

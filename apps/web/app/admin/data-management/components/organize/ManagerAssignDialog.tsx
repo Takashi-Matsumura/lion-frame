@@ -25,6 +25,7 @@ interface ManagerAssignDialogProps {
   t: DataManagementTranslation;
   onClose: () => void;
   onAssigned: () => void;
+  isGroupMode?: boolean;
 }
 
 export function ManagerAssignDialog({
@@ -34,6 +35,7 @@ export function ManagerAssignDialog({
   t,
   onClose,
   onAssigned,
+  isGroupMode,
 }: ManagerAssignDialogProps) {
   const [managerCandidates, setManagerCandidates] = useState<
     ManagerCandidate[]
@@ -50,6 +52,7 @@ export function ManagerAssignDialog({
         const params = new URLSearchParams();
         params.set("type", unitType);
         params.set("id", unitId);
+        if (isGroupMode) params.set("groupMode", "true");
 
         const response = await fetch(
           `/api/admin/organization/manager-candidates?${params}`,
@@ -64,7 +67,7 @@ export function ManagerAssignDialog({
         setLoadingCandidates(false);
       }
     },
-    [],
+    [isGroupMode],
   );
 
   // Handle dialog open change - fetch candidates when opening
@@ -104,6 +107,7 @@ export function ManagerAssignDialog({
           type: selectedUnit.type,
           id: selectedUnit.id,
           managerId: employeeId,
+          ...(isGroupMode ? { groupMode: true } : {}),
         }),
       });
 
@@ -147,6 +151,15 @@ export function ManagerAssignDialog({
             )}
           </div>
 
+          {/* Group Mode Info */}
+          {isGroupMode && (
+            <div className="p-3 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-md">
+              <p className="text-xs text-blue-700 dark:text-blue-300">
+                {t.groupModePropagated}
+              </p>
+            </div>
+          )}
+
           {/* Search */}
           <Input
             placeholder={t.searchPlaceholder}
@@ -182,6 +195,11 @@ export function ManagerAssignDialog({
                       <p className="text-sm font-medium">{emp.name}</p>
                       <p className="text-xs text-muted-foreground">
                         {emp.employeeId} / {emp.position}
+                        {isGroupMode && (emp as ManagerCandidate & { orgName?: string }).orgName && (
+                          <span className="ml-1 text-blue-600 dark:text-blue-400">
+                            [{(emp as ManagerCandidate & { orgName?: string }).orgName}]
+                          </span>
+                        )}
                       </p>
                     </div>
                     {selectedUnit?.currentManager?.id === emp.id && (

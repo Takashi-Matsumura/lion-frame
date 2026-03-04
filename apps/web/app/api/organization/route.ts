@@ -335,6 +335,21 @@ export const GET = apiHandler(async (request) => {
   const extraCourseCounts = new Map<string, number>();
   let extraTotal = 0;
 
+  // 統合用: formatted unit の型
+  type FormattedCourse = {
+    id: string; name: string; code: string | null;
+    employeeCount: number;
+    manager: { id: string; name: string; position: string } | null;
+  };
+  type FormattedSection = FormattedCourse & { courses: FormattedCourse[] };
+  type FormattedDept = FormattedCourse & { sections: FormattedSection[] };
+
+  // プライマリの部門→セクション→コースのマッピング（追加分を後で統合するため）
+  // key: deptName, value: { key: sectKey, extraSections, extraCourses }
+  const extraSectsByDept = new Map<string, FormattedSection[]>();
+  const extraCoursesBySect = new Map<string, FormattedCourse[]>();
+  const extraDepts: FormattedDept[] = [];
+
   if (otherOrgIds.length > 0) {
     // プライマリ組織の名前→IDマッピング
     const deptNameToId = new Map<string, string>();
@@ -351,70 +366,166 @@ export const GET = apiHandler(async (request) => {
       }
     }
 
-    // 他組織のアクティブ社員を取得（名前ベースでカウント）
-    const otherEmployees = await prisma.employee.findMany({
-      where: { organizationId: { in: otherOrgIds }, isActive: true },
-      select: {
-        department: { select: { name: true } },
-        section: { select: { name: true } },
-        course: { select: { name: true } },
+    // 他組織の部門構造を取得（プライマリにない部署を発見するため）
+    const otherDepartments = await prisma.department.findMany({
+      where: { organizationId: { in: otherOrgIds } },
+      orderBy: [{ code: { sort: "asc", nulls: "last" } }, { name: "asc" }],
+      include: {
+        _count: { select: { employees: { where: { isActive: true } } } },
+        manager: { select: { id: true, name: true, position: true } },
+        sections: {
+          orderBy: [{ code: { sort: "asc", nulls: "last" } }, { name: "asc" }],
+          include: {
+            _count: { select: { employees: { where: { isActive: true } } } },
+            manager: { select: { id: true, name: true, position: true } },
+            courses: {
+              orderBy: [{ code: { sort: "asc", nulls: "last" } }, { name: "asc" }],
+              include: {
+                _count: { select: { employees: { where: { isActive: true } } } },
+                manager: { select: { id: true, name: true, position: true } },
+              },
+            },
+          },
+        },
       },
     });
 
-    extraTotal = otherEmployees.length;
+    // 処理済みの他組織ユニット名を追跡（重複排除用）
+    const addedDeptNames = new Set<string>();
+    const addedSectKeys = new Set<string>();
+    const addedCourseKeys = new Set<string>();
 
-    for (const emp of otherEmployees) {
-      const deptName = emp.department?.name;
-      if (!deptName) continue;
+    for (const otherDept of otherDepartments) {
+      const deptId = deptNameToId.get(otherDept.name);
 
-      // 部門レベル（このDeptに属する全社員をカウント）
-      const deptId = deptNameToId.get(deptName);
       if (deptId) {
-        extraDeptCounts.set(deptId, (extraDeptCounts.get(deptId) || 0) + 1);
-      }
+        // プライマリに同名部門がある → 社員数を加算
+        extraDeptCounts.set(deptId, (extraDeptCounts.get(deptId) || 0) + otherDept._count.employees);
+        extraTotal += otherDept._count.employees;
 
-      // 部レベル
-      const sectName = emp.section?.name;
-      if (sectName) {
-        const sectId = sectKeyToId.get(`${deptName}\0${sectName}`);
-        if (sectId) {
-          extraSectCounts.set(sectId, (extraSectCounts.get(sectId) || 0) + 1);
+        for (const otherSect of otherDept.sections) {
+          const sectId = sectKeyToId.get(`${otherDept.name}\0${otherSect.name}`);
+          if (sectId) {
+            // プライマリに同名部がある
+            extraSectCounts.set(sectId, (extraSectCounts.get(sectId) || 0) + otherSect._count.employees);
+            for (const otherCourse of otherSect.courses) {
+              const courseId = courseKeyToId.get(`${otherDept.name}\0${otherSect.name}\0${otherCourse.name}`);
+              if (courseId) {
+                extraCourseCounts.set(courseId, (extraCourseCounts.get(courseId) || 0) + otherCourse._count.employees);
+              } else {
+                // プライマリにない課 → formatted段階で追加
+                const courseKey = `${otherDept.name}\0${otherSect.name}\0${otherCourse.name}`;
+                if (!addedCourseKeys.has(courseKey)) {
+                  addedCourseKeys.add(courseKey);
+                  const sectCompositeKey = `${otherDept.name}\0${otherSect.name}`;
+                  if (!extraCoursesBySect.has(sectCompositeKey)) {
+                    extraCoursesBySect.set(sectCompositeKey, []);
+                  }
+                  extraCoursesBySect.get(sectCompositeKey)!.push({
+                    id: otherCourse.id,
+                    name: otherCourse.name,
+                    code: otherCourse.code,
+                    employeeCount: otherCourse._count.employees,
+                    manager: otherCourse.manager,
+                  });
+                }
+              }
+            }
+          } else {
+            // プライマリにない部 → formatted段階で追加
+            const sectKey = `${otherDept.name}\0${otherSect.name}`;
+            if (!addedSectKeys.has(sectKey)) {
+              addedSectKeys.add(sectKey);
+              if (!extraSectsByDept.has(otherDept.name)) {
+                extraSectsByDept.set(otherDept.name, []);
+              }
+              const sectEmployeeCount = otherSect._count.employees;
+              extraSectsByDept.get(otherDept.name)!.push({
+                id: otherSect.id,
+                name: otherSect.name,
+                code: otherSect.code,
+                employeeCount: sectEmployeeCount,
+                manager: otherSect.manager,
+                courses: otherSect.courses.map(c => ({
+                  id: c.id, name: c.name, code: c.code,
+                  employeeCount: c._count.employees,
+                  manager: c.manager,
+                })),
+              });
+            }
+          }
         }
-      }
+      } else {
+        // プライマリに同名部門がない → 新規部門として追加
+        if (!addedDeptNames.has(otherDept.name)) {
+          addedDeptNames.add(otherDept.name);
+          extraTotal += otherDept._count.employees;
 
-      // 課レベル
-      const courseName = emp.course?.name;
-      if (courseName && sectName) {
-        const courseId = courseKeyToId.get(`${deptName}\0${sectName}\0${courseName}`);
-        if (courseId) {
-          extraCourseCounts.set(courseId, (extraCourseCounts.get(courseId) || 0) + 1);
+          extraDepts.push({
+            id: otherDept.id,
+            name: otherDept.name,
+            code: otherDept.code,
+            employeeCount: otherDept._count.employees,
+            manager: otherDept.manager,
+            sections: otherDept.sections.map(s => ({
+              id: s.id,
+              name: s.name,
+              code: s.code,
+              employeeCount: s._count.employees,
+              manager: s.manager,
+              courses: s.courses.map(c => ({
+                id: c.id, name: c.name, code: c.code,
+                employeeCount: c._count.employees,
+                manager: c.manager,
+              })),
+            })),
+          });
         }
       }
     }
   }
 
   // レスポンス用に整形（統合カウント含む）
-  const formattedDepartments = departments.map((dept) => ({
-    id: dept.id,
-    name: dept.name,
-    code: dept.code,
-    employeeCount: dept._count.employees + (extraDeptCounts.get(dept.id) || 0),
-    manager: dept.manager,
-    sections: dept.sections.map((sect) => ({
-      id: sect.id,
-      name: sect.name,
-      code: sect.code,
-      employeeCount: sect._count.employees + (extraSectCounts.get(sect.id) || 0),
-      manager: sect.manager,
-      courses: sect.courses.map((course) => ({
+  const formattedDepartments: FormattedDept[] = departments.map((dept) => {
+    const sections: FormattedSection[] = dept.sections.map((sect) => {
+      const courses: FormattedCourse[] = sect.courses.map((course) => ({
         id: course.id,
         name: course.name,
         code: course.code,
         employeeCount: course._count.employees + (extraCourseCounts.get(course.id) || 0),
         manager: course.manager,
-      })),
-    })),
-  }));
+      }));
+      // 他組織にのみ存在する課を追加
+      const extraCourses = extraCoursesBySect.get(`${dept.name}\0${sect.name}`) || [];
+      courses.push(...extraCourses);
+
+      return {
+        id: sect.id,
+        name: sect.name,
+        code: sect.code,
+        employeeCount: sect._count.employees + (extraSectCounts.get(sect.id) || 0)
+          + extraCourses.reduce((sum, c) => sum + c.employeeCount, 0),
+        manager: sect.manager,
+        courses,
+      };
+    });
+    // 他組織にのみ存在する部を追加
+    const extraSects = extraSectsByDept.get(dept.name) || [];
+    sections.push(...extraSects);
+    const extraSectsEmployees = extraSects.reduce((sum, s) => sum + s.employeeCount, 0);
+
+    return {
+      id: dept.id,
+      name: dept.name,
+      code: dept.code,
+      employeeCount: dept._count.employees + (extraDeptCounts.get(dept.id) || 0) + extraSectsEmployees,
+      manager: dept.manager,
+      sections,
+    };
+  });
+
+  // 他組織にのみ存在する部門を追加
+  formattedDepartments.push(...extraDepts);
 
   // 全組織の社員数を計算
   const totalEmployees = await prisma.employee.count({

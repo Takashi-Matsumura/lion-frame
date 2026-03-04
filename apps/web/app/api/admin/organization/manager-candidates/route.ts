@@ -15,6 +15,7 @@ export const GET = apiHandler(async (request) => {
   const { searchParams } = new URL(request.url);
   const type = searchParams.get("type"); // department, section, course
   const id = searchParams.get("id");
+  const groupMode = searchParams.get("groupMode") === "true";
 
   if (!type || !id) {
     throw ApiError.badRequest("Type and ID are required");
@@ -214,6 +215,132 @@ export const GET = apiHandler(async (request) => {
     candidates = courseCandidates
       .filter((emp) => isEligibleForManager(emp.positionCode))
       .sort(sortByPositionCode);
+  }
+
+  // グループモード: 全PUBLISHED組織の同名ユニットから候補を収集
+  if (groupMode) {
+    // 対象ユニットの名前・階層パスを取得
+    let unitName = "";
+    let deptName = "";
+    let sectName = "";
+
+    if (type === "department") {
+      const dept = await prisma.department.findUnique({
+        where: { id },
+        select: { name: true },
+      });
+      if (dept) unitName = dept.name;
+      deptName = unitName;
+    } else if (type === "section") {
+      const sect = await prisma.section.findUnique({
+        where: { id },
+        select: { name: true, department: { select: { name: true } } },
+      });
+      if (sect) {
+        unitName = sect.name;
+        deptName = sect.department.name;
+      }
+    } else if (type === "course") {
+      const course = await prisma.course.findUnique({
+        where: { id },
+        select: {
+          name: true,
+          section: {
+            select: {
+              name: true,
+              department: { select: { name: true } },
+            },
+          },
+        },
+      });
+      if (course) {
+        unitName = course.name;
+        sectName = course.section.name;
+        deptName = course.section.department.name;
+      }
+    }
+
+    // 全PUBLISHED組織から同名の親本部（deptName）のdepartmentIdを収集
+    // section/courseの場合も、同名の親本部全体から候補を集める
+    const publishedOrgs = await prisma.organization.findMany({
+      where: { status: "PUBLISHED" },
+      select: { id: true, name: true },
+    });
+
+    const departmentIds = new Set<string>();
+
+    for (const org of publishedOrgs) {
+      // 全タイプ共通: 同名の本部(deptName)のIDを収集
+      const matchingDepts = await prisma.department.findMany({
+        where: { organizationId: org.id, name: deptName },
+        select: { id: true },
+      });
+      for (const d of matchingDepts) departmentIds.add(d.id);
+    }
+
+    // 各部署から候補を収集
+    const allCandidates = await prisma.employee.findMany({
+      where: {
+        departmentId: { in: Array.from(departmentIds) },
+        isActive: true,
+      },
+      select: {
+        id: true,
+        employeeId: true,
+        name: true,
+        position: true,
+        positionCode: true,
+        department: {
+          select: {
+            organization: { select: { name: true } },
+          },
+        },
+      },
+    });
+
+    // 本部の場合は役員も追加
+    if (type === "department") {
+      for (const org of publishedOrgs) {
+        const execDept = await prisma.department.findFirst({
+          where: { organizationId: org.id, name: EXECUTIVES_DEPARTMENT_NAME },
+        });
+        if (execDept) {
+          const execs = await prisma.employee.findMany({
+            where: { departmentId: execDept.id, isActive: true },
+            select: {
+              id: true,
+              employeeId: true,
+              name: true,
+              position: true,
+              positionCode: true,
+              department: {
+                select: {
+                  organization: { select: { name: true } },
+                },
+              },
+            },
+          });
+          allCandidates.push(...execs);
+        }
+      }
+    }
+
+    // フィルター + 重複排除
+    const candidateMap = new Map<string, typeof candidates[number] & { orgName?: string }>();
+    for (const emp of allCandidates) {
+      if (isEligibleForManager(emp.positionCode) && !candidateMap.has(emp.id)) {
+        candidateMap.set(emp.id, {
+          id: emp.id,
+          employeeId: emp.employeeId,
+          name: emp.name,
+          position: emp.position,
+          positionCode: emp.positionCode,
+          orgName: emp.department?.organization?.name || "",
+        });
+      }
+    }
+
+    candidates = Array.from(candidateMap.values()).sort(sortByPositionCode);
   }
 
   return { candidates };

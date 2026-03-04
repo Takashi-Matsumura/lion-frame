@@ -183,6 +183,11 @@ export const dataManagementTranslations = {
     // Group Manager Indicator
     groupManagerSet: "Group",
 
+    // Group Merged View
+    groupMergedView: "Group (Merged)",
+    groupModeDescription: "Unified view of all published organizations",
+    groupModePropagated: "Manager propagated to all matching units",
+
     // Apply Pending Imports
     applyPendingImports: "Apply Pending",
     applyPendingTitle: "Apply Pending Future Imports",
@@ -372,6 +377,11 @@ export const dataManagementTranslations = {
 
     // Group Manager Indicator
     groupManagerSet: "グループ",
+
+    // Group Merged View
+    groupMergedView: "グループ（統合）",
+    groupModeDescription: "全公開組織を統合して表示",
+    groupModePropagated: "全組織の該当部署に責任者を反映しました",
 
     // Apply Pending Imports
     applyPendingImports: "発令適用",
