@@ -8,6 +8,7 @@ import {
   type SelectedPermission,
 } from "@/components/PermissionTreeSelector";
 import { Badge } from "@/components/ui/badge";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -516,16 +517,14 @@ export function AccessKeyManager({
 
             <div className="space-y-2">
               <Label>{t("Expiration Date", "有効期限")}</Label>
-              <Input
-                type="date"
+              <DatePicker
                 value={formData.expiresAt}
-                onChange={(e) =>
+                onChange={(val) =>
                   setFormData({
                     ...formData,
-                    expiresAt: e.target.value,
+                    expiresAt: val,
                   })
                 }
-                min={new Date().toISOString().split("T")[0]}
               />
             </div>
 

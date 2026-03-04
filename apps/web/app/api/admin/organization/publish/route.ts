@@ -75,17 +75,7 @@ export const PATCH = apiHandler(async (request, session) => {
   switch (action) {
     case "publish":
       // Immediately publish the organization
-      // First, archive any currently published organization
-      await prisma.organization.updateMany({
-        where: {
-          status: "PUBLISHED",
-          id: { not: organizationId },
-        },
-        data: {
-          status: "ARCHIVED",
-        },
-      });
-
+      // Multiple organizations can be PUBLISHED simultaneously
       updateData = {
         status: "PUBLISHED",
         publishAt: null,

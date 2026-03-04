@@ -464,6 +464,16 @@ export function EmployeeDetailDialog({
                         {t.affiliation}
                       </h3>
                       <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                        {employee.organization && (
+                          <>
+                            <dt className="text-muted-foreground">
+                              {t.organization}
+                            </dt>
+                            <dd className="text-foreground">
+                              {employee.organization.name}
+                            </dd>
+                          </>
+                        )}
                         {employee.department && (
                           <>
                             <dt className="text-muted-foreground">

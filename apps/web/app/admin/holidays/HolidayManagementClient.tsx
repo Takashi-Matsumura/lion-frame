@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Languages } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -383,11 +384,9 @@ export function HolidayManagementClient({
           <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="holiday-date">{t.holidayDate}</Label>
-              <Input
-                id="holiday-date"
-                type="date"
+              <DatePicker
                 value={form.date}
-                onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))}
+                onChange={(val) => setForm((f) => ({ ...f, date: val }))}
               />
             </div>
 

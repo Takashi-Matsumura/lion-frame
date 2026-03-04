@@ -592,8 +592,8 @@ export function AdminDashboard({ language }: AdminDashboardProps) {
                   <h4 className="text-sm font-medium mb-3">{t.departmentAdoption}</h4>
                   {usageStats.departments.length > 0 ? (
                     <div className="space-y-2">
-                      {usageStats.departments.map((d) => (
-                        <div key={d.name}>
+                      {usageStats.departments.map((d, i) => (
+                        <div key={`${d.name}-${i}`}>
                           <div className="flex items-center justify-between text-xs mb-1">
                             <span className="truncate">{d.name}</span>
                             <span className="text-muted-foreground shrink-0 ml-2">

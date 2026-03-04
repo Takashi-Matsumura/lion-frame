@@ -1,8 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
 import type {
   GroupManagerMap,
@@ -28,6 +36,7 @@ export function OrganizeTab({ organizationId, language, t }: OrganizeTabProps) {
   const [orgData, setOrgData] = useState<OrganizationData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const hasLoadedRef = useRef(false);
 
   // All employees (fetched once)
   const [allEmployees, setAllEmployees] = useState<OrgEmployeeData[]>([]);
@@ -60,6 +69,11 @@ export function OrganizeTab({ organizationId, language, t }: OrganizeTabProps) {
   // Apply pending imports
   const [pendingCount, setPendingCount] = useState(0);
   const [applyingPending, setApplyingPending] = useState(false);
+  const [showApplyPendingDialog, setShowApplyPendingDialog] = useState(false);
+  const [applyPendingResult, setApplyPendingResult] = useState<{
+    type: "success" | "none";
+    applied?: number;
+  } | null>(null);
 
   // Group-level managers (for cross-org comparison)
   const [groupManagers, setGroupManagers] = useState<GroupManagerMap | null>(null);
@@ -67,7 +81,10 @@ export function OrganizeTab({ organizationId, language, t }: OrganizeTabProps) {
   // Fetch organization data
   const fetchOrgData = useCallback(async () => {
     try {
-      setLoading(true);
+      // 初回のみスケルトン表示（再取得時はOrgTreeViewをアンマウントしない）
+      if (!hasLoadedRef.current) {
+        setLoading(true);
+      }
       setError(null);
       const response = await fetch(
         `/api/organization?organizationId=${organizationId}`,
@@ -79,6 +96,7 @@ export function OrganizeTab({ organizationId, language, t }: OrganizeTabProps) {
       setError("Failed to load organization data");
       console.error("Error fetching organization data:", err);
     } finally {
+      hasLoadedRef.current = true;
       setLoading(false);
     }
   }, [organizationId]);
@@ -177,7 +195,6 @@ export function OrganizeTab({ organizationId, language, t }: OrganizeTabProps) {
 
   // Apply pending imports
   const handleApplyPending = async () => {
-    if (!confirm(t.applyPendingConfirm)) return;
     try {
       setApplyingPending(true);
       const response = await fetch("/api/admin/organization/apply-pending", {
@@ -186,16 +203,17 @@ export function OrganizeTab({ organizationId, language, t }: OrganizeTabProps) {
       if (!response.ok) throw new Error("Failed to apply pending imports");
       const data = await response.json();
       if (data.applied > 0) {
-        alert(t.applyPendingSuccess);
+        setApplyPendingResult({ type: "success", applied: data.applied });
         await refreshAllData();
         await fetchPendingCount();
       } else {
-        alert(t.applyPendingNone);
+        setApplyPendingResult({ type: "none" });
       }
     } catch (err) {
       console.error("Error applying pending imports:", err);
     } finally {
       setApplyingPending(false);
+      setShowApplyPendingDialog(false);
     }
   };
 
@@ -332,7 +350,7 @@ export function OrganizeTab({ organizationId, language, t }: OrganizeTabProps) {
             <Button
               variant="outline"
               size="sm"
-              onClick={handleApplyPending}
+              onClick={() => setShowApplyPendingDialog(true)}
               disabled={applyingPending}
               className="border-orange-300 text-orange-700 hover:bg-orange-50 dark:border-orange-700 dark:text-orange-400 dark:hover:bg-orange-950"
             >
@@ -460,6 +478,60 @@ export function OrganizeTab({ organizationId, language, t }: OrganizeTabProps) {
         onClose={() => setShowPublishDialog(false)}
         onPublished={fetchPublishSettings}
       />
+
+      {/* Apply Pending Confirm Dialog */}
+      <Dialog
+        open={showApplyPendingDialog}
+        onOpenChange={(open) => { if (!open) setShowApplyPendingDialog(false); }}
+      >
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>{t.applyPendingTitle}</DialogTitle>
+            <DialogDescription>{t.applyPendingDescription}</DialogDescription>
+          </DialogHeader>
+          <div className="p-3 bg-muted rounded-md text-sm">
+            {t.applyPendingConfirm}
+            <span className="ml-1 font-medium">({pendingCount}{language === "ja" ? "件" : " items"})</span>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowApplyPendingDialog(false)}
+              disabled={applyingPending}
+            >
+              {t.cancel}
+            </Button>
+            <Button
+              onClick={handleApplyPending}
+              disabled={applyingPending}
+            >
+              {applyingPending ? t.loading : t.autoAssignExecute}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Apply Pending Result Dialog */}
+      <Dialog
+        open={applyPendingResult !== null}
+        onOpenChange={(open) => { if (!open) setApplyPendingResult(null); }}
+      >
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>{t.applyPendingTitle}</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm">
+            {applyPendingResult?.type === "success"
+              ? `${t.applyPendingSuccess}（${applyPendingResult.applied}${language === "ja" ? "件" : " items"}）`
+              : t.applyPendingNone}
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setApplyPendingResult(null)}>
+              {t.close}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Action Dialogs (Cancel Import, Clear Data, Auto-assign) */}
       <OrgActionDialogs

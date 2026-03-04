@@ -1,5 +1,6 @@
 import { useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
+import { DatePicker } from "@/components/ui/date-picker";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import {
   Dialog,
@@ -161,29 +162,25 @@ export function EventFormDialog({
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="event-start-date">{t.startDateTime}</Label>
-                  <Input
-                    id="event-start-date"
-                    type="date"
+                  <DatePicker
                     value={form.startTime.split("T")[0]}
-                    onChange={(e) =>
+                    onChange={(val) =>
                       onFormChange({
                         ...form,
-                        startTime: `${e.target.value}T00:00`,
-                        endTime: `${e.target.value}T23:59`,
+                        startTime: `${val}T00:00`,
+                        endTime: `${val}T23:59`,
                       })
                     }
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="event-end-date">{t.endDateTime}</Label>
-                  <Input
-                    id="event-end-date"
-                    type="date"
+                  <Label>{t.endDateTime}</Label>
+                  <DatePicker
                     value={form.endTime.split("T")[0]}
-                    onChange={(e) =>
+                    onChange={(val) =>
                       onFormChange({
                         ...form,
-                        endTime: `${e.target.value}T23:59`,
+                        endTime: `${val}T23:59`,
                       })
                     }
                   />

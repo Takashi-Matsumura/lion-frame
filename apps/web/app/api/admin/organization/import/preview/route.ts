@@ -20,6 +20,8 @@ export const POST = apiHandler(async (request) => {
   const formData = await request.formData();
   const file = formData.get("file") as File | null;
   const organizationId = formData.get("organizationId") as string | null;
+  const markMissingAsRetired =
+    formData.get("markMissingAsRetired") === "true";
 
   if (!file || !(file instanceof File)) {
     throw ApiError.badRequest("ファイルがアップロードされていません");
@@ -222,14 +224,16 @@ export const POST = apiHandler(async (request) => {
     }
   }
 
-  // 退職社員の検出
-  for (const existing of existingEmployees) {
-    if (existing.isActive && !importedIds.has(existing.employeeId)) {
-      preview.retiredEmployees.push({
-        employeeId: existing.employeeId,
-        name: existing.name,
-        department: existing.department?.name || "",
-      });
+  // 退職社員の検出（markMissingAsRetired が有効な場合のみ）
+  if (markMissingAsRetired) {
+    for (const existing of existingEmployees) {
+      if (existing.isActive && !importedIds.has(existing.employeeId)) {
+        preview.retiredEmployees.push({
+          employeeId: existing.employeeId,
+          name: existing.name,
+          department: existing.department?.name || "",
+        });
+      }
     }
   }
 

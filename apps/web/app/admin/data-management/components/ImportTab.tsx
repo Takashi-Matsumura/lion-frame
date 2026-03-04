@@ -10,6 +10,7 @@ import {
   FaUpload,
 } from "react-icons/fa";
 import type { PreviewResult } from "@/lib/importers/organization/types";
+import { DatePicker } from "@/components/ui/date-picker";
 import type { DataManagementTranslation } from "../translations";
 import { PreviewDialog } from "./PreviewDialog";
 
@@ -69,6 +70,7 @@ export function ImportTab({ organizationId, language, t }: ImportTabProps) {
       const formData = new FormData();
       formData.append("file", file);
       formData.append("organizationId", organizationId);
+      formData.append("markMissingAsRetired", String(markMissingAsRetired));
 
       const response = await fetch("/api/admin/organization/import/preview", {
         method: "POST",
@@ -252,11 +254,9 @@ export function ImportTab({ organizationId, language, t }: ImportTabProps) {
                 ? "CSV行に「発令日」カラムがない場合、この日付が適用されます"
                 : "Used when rows don't have an 'Effective Date' column"}
             </p>
-            <input
-              type="date"
+            <DatePicker
               value={defaultEffectiveDate}
-              onChange={(e) => setDefaultEffectiveDate(e.target.value)}
-              className="px-3 py-1.5 text-sm border border-input rounded-md bg-background text-foreground"
+              onChange={setDefaultEffectiveDate}
             />
           </div>
 

@@ -188,26 +188,30 @@ export const GET = apiHandler(async (request) => {
     }
   }
 
-  const departmentStats = departments.map((dept) => {
-    const totalEmployees = dept.employees.length;
-    let loggedInUsers = 0;
+  // 同名部署を統合（複数組織で同じ部署名がある場合にマージ）
+  const deptStatsMap = new Map<string, { totalEmployees: number; loggedInUsers: number }>();
+  for (const dept of departments) {
+    const existing = deptStatsMap.get(dept.name) || { totalEmployees: 0, loggedInUsers: 0 };
+    existing.totalEmployees += dept.employees.length;
     for (const emp of dept.employees) {
       if (emp.email) {
         const userId = emailToUserId.get(emp.email.toLowerCase());
         if (userId && recentLoginUserIds.has(userId)) {
-          loggedInUsers++;
+          existing.loggedInUsers++;
         }
       }
     }
-    return {
-      name: dept.name,
-      totalEmployees,
-      loggedInUsers,
-      adoptionRate: totalEmployees > 0
-        ? Math.round((loggedInUsers / totalEmployees) * 100)
-        : 0,
-    };
-  }).sort((a, b) => b.adoptionRate - a.adoptionRate);
+    deptStatsMap.set(dept.name, existing);
+  }
+
+  const departmentStats = Array.from(deptStatsMap.entries()).map(([name, stats]) => ({
+    name,
+    totalEmployees: stats.totalEmployees,
+    loggedInUsers: stats.loggedInUsers,
+    adoptionRate: stats.totalEmployees > 0
+      ? Math.round((stats.loggedInUsers / stats.totalEmployees) * 100)
+      : 0,
+  })).sort((a, b) => b.adoptionRate - a.adoptionRate);
 
   // --- AIチャット利用 ---
   const aiDailyMap = new Map<string, number>();

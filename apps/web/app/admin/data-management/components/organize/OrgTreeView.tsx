@@ -178,7 +178,7 @@ export function OrgTreeView({
         >
           {t.collapseAll}
         </Button>
-        {isDraft && onAutoAssignClick && (
+        {onAutoAssignClick && (
           <>
             <div className="flex-1" />
             <Button

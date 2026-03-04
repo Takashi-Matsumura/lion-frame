@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -396,23 +397,19 @@ export function CompanyEventsTab({ language }: CompanyEventsTabProps) {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="event-start-date">{t.startDate}</Label>
-                <Input
-                  id="event-start-date"
-                  type="date"
+                <DatePicker
                   value={form.startDate}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, startDate: e.target.value }))
+                  onChange={(val) =>
+                    setForm((f) => ({ ...f, startDate: val }))
                   }
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="event-end-date">{t.endDate}</Label>
-                <Input
-                  id="event-end-date"
-                  type="date"
+                <Label>{t.endDate}</Label>
+                <DatePicker
                   value={form.endDate}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, endDate: e.target.value }))
+                  onChange={(val) =>
+                    setForm((f) => ({ ...f, endDate: val }))
                   }
                 />
               </div>

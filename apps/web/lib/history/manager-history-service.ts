@@ -81,7 +81,13 @@ export class ManagerHistoryService {
     const existing = await prisma.managerHistory.count();
     if (existing > 0) return { skipped: true, created: 0 };
 
-    const now = new Date();
+    // 最古の基準日を決定（ChangeLogまたは組織作成日のうち最古）
+    const oldestChangeLog = await prisma.changeLog.findFirst({ orderBy: { createdAt: "asc" }, select: { createdAt: true } });
+    const oldestOrg = await prisma.organization.findFirst({ orderBy: { createdAt: "asc" }, select: { createdAt: true } });
+    const earliestDate = [oldestChangeLog?.createdAt, oldestOrg?.createdAt]
+      .filter((d): d is Date => d != null)
+      .sort((a, b) => a.getTime() - b.getTime())[0] || new Date();
+
     const records: {
       unitType: UnitType;
       unitId: string;
@@ -119,7 +125,7 @@ export class ManagerHistoryService {
           unitType: r.unitType,
           unitId: r.unitId,
           managerId: r.managerId,
-          validFrom: now,
+          validFrom: earliestDate,
           validTo: null,
           changeReason: "初期データ移行",
           changedBy: "system",

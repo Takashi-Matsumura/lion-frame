@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
 import { cn } from "@/lib/utils";
@@ -50,15 +50,42 @@ export function DatePicker({ value, onChange, className }: DatePickerProps) {
     }
   }, [value]);
 
-  // ポップオーバーの位置を計算
-  useEffect(() => {
-    if (!isOpen || !triggerRef.current) return;
+  // ポップオーバーの位置を計算（画面内に収まるように調整）
+  const updatePosition = useCallback(() => {
+    if (!triggerRef.current) return;
     const rect = triggerRef.current.getBoundingClientRect();
-    setPopoverPos({
-      top: rect.bottom + 4,
-      left: rect.right,
-    });
-  }, [isOpen]);
+    const popoverHeight = 320;
+    const popoverWidth = 280;
+    const margin = 8;
+
+    let top: number;
+    if (rect.bottom + popoverHeight + margin > window.innerHeight) {
+      top = rect.top - popoverHeight - 4;
+    } else {
+      top = rect.bottom + 4;
+    }
+
+    let left = rect.right;
+    if (left - popoverWidth < margin) {
+      left = rect.left + popoverWidth;
+    }
+    if (left > window.innerWidth - margin) {
+      left = window.innerWidth - margin;
+    }
+
+    setPopoverPos({ top, left });
+  }, []);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    updatePosition();
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+    return () => {
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+    };
+  }, [isOpen, updatePosition]);
 
   // クリック外で閉じる
   useEffect(() => {
