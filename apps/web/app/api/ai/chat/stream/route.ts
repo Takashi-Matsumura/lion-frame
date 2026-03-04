@@ -79,6 +79,7 @@ export async function POST(request: Request) {
 
     // RAGコンテキストの構築（ユーザーIDで個人+共有ドキュメントをスコープ）
     // 直近の会話コンテキストを含めて検索クエリを構築し、フォローアップ質問の精度を向上
+    let ragRetrievalData = null;
     if (useRagContext) {
       const recentMessages = messages.slice(-6); // 直近3ターン（user+assistant）
       const lastUserMsg = [...messages].reverse().find(
@@ -94,10 +95,11 @@ export async function POST(request: Request) {
           ? contextParts.join(" ")
           : lastUserMsg;
 
-        const ragContext = await buildRagContext(searchQuery, session.user.id);
-        if (ragContext) {
+        const ragResult = await buildRagContext(searchQuery, session.user.id);
+        if (ragResult) {
           finalSystemPrompt += RAG_CONTEXT_SYSTEM_ADDITION;
-          finalSystemPrompt += `\n\n${ragContext}`;
+          finalSystemPrompt += `\n\n${ragResult.formattedContext}`;
+          ragRetrievalData = ragResult.retrievalData;
         }
       }
     }
@@ -133,6 +135,14 @@ export async function POST(request: Request) {
     const stream = new ReadableStream({
       async start(controller) {
         try {
+          // RAGメタデータをAI応答ストリーム開始前に送信
+          if (ragRetrievalData) {
+            controller.enqueue(
+              new TextEncoder().encode(
+                `data: ${JSON.stringify({ ragMetadata: ragRetrievalData })}\n\n`,
+              ),
+            );
+          }
           await streamChat(config, messagesWithSystem, controller);
         } catch (error) {
           const message =

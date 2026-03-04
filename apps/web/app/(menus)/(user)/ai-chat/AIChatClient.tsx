@@ -21,11 +21,12 @@ import {
   estimateTokens,
   getContextWindowSize,
 } from "@/lib/core-modules/ai";
-import type { ChatMessage, TokenStats, TutorialDocument } from "@/types/ai-chat";
+import type { ChatMessage, RagRetrievalData, TokenStats, TutorialDocument } from "@/types/ai-chat";
 import { ChatInput } from "./components/ChatInput";
 import { ChatMessageList } from "./components/ChatMessageList";
 import { TokenStatsPanel } from "./components/TokenStatsPanel";
 import { TutorialDocumentPanel } from "./components/TutorialDocumentPanel";
+import { RagDocumentManager } from "./components/RagDocumentManager";
 import { AIChatSkeleton } from "./AIChatSkeleton";
 import { aiChatTranslations } from "./translations";
 
@@ -57,6 +58,7 @@ export function AIChatClient({ language, userName }: AIChatClientProps) {
   const [ragAvailable, setRagAvailable] = useState(false);
   const [ragDocumentCount, setRagDocumentCount] = useState(0);
   const [useRagContext, setUseRagContext] = useState(false);
+  const [ragDialogOpen, setRagDialogOpen] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [streamingContent, setStreamingContent] = useState("");
   const [showStats, setShowStats] = useState(true);
@@ -195,6 +197,7 @@ export function AIChatClient({ language, userName }: AIChatClientProps) {
     let buffer = "";
     let fullContent = "";
     let messageAdded = false;
+    let ragMetadataForMessage: RagRetrievalData | undefined;
 
     while (true) {
       const { done, value } = await reader.read();
@@ -210,6 +213,9 @@ export function AIChatClient({ language, userName }: AIChatClientProps) {
 
         try {
           const parsed = JSON.parse(data);
+          if (parsed.ragMetadata) {
+            ragMetadataForMessage = parsed.ragMetadata;
+          }
           if (parsed.content) {
             fullContent += parsed.content;
             setStreamingContent(fullContent);
@@ -225,6 +231,7 @@ export function AIChatClient({ language, userName }: AIChatClientProps) {
               content: fullContent,
               timestamp: new Date(),
               tokenCount: outputTokens,
+              ragRetrievalData: ragMetadataForMessage,
             };
             setMessages((prev) => [...prev, assistantMessage]);
             setStreamingContent("");
@@ -263,6 +270,7 @@ export function AIChatClient({ language, userName }: AIChatClientProps) {
         content: fullContent,
         timestamp: new Date(),
         tokenCount: outputTokens,
+        ragRetrievalData: ragMetadataForMessage,
       };
       setMessages((prev) => [...prev, assistantMessage]);
     }
@@ -580,6 +588,7 @@ export function AIChatClient({ language, userName }: AIChatClientProps) {
           useRagContext={useRagContext}
           onSetUseRagContext={setUseRagContext}
           ragDocumentCount={ragDocumentCount}
+          onOpenRagDialog={() => setRagDialogOpen(true)}
         />
       </div>
 
@@ -611,6 +620,14 @@ export function AIChatClient({ language, userName }: AIChatClientProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* RAG Document Manager dialog */}
+      <RagDocumentManager
+        open={ragDialogOpen}
+        onOpenChange={setRagDialogOpen}
+        language={language}
+        onDocumentCountChange={setRagDocumentCount}
+      />
     </div>
   );
 }

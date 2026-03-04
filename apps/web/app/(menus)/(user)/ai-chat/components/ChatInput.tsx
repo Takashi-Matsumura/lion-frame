@@ -38,6 +38,7 @@ interface ChatInputProps {
   useRagContext?: boolean;
   onSetUseRagContext?: (value: boolean) => void;
   ragDocumentCount?: number;
+  onOpenRagDialog?: () => void;
 }
 
 function OrgIcon({ className }: { className?: string }) {
@@ -89,6 +90,7 @@ export function ChatInput({
   useRagContext,
   onSetUseRagContext,
   ragDocumentCount,
+  onOpenRagDialog,
 }: ChatInputProps) {
   const t = aiChatTranslations[language];
   const [isComposing, setIsComposing] = useState(false);
@@ -155,11 +157,17 @@ export function ChatInput({
         <div className="flex items-center gap-2 mb-2 px-1 flex-wrap">
           {useRagContext && (
             <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300">
-              <Database className="w-3 h-3" />
-              @{t.ragMention}
-              <span className="text-amber-500 dark:text-amber-400">
-                {ragDocumentCount}{t.ragDocCount}
-              </span>
+              <button
+                type="button"
+                onClick={() => onOpenRagDialog?.()}
+                className="inline-flex items-center gap-1 hover:underline cursor-pointer"
+              >
+                <Database className="w-3 h-3" />
+                @{t.ragMention}
+                <span className="text-amber-500 dark:text-amber-400">
+                  {ragDocumentCount}{t.ragDocCount}
+                </span>
+              </button>
               <button
                 type="button"
                 onClick={() => onSetUseRagContext?.(false)}

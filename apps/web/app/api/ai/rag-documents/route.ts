@@ -10,16 +10,50 @@ const RAG_BACKEND_URL =
 export const GET = apiHandler(async (_request, session) => {
   const userId = session.user.id;
 
-  const response = await fetch(
-    `${RAG_BACKEND_URL}/api/documents/list?user_id=${encodeURIComponent(userId)}`,
-    { signal: AbortSignal.timeout(5000) },
-  );
+  // Fetch user's personal documents and shared documents in parallel
+  const [userResponse, sharedResponse] = await Promise.all([
+    fetch(
+      `${RAG_BACKEND_URL}/api/documents/list?user_id=${encodeURIComponent(userId)}`,
+      { signal: AbortSignal.timeout(5000) },
+    ),
+    fetch(
+      `${RAG_BACKEND_URL}/api/documents/list?user_id=shared`,
+      { signal: AbortSignal.timeout(5000) },
+    ).catch(() => null),
+  ]);
 
-  if (!response.ok) {
-    throw new Error(`RAG backend error: ${response.status}`);
+  if (!userResponse.ok) {
+    throw new Error(`RAG backend error: ${userResponse.status}`);
   }
 
-  return response.json();
+  interface RagDoc {
+    filename: string;
+    user_id?: string;
+    [key: string]: unknown;
+  }
+
+  const userData = await userResponse.json();
+  const userDocs: RagDoc[] = ((userData.documents || []) as RagDoc[]).map(
+    (doc) => ({ ...doc, user_id: doc.user_id ?? userId }),
+  );
+
+  // Merge shared documents if available
+  let sharedDocs: RagDoc[] = [];
+  if (sharedResponse?.ok) {
+    const sharedData = await sharedResponse.json();
+    sharedDocs = ((sharedData.documents || []) as RagDoc[]).map(
+      (doc) => ({ ...doc, user_id: "shared" }),
+    );
+  }
+
+  // Deduplicate: if same filename exists in both personal and shared, keep personal
+  const personalFilenames = new Set(userDocs.map((d) => d.filename));
+  const uniqueSharedDocs = sharedDocs.filter((d) => !personalFilenames.has(d.filename));
+
+  // Combine: personal docs first, then shared docs
+  const allDocs = [...userDocs, ...uniqueSharedDocs];
+
+  return { documents: allDocs };
 });
 
 /**

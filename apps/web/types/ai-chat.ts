@@ -1,4 +1,25 @@
 /**
+ * RAG検索で取得された個別チャンク
+ */
+export interface RagRetrievalItem {
+  filename: string;
+  score: number;
+  chunkIndex: number;
+  totalChunks: number;
+  content: string;
+}
+
+/**
+ * RAG検索プロセスの全体データ
+ */
+export interface RagRetrievalData {
+  query: string;
+  items: RagRetrievalItem[];
+  retrievedCount: number;
+  searchTimeMs: number;
+}
+
+/**
  * Chat message in AI chat
  */
 export interface ChatMessage {
@@ -11,6 +32,7 @@ export interface ChatMessage {
   tutorialDocId?: string;
   tutorialDocTitle?: string;
   ragContext?: boolean;
+  ragRetrievalData?: RagRetrievalData;
 }
 
 /**

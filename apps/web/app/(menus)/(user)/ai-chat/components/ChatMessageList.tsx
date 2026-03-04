@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 const ReactMarkdown = dynamic(() => import("react-markdown"), { ssr: false });
 import type { ChatMessage, TutorialDocument } from "@/types/ai-chat";
 import { aiChatTranslations } from "../translations";
+import { RagInsightPanel } from "./RagInsightPanel";
 
 interface ChatMessageListProps {
   messages: ChatMessage[];
@@ -199,7 +200,7 @@ export function ChatMessageList({
                       {t.tutorialBadge}
                     </span>
                   )}
-                  {message.ragContext && (
+                  {(message.ragContext || message.ragRetrievalData) && (
                     <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300">
                       <Database className="w-2.5 h-2.5" />
                       {t.ragBadge}
@@ -221,6 +222,11 @@ export function ChatMessageList({
                     <p className="whitespace-pre-wrap">{message.content}</p>
                   )}
                 </div>
+
+                {/* RAG Insight Panel */}
+                {message.role === "assistant" && message.ragRetrievalData && (
+                  <RagInsightPanel data={message.ragRetrievalData} t={t} />
+                )}
 
                 {/* Actions */}
                 {message.role === "assistant" && (

@@ -5,8 +5,15 @@
  * 取得したドキュメントをシステムプロンプトに注入するコンテキストを構築する
  */
 
+import type { RagRetrievalData, RagRetrievalItem } from "@/types/ai-chat";
+
 const RAG_BACKEND_URL =
   process.env.RAG_BACKEND_URL || "http://localhost:8000";
+
+export interface RagBuildResult {
+  formattedContext: string;
+  retrievalData: RagRetrievalData;
+}
 
 /**
  * RAGバックエンドの利用可能性を確認し、ドキュメント数を返す
@@ -43,15 +50,16 @@ export async function isRagAvailable(): Promise<{
 }
 
 /**
- * ユーザーメッセージでRAG検索を行い、コンテキスト文字列を返す
+ * ユーザーメッセージでRAG検索を行い、コンテキスト文字列と検索メタデータを返す
  * userId指定時は個人+共有ドキュメントを検索
  * 失敗時はnullを返す（サイレントフォールバック）
  */
 export async function buildRagContext(
   userMessage: string,
   userId?: string,
-): Promise<string | null> {
+): Promise<RagBuildResult | null> {
   try {
+    const startTime = Date.now();
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 10000);
 
@@ -74,7 +82,30 @@ export async function buildRagContext(
 
     if (!data.context || data.context.length === 0) return null;
 
-    return formatRagContext(data.context);
+    const searchTimeMs = Date.now() - startTime;
+
+    const retrievalItems: RagRetrievalItem[] = data.context.map(
+      (item: RagContextItem) => ({
+        filename: item.metadata.title || item.metadata.filename || "unknown",
+        score: item.score,
+        chunkIndex: item.metadata.chunk_index ?? 0,
+        totalChunks: item.metadata.total_chunks ?? 1,
+        content:
+          item.content.length > 200
+            ? item.content.slice(0, 200) + "..."
+            : item.content,
+      }),
+    );
+
+    return {
+      formattedContext: formatRagContext(data.context),
+      retrievalData: {
+        query: userMessage,
+        items: retrievalItems,
+        retrievedCount: retrievalItems.length,
+        searchTimeMs,
+      },
+    };
   } catch (error) {
     console.error("Error building RAG context:", error);
     return null;
