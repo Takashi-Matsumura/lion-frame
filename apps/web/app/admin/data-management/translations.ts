@@ -179,6 +179,18 @@ export const dataManagementTranslations = {
     importedAt: "Imported at",
     affectedRecords: "Affected records",
     cancellingImport: "Cancelling import...",
+
+    // Group Manager Indicator
+    groupManagerSet: "Group",
+
+    // Apply Pending Imports
+    applyPendingImports: "Apply Pending",
+    applyPendingTitle: "Apply Pending Future Imports",
+    applyPendingDescription:
+      "Apply future-dated import data to the employee table once the effective date has arrived.",
+    applyPendingConfirm: "Apply pending imports?",
+    applyPendingSuccess: "Pending imports applied successfully",
+    applyPendingNone: "No pending imports to apply",
   },
   ja: {
     title: "組織データ管理",
@@ -357,6 +369,18 @@ export const dataManagementTranslations = {
     importedAt: "インポート日時",
     affectedRecords: "対象レコード数",
     cancellingImport: "取り消し中...",
+
+    // Group Manager Indicator
+    groupManagerSet: "グループ",
+
+    // Apply Pending Imports
+    applyPendingImports: "発令適用",
+    applyPendingTitle: "未来発令の適用",
+    applyPendingDescription:
+      "発令日が到来した未来日付インポートのデータを社員テーブルに反映します。",
+    applyPendingConfirm: "待機中のインポートを適用しますか？",
+    applyPendingSuccess: "発令を適用しました",
+    applyPendingNone: "適用待ちの発令はありません",
   },
 } as const;
 

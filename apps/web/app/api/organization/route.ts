@@ -1,4 +1,5 @@
 import { apiHandler } from "@/lib/api";
+import { ManagerHistoryService } from "@/lib/history/manager-history-service";
 import { prisma } from "@/lib/prisma";
 
 /**
@@ -199,34 +200,47 @@ export const GET = apiHandler(async (request) => {
       }
     }
 
-    // 現在の責任者情報を取得（プライマリ組織から）
+    // 基準日時点の責任者を ManagerHistory から復元
     type ManagerInfo = { id: string; name: string; position: string } | null;
-    const managerSelect = { select: { id: true, name: true, position: true } } as const;
+    const managerIdMap = await ManagerHistoryService.getManagersAtDate(refDateEndJST);
 
-    const [deptManagers, sectManagers, courseManagers] = await Promise.all([
-      prisma.department.findMany({
-        where: { organizationId: primaryOrg.id },
-        select: { id: true, manager: managerSelect },
-      }),
-      prisma.section.findMany({
-        where: { department: { organizationId: primaryOrg.id } },
-        select: { id: true, manager: managerSelect },
-      }),
-      prisma.course.findMany({
-        where: { section: { department: { organizationId: primaryOrg.id } } },
-        select: { id: true, manager: managerSelect },
-      }),
-    ]);
+    // 全managerIdを収集してEmployee情報を一括取得
+    const allManagerIds = new Set<string>();
+    for (const mId of managerIdMap.values()) {
+      if (mId) allManagerIds.add(mId);
+    }
 
-    const deptManagerMap = new Map<string, ManagerInfo>(
-      deptManagers.map((d) => [d.id, d.manager]),
+    const managerEmployees = allManagerIds.size > 0
+      ? await prisma.employee.findMany({
+          where: { id: { in: Array.from(allManagerIds) } },
+          select: { id: true, name: true, position: true },
+        })
+      : [];
+
+    const managerInfoById = new Map<string, { id: string; name: string; position: string }>(
+      managerEmployees.map((e) => [e.id, { id: e.id, name: e.name, position: e.position }]),
     );
-    const sectManagerMap = new Map<string, ManagerInfo>(
-      sectManagers.map((s) => [s.id, s.manager]),
-    );
-    const courseManagerMap = new Map<string, ManagerInfo>(
-      courseManagers.map((c) => [c.id, c.manager]),
-    );
+
+    // unitType:unitId → ManagerInfo のヘルパー
+    const getManagerInfo = (unitType: string, unitId: string): ManagerInfo => {
+      const mId = managerIdMap.get(`${unitType}:${unitId}`);
+      if (!mId) return null;
+      return managerInfoById.get(mId) ?? null;
+    };
+
+    const deptManagerMap = new Map<string, ManagerInfo>();
+    const sectManagerMap = new Map<string, ManagerInfo>();
+    const courseManagerMap = new Map<string, ManagerInfo>();
+
+    for (const dept of primaryDepts) {
+      deptManagerMap.set(dept.id, getManagerInfo("department", dept.id));
+      for (const sect of dept.sections) {
+        sectManagerMap.set(sect.id, getManagerInfo("section", sect.id));
+        for (const course of sect.courses) {
+          courseManagerMap.set(course.id, getManagerInfo("course", course.id));
+        }
+      }
+    }
 
     // 部門を名前順にソート
     const formattedDepartments = Array.from(deptMap.values())

@@ -1,4 +1,5 @@
 import { apiHandler, ApiError } from "@/lib/api";
+import { ManagerHistoryService } from "@/lib/history/manager-history-service";
 import { EXECUTIVES_DEPARTMENT_NAME } from "@/lib/importers/organization/parser";
 import { prisma } from "@/lib/prisma";
 import { AuditService } from "@/lib/services/audit-service";
@@ -27,7 +28,8 @@ interface Skipped {
  */
 export const POST = apiHandler(async (request, session) => {
   const body = await request.json();
-  const { organizationId } = body;
+  const { organizationId, effectiveDate: effectiveDateStr } = body;
+  const effectiveDate = effectiveDateStr ? new Date(effectiveDateStr) : new Date();
 
   if (!organizationId) {
     throw ApiError.badRequest("organizationId is required");
@@ -176,6 +178,14 @@ export const POST = apiHandler(async (request, session) => {
           where: { id: dept.id },
           data: { managerId: candidate.id },
         });
+        await ManagerHistoryService.recordManagerChange({
+          unitType: "department",
+          unitId: dept.id,
+          managerId: candidate.id,
+          effectiveDate,
+          changeReason: "自動割当（役職マスタ基準）",
+          changedBy: session.user?.id || "system",
+        });
         assignments.push({
           type: "department",
           unitId: dept.id,
@@ -217,6 +227,14 @@ export const POST = apiHandler(async (request, session) => {
             where: { id: sect.id },
             data: { managerId: candidate.id },
           });
+          await ManagerHistoryService.recordManagerChange({
+            unitType: "section",
+            unitId: sect.id,
+            managerId: candidate.id,
+            effectiveDate,
+            changeReason: "自動割当（役職マスタ基準）",
+            changedBy: session.user?.id || "system",
+          });
           assignments.push({
             type: "section",
             unitId: sect.id,
@@ -257,6 +275,14 @@ export const POST = apiHandler(async (request, session) => {
             await prisma.course.update({
               where: { id: course.id },
               data: { managerId: candidate.id },
+            });
+            await ManagerHistoryService.recordManagerChange({
+              unitType: "course",
+              unitId: course.id,
+              managerId: candidate.id,
+              effectiveDate,
+              changeReason: "自動割当（役職マスタ基準）",
+              changedBy: session.user?.id || "system",
             });
             assignments.push({
               type: "course",

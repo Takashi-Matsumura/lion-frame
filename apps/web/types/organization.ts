@@ -153,3 +153,12 @@ export interface OrganizeTabProps {
   language: "en" | "ja";
   t: DataManagementTranslation;
 }
+
+/**
+ * Group-level manager map (name-based lookup for cross-org comparison)
+ */
+export interface GroupManagerMap {
+  departments: Map<string, OrgManager>;
+  sections: Map<string, OrgManager>;   // key: "deptName\0sectName"
+  courses: Map<string, OrgManager>;    // key: "deptName\0sectName\0courseName"
+}

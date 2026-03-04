@@ -12,8 +12,10 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { EXECUTIVES_DEPARTMENT_NAME } from "@/lib/importers/organization/parser";
 import { cn } from "@/lib/utils";
 import type {
+  GroupManagerMap,
   OrganizationData,
   OrgEmployeeData,
+  OrgManager,
   SelectedUnit,
   UnitType,
 } from "@/types/organization";
@@ -29,6 +31,8 @@ interface OrgTreeViewProps {
   /** Whether the auto-assign button should be shown */
   isDraft?: boolean;
   onAutoAssignClick?: () => void;
+  /** Group-level managers for cross-org comparison */
+  groupManagers?: GroupManagerMap | null;
 }
 
 export function OrgTreeView({
@@ -40,6 +44,7 @@ export function OrgTreeView({
   loadingEmployees,
   isDraft,
   onAutoAssignClick,
+  groupManagers,
 }: OrgTreeViewProps) {
   const [expandedDepts, setExpandedDepts] = useState<Set<string>>(new Set());
   const [expandedSects, setExpandedSects] = useState<Set<string>>(new Set());
@@ -126,6 +131,31 @@ export function OrgTreeView({
     currentManager: { id: string; name: string; position: string } | null,
   ) => {
     onUnitClick({ type, id, name, currentManager });
+  };
+
+  // Render manager label with group-level fallback
+  const renderManagerLabel = (
+    ownManager: OrgManager | null,
+    groupManager: OrgManager | null | undefined,
+  ) => {
+    if (ownManager) {
+      return (
+        <span>
+          {ownManager.name} ({ownManager.position})
+        </span>
+      );
+    }
+    if (groupManager) {
+      return (
+        <span className="text-muted-foreground">
+          <span className="text-xs bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 px-1 rounded mr-1">
+            {t.groupManagerSet}
+          </span>
+          {groupManager.name} ({groupManager.position})
+        </span>
+      );
+    }
+    return <span className="text-orange-500">{t.noManager}</span>;
   };
 
   return (
@@ -233,12 +263,9 @@ export function OrgTreeView({
                         d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
                       />
                     </svg>
-                    {dept.manager ? (
-                      <span>
-                        {dept.manager.name} ({dept.manager.position})
-                      </span>
-                    ) : (
-                      <span className="text-orange-500">{t.noManager}</span>
+                    {renderManagerLabel(
+                      dept.manager,
+                      groupManagers?.departments.get(dept.name),
                     )}
                     <svg
                       className="w-3 h-3"
@@ -254,6 +281,19 @@ export function OrgTreeView({
                       />
                     </svg>
                   </button>
+
+                  {(() => {
+                    const emps = getUnitEmployeeNames("department", dept.id);
+                    if (emps.length === 0) return null;
+                    return (
+                      <>
+                        <div className="w-px h-4 bg-border shrink-0" />
+                        <span className="text-xs text-muted-foreground truncate">
+                          {emps.map((e) => e.name).join("\u3001")}
+                        </span>
+                      </>
+                    );
+                  })()}
 
                   <Badge variant="secondary" className="text-xs ml-auto shrink-0">
                     {dept.employeeCount}
@@ -326,14 +366,9 @@ export function OrgTreeView({
                                 d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
                               />
                             </svg>
-                            {sect.manager ? (
-                              <span>
-                                {sect.manager.name} ({sect.manager.position})
-                              </span>
-                            ) : (
-                              <span className="text-orange-500">
-                                {t.noManager}
-                              </span>
+                            {renderManagerLabel(
+                              sect.manager,
+                              groupManagers?.sections.get(`${dept.name}\0${sect.name}`),
                             )}
                             <svg
                               className="w-2.5 h-2.5"
@@ -404,14 +439,9 @@ export function OrgTreeView({
                                     d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
                                   />
                                 </svg>
-                                {course.manager ? (
-                                  <span>
-                                    {course.manager.name} ({course.manager.position})
-                                  </span>
-                                ) : (
-                                  <span className="text-orange-500">
-                                    {t.noManager}
-                                  </span>
+                                {renderManagerLabel(
+                                  course.manager,
+                                  groupManagers?.courses.get(`${dept.name}\0${sect.name}\0${course.name}`),
                                 )}
                                 <svg
                                   className="w-2.5 h-2.5"

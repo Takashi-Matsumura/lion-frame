@@ -3,6 +3,39 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
+async function seedManagerHistory(db: PrismaClient) {
+  const existing = await db.managerHistory.count();
+  if (existing > 0) return { skipped: true, created: 0 };
+
+  const now = new Date();
+  const records: { unitType: string; unitId: string; managerId: string | null }[] = [];
+
+  const departments = await db.department.findMany({ select: { id: true, managerId: true } });
+  for (const d of departments) records.push({ unitType: "department", unitId: d.id, managerId: d.managerId });
+
+  const sections = await db.section.findMany({ select: { id: true, managerId: true } });
+  for (const s of sections) records.push({ unitType: "section", unitId: s.id, managerId: s.managerId });
+
+  const courses = await db.course.findMany({ select: { id: true, managerId: true } });
+  for (const c of courses) records.push({ unitType: "course", unitId: c.id, managerId: c.managerId });
+
+  if (records.length > 0) {
+    await db.managerHistory.createMany({
+      data: records.map((r) => ({
+        unitType: r.unitType,
+        unitId: r.unitId,
+        managerId: r.managerId,
+        validFrom: now,
+        validTo: null,
+        changeReason: "初期データ移行",
+        changedBy: "system",
+      })),
+    });
+  }
+
+  return { skipped: false, created: records.length };
+}
+
 async function main() {
   console.log("🌱 Seeding database...");
 
@@ -189,12 +222,20 @@ async function main() {
     workflowTemplateCount++;
   }
 
+  // Seed ManagerHistory from current state
+  const managerHistoryResult = await seedManagerHistory(prisma);
+
   console.log("✅ Database seeded successfully!");
   console.log("Created admin user:");
   console.log(`  - ${admin.email} (${admin.role})`);
   console.log(`Seeded ${defaultPositions.length} position master records`);
   console.log(`Seeded ${companyEventCount} company events`);
   console.log(`Seeded ${workflowTemplateCount} workflow templates`);
+  if (managerHistoryResult.skipped) {
+    console.log("ManagerHistory: already seeded, skipped");
+  } else {
+    console.log(`Seeded ${managerHistoryResult.created} manager history records`);
+  }
   console.log("\nCredentials login:");
   console.log("  - Email: admin@lionframe.local");
   console.log("  - Password: admin");

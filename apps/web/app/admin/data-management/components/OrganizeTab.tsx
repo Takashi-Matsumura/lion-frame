@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
 import type {
+  GroupManagerMap,
   OrganizationData,
   OrgEmployeeData,
   OrganizationStatus,
@@ -55,6 +56,13 @@ export function OrganizeTab({ organizationId, language, t }: OrganizeTabProps) {
 
   // Auto-assign managers
   const [showAutoAssignDialog, setShowAutoAssignDialog] = useState(false);
+
+  // Apply pending imports
+  const [pendingCount, setPendingCount] = useState(0);
+  const [applyingPending, setApplyingPending] = useState(false);
+
+  // Group-level managers (for cross-org comparison)
+  const [groupManagers, setGroupManagers] = useState<GroupManagerMap | null>(null);
 
   // Fetch organization data
   const fetchOrgData = useCallback(async () => {
@@ -126,12 +134,79 @@ export function OrganizeTab({ organizationId, language, t }: OrganizeTabProps) {
     }
   }, []);
 
+  // Fetch pending import count
+  const fetchPendingCount = useCallback(async () => {
+    try {
+      const response = await fetch("/api/admin/organization/apply-pending");
+      if (response.ok) {
+        const data = await response.json();
+        setPendingCount(data.count || 0);
+      }
+    } catch (err) {
+      console.error("Error fetching pending count:", err);
+    }
+  }, []);
+
+  // Fetch group-level managers (merged view) for cross-org comparison
+  const fetchGroupManagers = useCallback(async () => {
+    try {
+      const response = await fetch("/api/organization");
+      if (!response.ok) return;
+      const data: OrganizationData = await response.json();
+      if (!data.departments || data.departments.length === 0) return;
+
+      const deptMap = new Map<string, { id: string; name: string; position: string }>();
+      const sectMap = new Map<string, { id: string; name: string; position: string }>();
+      const courseMap = new Map<string, { id: string; name: string; position: string }>();
+
+      for (const dept of data.departments) {
+        if (dept.manager) deptMap.set(dept.name, dept.manager);
+        for (const sect of dept.sections) {
+          if (sect.manager) sectMap.set(`${dept.name}\0${sect.name}`, sect.manager);
+          for (const course of sect.courses) {
+            if (course.manager) courseMap.set(`${dept.name}\0${sect.name}\0${course.name}`, course.manager);
+          }
+        }
+      }
+
+      setGroupManagers({ departments: deptMap, sections: sectMap, courses: courseMap });
+    } catch (err) {
+      console.error("Error fetching group managers:", err);
+    }
+  }, []);
+
+  // Apply pending imports
+  const handleApplyPending = async () => {
+    if (!confirm(t.applyPendingConfirm)) return;
+    try {
+      setApplyingPending(true);
+      const response = await fetch("/api/admin/organization/apply-pending", {
+        method: "POST",
+      });
+      if (!response.ok) throw new Error("Failed to apply pending imports");
+      const data = await response.json();
+      if (data.applied > 0) {
+        alert(t.applyPendingSuccess);
+        await refreshAllData();
+        await fetchPendingCount();
+      } else {
+        alert(t.applyPendingNone);
+      }
+    } catch (err) {
+      console.error("Error applying pending imports:", err);
+    } finally {
+      setApplyingPending(false);
+    }
+  };
+
   useEffect(() => {
     fetchOrgData();
     fetchAllEmployees();
     fetchPublishSettings();
     fetchCancelStatus();
-  }, [fetchOrgData, fetchAllEmployees, fetchPublishSettings, fetchCancelStatus]);
+    fetchPendingCount();
+    fetchGroupManagers();
+  }, [fetchOrgData, fetchAllEmployees, fetchPublishSettings, fetchCancelStatus, fetchPendingCount, fetchGroupManagers]);
 
   // Cancel scheduled publish
   const handleCancelSchedule = async () => {
@@ -164,8 +239,10 @@ export function OrganizeTab({ organizationId, language, t }: OrganizeTabProps) {
       fetchAllEmployees(),
       fetchPublishSettings(),
       fetchCancelStatus(),
+      fetchPendingCount(),
+      fetchGroupManagers(),
     ]);
-  }, [fetchOrgData, fetchAllEmployees, fetchPublishSettings, fetchCancelStatus]);
+  }, [fetchOrgData, fetchAllEmployees, fetchPublishSettings, fetchCancelStatus, fetchPendingCount, fetchGroupManagers]);
 
   // Get status badge color
   const getStatusBadgeClass = (status: OrganizationStatus) => {
@@ -249,8 +326,24 @@ export function OrganizeTab({ organizationId, language, t }: OrganizeTabProps) {
             {t.organizeDescription}
           </p>
         </div>
+        <div className="flex items-center gap-3">
+          {/* Apply Pending Imports Button */}
+          {pendingCount > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleApplyPending}
+              disabled={applyingPending}
+              className="border-orange-300 text-orange-700 hover:bg-orange-50 dark:border-orange-700 dark:text-orange-400 dark:hover:bg-orange-950"
+            >
+              {t.applyPendingImports}
+              <Badge className="ml-1.5 bg-orange-500 text-white text-xs px-1.5 py-0">
+                {pendingCount}
+              </Badge>
+            </Button>
+          )}
         {publishSettings && (
-          <div className="flex items-center gap-3">
+          <>
             {/* Status Badge */}
             <div className="flex items-center gap-2">
               <Badge className={getStatusBadgeClass(publishSettings.status)}>
@@ -306,8 +399,9 @@ export function OrganizeTab({ organizationId, language, t }: OrganizeTabProps) {
                 {t.cancelSchedule}
               </Button>
             )}
-          </div>
+          </>
         )}
+        </div>
       </div>
 
       {/* Empty state when no data imported */}
@@ -342,6 +436,7 @@ export function OrganizeTab({ organizationId, language, t }: OrganizeTabProps) {
           loadingEmployees={loadingEmployees}
           isDraft={publishSettings?.status === "DRAFT"}
           onAutoAssignClick={() => setShowAutoAssignDialog(true)}
+          groupManagers={groupManagers}
         />
       )}
 
@@ -352,7 +447,7 @@ export function OrganizeTab({ organizationId, language, t }: OrganizeTabProps) {
         language={language}
         t={t}
         onClose={() => setSelectedUnit(null)}
-        onAssigned={fetchOrgData}
+        onAssigned={refreshAllData}
       />
 
       {/* Publish Settings Dialog */}

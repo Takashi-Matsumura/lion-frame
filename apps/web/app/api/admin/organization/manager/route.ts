@@ -1,4 +1,5 @@
 import { apiHandler, ApiError } from "@/lib/api";
+import { ManagerHistoryService } from "@/lib/history/manager-history-service";
 import { prisma } from "@/lib/prisma";
 import { AuditService } from "@/lib/services/audit-service";
 import { SupervisorService } from "@/lib/services/supervisor-service";
@@ -71,6 +72,14 @@ export const PATCH = apiHandler(async (request, session) => {
         },
       },
     });
+    await ManagerHistoryService.recordManagerChange({
+      unitType: "department",
+      unitId: id,
+      managerId: managerId || null,
+      effectiveDate: new Date(),
+      changeReason: managerId ? "手動設定" : "責任者解除",
+      changedBy: session.user?.id || "system",
+    });
   } else if (type === "section") {
     result = await prisma.section.update({
       where: { id },
@@ -81,6 +90,14 @@ export const PATCH = apiHandler(async (request, session) => {
         },
       },
     });
+    await ManagerHistoryService.recordManagerChange({
+      unitType: "section",
+      unitId: id,
+      managerId: managerId || null,
+      effectiveDate: new Date(),
+      changeReason: managerId ? "手動設定" : "責任者解除",
+      changedBy: session.user?.id || "system",
+    });
   } else if (type === "course") {
     result = await prisma.course.update({
       where: { id },
@@ -90,6 +107,14 @@ export const PATCH = apiHandler(async (request, session) => {
           select: { id: true, name: true, position: true },
         },
       },
+    });
+    await ManagerHistoryService.recordManagerChange({
+      unitType: "course",
+      unitId: id,
+      managerId: managerId || null,
+      effectiveDate: new Date(),
+      changeReason: managerId ? "手動設定" : "責任者解除",
+      changedBy: session.user?.id || "system",
     });
   }
 

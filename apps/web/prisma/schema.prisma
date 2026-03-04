@@ -811,6 +811,26 @@ model DependencyItem {
 }
 
 // ========================================
+// 責任者履歴
+// ========================================
+
+model ManagerHistory {
+  id           String    @id @default(cuid())
+  unitType     String    // "department" | "section" | "course"
+  unitId       String
+  managerId    String?   // null = 責任者解除
+  validFrom    DateTime
+  validTo      DateTime?
+  changeReason String?
+  changedBy    String
+  createdAt    DateTime  @default(now())
+
+  @@index([unitType, unitId, validFrom])
+  @@index([managerId])
+  @@index([validFrom, validTo])
+}
+
+// ========================================
 // ワークフロー（申請・承認）
 // ========================================
 
