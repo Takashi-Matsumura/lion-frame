@@ -8,6 +8,7 @@ import {
   SidebarProvider,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { FloatingWindow } from "@/components/ui/floating-window";
 import { useIsMobile } from "@/lib/hooks/use-mobile";
 import { useSidebarStore } from "@/lib/stores/sidebar-store";
 import type { AppMenu } from "@/types/module";
@@ -147,6 +148,7 @@ export function ClientLayout({
       <MobileOverlay />
       <ResizeHandle />
       <SidebarInset>{children}</SidebarInset>
+      <FloatingWindow language={language as "en" | "ja"} />
     </SidebarProvider>
   );
 }

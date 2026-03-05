@@ -4,13 +4,6 @@ import { BookOpen, ChevronDown, ChevronRight, ClipboardPaste, Database, FileText
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
@@ -32,8 +25,6 @@ interface ChunkData {
 }
 
 interface RagDocumentManagerProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
   language: "en" | "ja";
   onDocumentCountChange?: (count: number) => void;
 }
@@ -445,10 +436,8 @@ function ManageTab({
   );
 }
 
-// --- Main Component ---
+// --- Main Component (FloatingWindow content) ---
 export function RagDocumentManager({
-  open,
-  onOpenChange,
   language,
   onDocumentCountChange,
 }: RagDocumentManagerProps) {
@@ -480,10 +469,8 @@ export function RagDocumentManager({
   }, [onDocumentCountChange]);
 
   useEffect(() => {
-    if (open) {
-      fetchDocuments();
-    }
-  }, [open, fetchDocuments]);
+    fetchDocuments();
+  }, [fetchDocuments]);
 
   const handleUpload = async (file: File) => {
     if (!file.name.toLowerCase().endsWith(".md") && !file.name.toLowerCase().endsWith(".markdown")) {
@@ -562,43 +549,33 @@ export function RagDocumentManager({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-3xl max-h-[85vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Database className="w-5 h-5 text-amber-600 dark:text-amber-400" />
-            {t.ragDialog.title}
-          </DialogTitle>
-          <DialogDescription>
-            {t.ragDialog.description}
-          </DialogDescription>
-        </DialogHeader>
+    <div className="flex flex-col h-full -m-4">
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".md"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) handleUpload(file);
+          e.target.value = "";
+        }}
+      />
 
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".md"
-          className="hidden"
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file) handleUpload(file);
-            e.target.value = "";
-          }}
-        />
+      <Tabs defaultValue="manage" className="flex flex-col h-full">
+        <TabsList className="w-full shrink-0 mx-4 mt-2" style={{ width: "calc(100% - 2rem)" }}>
+          <TabsTrigger value="manage" className="flex-1">
+            <Upload className="w-3.5 h-3.5 mr-1.5" />
+            {t.ragDialog.manageTab}
+          </TabsTrigger>
+          <TabsTrigger value="browse" className="flex-1">
+            <BookOpen className="w-3.5 h-3.5 mr-1.5" />
+            {t.ragDialog.browseTab}
+          </TabsTrigger>
+        </TabsList>
 
-        <Tabs defaultValue="manage">
-          <TabsList className="w-full">
-            <TabsTrigger value="manage" className="flex-1">
-              <Upload className="w-3.5 h-3.5 mr-1.5" />
-              {t.ragDialog.manageTab}
-            </TabsTrigger>
-            <TabsTrigger value="browse" className="flex-1">
-              <BookOpen className="w-3.5 h-3.5 mr-1.5" />
-              {t.ragDialog.browseTab}
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="manage">
+        <div className="flex-1 overflow-y-auto px-4 pb-4">
+          <TabsContent value="manage" className="mt-3">
             <ManageTab
               documents={documents}
               loading={loading}
@@ -617,15 +594,15 @@ export function RagDocumentManager({
             />
           </TabsContent>
 
-          <TabsContent value="browse">
+          <TabsContent value="browse" className="mt-3">
             <BrowseTab
               documents={documents}
               loading={loading}
               language={language}
             />
           </TabsContent>
-        </Tabs>
-      </DialogContent>
-    </Dialog>
+        </div>
+      </Tabs>
+    </div>
   );
 }

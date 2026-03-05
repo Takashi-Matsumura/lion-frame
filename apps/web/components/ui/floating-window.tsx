@@ -22,6 +22,7 @@ export function FloatingWindow({ language = "en" }: FloatingWindowProps) {
     title,
     titleJa,
     content,
+    modal,
     close,
     minimize,
     maximize,
@@ -207,25 +208,27 @@ export function FloatingWindow({ language = "en" }: FloatingWindowProps) {
           {displayTitle}
         </h3>
         <div className="flex items-center gap-1">
-          {/* 最小化ボタン */}
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              minimize();
-            }}
-            className="p-1 text-muted-foreground hover:text-foreground hover:bg-accent rounded transition-colors"
-            aria-label={language === "ja" ? "最小化" : "Minimize"}
-          >
-            <svg
-              className="w-4 h-4"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
+          {/* 最小化ボタン（モーダル時は非表示） */}
+          {!modal && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                minimize();
+              }}
+              className="p-1 text-muted-foreground hover:text-foreground hover:bg-accent rounded transition-colors"
+              aria-label={language === "ja" ? "最小化" : "Minimize"}
             >
-              <path strokeLinecap="round" strokeWidth={2} d="M5 12h14" />
-            </svg>
-          </button>
+              <svg
+                className="w-4 h-4"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+              >
+                <path strokeLinecap="round" strokeWidth={2} d="M5 12h14" />
+              </svg>
+            </button>
+          )}
           {/* 最大化/復元ボタン */}
           <button
             type="button"
@@ -328,6 +331,19 @@ export function FloatingWindow({ language = "en" }: FloatingWindowProps) {
       )}
     </div>
   );
+
+  if (modal) {
+    return createPortal(
+      <>
+        <div
+          className="fixed inset-0 z-[99] bg-black/40"
+          onClick={close}
+        />
+        {windowContent}
+      </>,
+      document.body,
+    );
+  }
 
   return createPortal(windowContent, document.body);
 }

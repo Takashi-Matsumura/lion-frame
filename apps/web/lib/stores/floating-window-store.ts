@@ -22,6 +22,7 @@ interface OpenOptions {
   content?: ReactNode;
   initialPosition?: FloatingWindowPosition;
   initialSize?: FloatingWindowSize;
+  modal?: boolean;
 }
 
 // architecture-avoid-boolean-props: 3つのbooleanを単一のstatus型に統合
@@ -43,6 +44,9 @@ interface FloatingWindowStore {
   title: string;
   titleJa: string;
   content: ReactNode | null;
+
+  // モーダル（背面操作ブロック）
+  modal: boolean;
 
   // アクション
   open: (options?: OpenOptions) => void;
@@ -66,6 +70,7 @@ export const useFloatingWindowStore = create<FloatingWindowStore>(
     title: "Sub Window",
     titleJa: "サブウィンドウ",
     content: null,
+    modal: false,
 
     open: (options) => {
       set({
@@ -75,6 +80,7 @@ export const useFloatingWindowStore = create<FloatingWindowStore>(
         content: options?.content ?? null,
         position: options?.initialPosition ?? DEFAULT_POSITION,
         size: options?.initialSize ?? DEFAULT_SIZE,
+        modal: options?.modal ?? false,
       });
     },
 
@@ -84,10 +90,13 @@ export const useFloatingWindowStore = create<FloatingWindowStore>(
         content: null,
         prevPosition: null,
         prevSize: null,
+        modal: false,
       });
     },
 
     minimize: () => {
+      // モーダル時は最小化不可（背面操作をブロックする意味がなくなるため）
+      if (get().modal) return;
       set({ windowStatus: "minimized" });
     },
 

@@ -48,7 +48,7 @@ export const aiChatTranslations = {
     ragDocCount: "docs",
     ragManage: "My Documents",
     ragDialog: {
-      title: "My RAG Documents",
+      title: "RAG Documents",
       description: "Upload your own documents for AI-powered search and Q&A",
       upload: "Upload",
       uploading: "Uploading...",
@@ -178,7 +178,7 @@ export const aiChatTranslations = {
     ragDocCount: "件",
     ragManage: "マイドキュメント",
     ragDialog: {
-      title: "マイRAGドキュメント",
+      title: "RAGドキュメント",
       description: "自分のドキュメントをアップロードしてAI検索・質問応答を体験できます",
       upload: "アップロード",
       uploading: "アップロード中...",

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Database } from "lucide-react";
+import { useFloatingWindowStore } from "@/lib/stores/floating-window-store";
 import {
   RiBarChartBoxLine,
   RiDeleteBinLine,
@@ -58,7 +59,7 @@ export function AIChatClient({ language, userName }: AIChatClientProps) {
   const [ragAvailable, setRagAvailable] = useState(false);
   const [ragDocumentCount, setRagDocumentCount] = useState(0);
   const [useRagContext, setUseRagContext] = useState(false);
-  const [ragDialogOpen, setRagDialogOpen] = useState(false);
+  const floatingWindow = useFloatingWindowStore();
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [streamingContent, setStreamingContent] = useState("");
   const [showStats, setShowStats] = useState(true);
@@ -449,6 +450,22 @@ export function AIChatClient({ language, userName }: AIChatClientProps) {
     }
   }, []);
 
+  const handleOpenRagManager = useCallback(() => {
+    floatingWindow.open({
+      title: "RAG Documents",
+      titleJa: t.ragDialog.title,
+      content: (
+        <RagDocumentManager
+          language={language}
+          onDocumentCountChange={setRagDocumentCount}
+        />
+      ),
+      initialSize: { width: 700, height: 520 },
+      initialPosition: { x: 200, y: 120 },
+      modal: true,
+    });
+  }, [floatingWindow, language, t.ragDialog.title]);
+
   const handleSuggestionClick = (text: string, useOrg: boolean) => {
     handleSubmit(undefined, text, useOrg);
   };
@@ -588,7 +605,7 @@ export function AIChatClient({ language, userName }: AIChatClientProps) {
           useRagContext={useRagContext}
           onSetUseRagContext={setUseRagContext}
           ragDocumentCount={ragDocumentCount}
-          onOpenRagDialog={() => setRagDialogOpen(true)}
+          onOpenRagDialog={handleOpenRagManager}
         />
       </div>
 
@@ -621,13 +638,6 @@ export function AIChatClient({ language, userName }: AIChatClientProps) {
         </DialogContent>
       </Dialog>
 
-      {/* RAG Document Manager dialog */}
-      <RagDocumentManager
-        open={ragDialogOpen}
-        onOpenChange={setRagDialogOpen}
-        language={language}
-        onDocumentCountChange={setRagDocumentCount}
-      />
     </div>
   );
 }
