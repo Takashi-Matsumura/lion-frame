@@ -1,6 +1,6 @@
 ---
 name: テスト戦略
-description: Jest 30によるAPI契約テスト、アクセス制御テスト、TDDワークフロー。テスト作成、テスト設計、品質改善時に使用。
+description: Jest 30によるAPI契約テスト、アクセス制御テスト、TDDワークフロー。テスト作成、テスト設計、品質改善時に使用。テスト新規作成時は /test-plan コマンドを使って計画フェーズから始めること。
 ---
 
 # テスト戦略ガイド
@@ -14,23 +14,42 @@ description: Jest 30によるAPI契約テスト、アクセス制御テスト、
 | サービス層 | 中程度にテスト | ビジネスロジックの正確性 |
 | フロントエンド | 手動確認中心 | 柔軟な変更に対応 |
 
+## テスト作成ワークフロー
+
+テストを新規作成する場合は、必ず `/test-plan` コマンドを使って計画フェーズから始める。
+
+```
+/test-plan [対象ファイルまたは機能名]
+  → Phase 1: 対象コード分析
+  → Phase 2: テスト計画の提案（表形式、コードなし）
+  → ユーザ承認を待つ
+  → Phase 3: テストコード実装
+  → Phase 4: 実行・結果報告
+```
+
 ## テスト構成
 
 ```
 apps/web/__tests__/
 ├── api/                    # APIルートテスト
+│   ├── admin/
+│   │   └── audit-log-contracts.test.ts
 │   └── ai/
 │       ├── services/
 │       │   ├── generate.test.ts
 │       │   ├── summarize.test.ts
 │       │   └── extract.test.ts
 │       └── translate.test.ts
-└── lib/
-    ├── modules/
-    │   └── access-control.test.ts
-    └── core-modules/
-        └── ai/
-            └── ai-service.test.ts
+├── lib/
+│   ├── api/
+│   │   └── auth-guard.test.ts
+│   ├── modules/
+│   │   └── access-control.test.ts
+│   ├── core-modules/
+│   │   └── ai/
+│   │       └── ai-service.test.ts
+│   └── security/
+│       └── security-audit.test.ts
 
 apps/web/jest.config.ts     # Jest設定
 apps/web/jest.setup.ts      # グローバルモック

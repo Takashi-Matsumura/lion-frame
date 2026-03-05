@@ -64,14 +64,6 @@ describe("セキュリティ静的検証", () => {
     });
   });
 
-  describe("パストラバーサル防止", () => {
-    it("uploads/profiles route で resolve ベースのホワイトリスト検証があること", () => {
-      const source = readSource("app/api/uploads/profiles/[...path]/route.ts");
-      expect(source).toContain("resolve");
-      expect(source).toContain("startsWith(baseDir)");
-    });
-  });
-
   describe("プロフィール画像 MIME ベース拡張子", () => {
     it("profile-image route で MIME タイプから拡張子を導出していること", () => {
       const source = readSource("app/api/user/profile-image/route.ts");

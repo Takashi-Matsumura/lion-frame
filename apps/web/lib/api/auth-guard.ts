@@ -41,9 +41,12 @@ const ROLE_HIERARCHY: Record<Role, number> = {
  */
 export async function requireRole(minimumRole: Role): Promise<Session> {
   const session = await requireAuth();
-  const userLevel = ROLE_HIERARCHY[session.user.role] ?? 0;
-  const requiredLevel = ROLE_HIERARCHY[minimumRole] ?? 0;
-  if (userLevel < requiredLevel) {
+  const userLevel = ROLE_HIERARCHY[session.user.role];
+  if (userLevel === undefined) {
+    throw ApiError.unauthorized();
+  }
+  const requiredLevel = ROLE_HIERARCHY[minimumRole];
+  if (requiredLevel === undefined || userLevel < requiredLevel) {
     throw ApiError.unauthorized();
   }
   return session;
