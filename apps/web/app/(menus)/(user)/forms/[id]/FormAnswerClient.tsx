@@ -48,6 +48,13 @@ interface FormData {
   sections: FormSection[];
 }
 
+function formatAnswerDisplay(val: unknown): string {
+  if (val == null || val === "") return "";
+  if (Array.isArray(val)) return val.length > 0 ? val.join(", ") : "";
+  if (typeof val === "number") return String(val);
+  return String(val);
+}
+
 export function FormAnswerClient({
   formId,
   language,
@@ -252,13 +259,43 @@ export function FormAnswerClient({
         </div>
       </div>
 
-      {/* Confirm dialog */}
+      {/* Confirm dialog with answer review */}
       <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-[560px] max-h-[80vh] flex flex-col">
           <DialogHeader>
             <DialogTitle>{t.confirmTitle}</DialogTitle>
             <DialogDescription>{t.confirmDescription}</DialogDescription>
           </DialogHeader>
+          <div className="flex-1 min-h-0 overflow-y-auto space-y-3 py-2">
+            {form.sections.map((sec) => (
+              <div key={sec.id}>
+                {sec.title && (
+                  <p className="text-xs font-semibold text-muted-foreground mb-1.5">
+                    {language === "ja" && sec.titleJa ? sec.titleJa : sec.title}
+                  </p>
+                )}
+                {sec.fields
+                  .filter((f) => f.type !== "SECTION_HEADER" && evaluateConditions(f.conditionalLogic, answers))
+                  .map((field) => {
+                    const label = (language === "ja" && field.labelJa) || field.label;
+                    const val = answers[field.id];
+                    const display = formatAnswerDisplay(val);
+                    const isEmpty = !display;
+                    return (
+                      <div key={field.id} className="flex items-baseline gap-2 py-1 border-b border-border last:border-0">
+                        <span className="text-xs text-muted-foreground shrink-0 w-1/3 truncate">
+                          {label}
+                          {field.required && <span className="text-destructive ml-0.5">*</span>}
+                        </span>
+                        <span className={`text-sm flex-1 ${isEmpty ? "text-muted-foreground/50 italic" : "text-foreground"}`}>
+                          {isEmpty ? (language === "ja" ? "未入力" : "No answer") : display}
+                        </span>
+                      </div>
+                    );
+                  })}
+              </div>
+            ))}
+          </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setConfirmOpen(false)}>
               {t.cancel}
