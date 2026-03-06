@@ -4,6 +4,7 @@ import { organizationModule } from "@/lib/core-modules/organization";
 import { scheduleModule } from "@/lib/core-modules/schedule";
 import { systemModule } from "@/lib/core-modules/system";
 // アドオンモジュール
+import { formsModule } from "@/lib/addon-modules/forms";
 import { workflowModule } from "@/lib/addon-modules/workflow";
 import { prisma } from "@/lib/prisma";
 import type {
@@ -121,6 +122,7 @@ export const moduleRegistry: ModuleRegistry = {
   organization: organizationModule,
   schedule: scheduleModule,
   // アドオンモジュール
+  forms: formsModule,
   workflow: workflowModule,
 };
 

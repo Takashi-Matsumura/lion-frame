@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { BackButton } from "@/components/ui/BackButton";
 import { getModuleIcon } from "@/lib/modules/icons";
 import type {
   ModulesData,
@@ -511,24 +512,7 @@ export function ModulesTab({ language }: ModulesTabProps) {
         <div className="h-full flex flex-col">
           {/* ヘッダー */}
           <div className="p-6 border-b flex-shrink-0 flex items-center gap-4">
-            <button
-              onClick={() => setSelectedModule(null)}
-              className="p-2 hover:bg-muted rounded-lg transition-colors"
-            >
-              <svg
-                className="w-5 h-5 text-muted-foreground"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M15 19l-7-7 7-7"
-                />
-              </svg>
-            </button>
+            <BackButton onClick={() => setSelectedModule(null)} />
             <div className="flex-shrink-0 w-14 h-14 bg-primary rounded-xl flex items-center justify-center text-primary-foreground">
               {getModuleIcon(selectedModule.id, "w-7 h-7")}
             </div>

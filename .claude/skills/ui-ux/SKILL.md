@@ -495,18 +495,37 @@ const isAddonModule = !CORE_MODULE_IDS.has(menu.moduleId);
 
 ## 戻るボタン（BackButton）
 
+**黒丸アイコン**のデザインで統一された戻るボタン。カード一覧→詳細画面の戻りや、ページ間の戻り遷移に使用する。
+
+**重要:** 戻るボタンは必ずこのコンポーネントを使用する。`<button>` + 自作SVGで独自の戻るボタンを作らない。
+
+### デザイン
+
+- 黒丸（`bg-muted-foreground`）の中に白い `<` アイコン
+- ホバー時に `bg-foreground` に変化
+- `shadow-md` で浮き上がり感
+
+### 使用方法
+
 ```tsx
 import { BackButton } from "@/components/ui/BackButton";
 
-// アイコンのみ（推奨）
+// アイコンのみ（推奨）— カード一覧→詳細の戻りに最適
+<BackButton onClick={() => setSelectedItem(null)} />
+
+// ページ間遷移
 <BackButton href="/parent-page" />
 
 // ラベル付き
 <BackButton href="/parent-page" label="一覧に戻る" />
-
-// onClick対応
-<BackButton onClick={() => setSelectedItem(null)} />
 ```
+
+### 使用箇所
+
+| 画面 | パターン |
+|------|---------|
+| モジュール管理（詳細→一覧） | `<BackButton onClick={() => setSelectedModule(null)} />` |
+| フォーム作成（エディタ→一覧） | `<BackButton onClick={handleBack} />` |
 
 ## AI翻訳ボタン（日本語 → 英語フィールド）
 
@@ -644,6 +663,84 @@ export function MyPageClient() {
 - パネル内コンポーネントは `flex flex-col h-full` で構成し、ヘッダー・コンテンツ（ScrollArea）・フッター（入力欄等）の3分割が基本
 - 既存実装例: `apps/web/app/(menus)/(user)/schedule/ScheduleClient.tsx` + `ScheduleConcierge.tsx`
 
+## カード一覧 → 詳細画面パターン（同一メニュー内遷移）
+
+1つのメニュー内で「カード一覧 → 詳細・編集画面」の遷移が必要な場合、**URLを変更せず state ベースで画面を切り替える**。
+ユーザーはアプリ全体で一貫した操作体験を得られる。
+
+### 原則
+
+- **URLは変わらない**: `/form-builder` のまま、一覧と詳細を切り替える（`/form-builder/[id]` のようなサブページは作らない）
+- **BackButton で戻る**: 詳細画面の左上に `BackButton`（onClick版）を配置
+- **state で切り替え**: `selectedItemId` が `null` → 一覧、`!null` → 詳細
+- **一覧に戻る際にリロード**: `handleBack` で選択解除 + データ再取得
+
+### 実装パターン
+
+```tsx
+"use client";
+import { useState, useCallback } from "react";
+import { BackButton, Card, PageSkeleton } from "@/components/ui";
+
+export function MyListDetailClient() {
+  // null = 一覧表示、string = 詳細表示
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [items, setItems] = useState([]);
+  const [detailData, setDetailData] = useState(null);
+
+  const handleBack = useCallback(() => {
+    setSelectedId(null);
+    setDetailData(null);
+    loadItems(); // 一覧データを再取得
+  }, []);
+
+  const openDetail = useCallback(async (id: string) => {
+    setSelectedId(id);
+    // 詳細データを取得...
+  }, []);
+
+  // ─── 詳細画面 ───
+  if (selectedId) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center gap-4">
+          <BackButton onClick={handleBack} />
+          <div>
+            <h2 className="text-lg font-semibold">{detailData.title}</h2>
+            <Badge>ステータス</Badge>
+          </div>
+        </div>
+        {/* 詳細コンテンツ */}
+      </div>
+    );
+  }
+
+  // ─── 一覧画面 ───
+  return (
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      {items.map((item) => (
+        <Card key={item.id} onClick={() => openDetail(item.id)}>
+          {/* カードコンテンツ */}
+        </Card>
+      ))}
+    </div>
+  );
+}
+```
+
+### 既存実装例
+
+| 画面 | ファイル |
+|------|---------|
+| モジュール管理 | `app/admin/components/ModulesTab.tsx`（`selectedModule` state） |
+| フォーム作成 | `app/(menus)/(manager)/form-builder/FormBuilderClient.tsx`（`selectedFormId` state） |
+
+### 注意
+
+- 詳細画面でのデータ変更後、一覧に戻る際は必ず `loadItems()` を呼んで一覧データを再取得する
+- 詳細画面のローディング中も `PageSkeleton` を表示
+- カード内のアクションボタン（削除・公開等）は `onClick={(e) => e.stopPropagation()}` でカードのクリックイベント伝播を止める
+
 ## チェックリスト
 
 新しいUIを作成する際:
@@ -658,3 +755,4 @@ export function MyPageClient() {
 - [ ] ページローディングは `PageSkeleton` を使用（テーブル/リスト系ページ）
 - [ ] モバイル対応を考慮
 - [ ] 日本語→英語のフィールドペアがある場合、AI翻訳ボタンを配置
+- [ ] カード一覧→詳細の画面遷移は state ベース切り替え（URL変更なし、BackButtonで戻る）

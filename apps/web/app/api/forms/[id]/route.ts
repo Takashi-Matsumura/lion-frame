@@ -1,0 +1,42 @@
+import { apiHandler } from "@/lib/api/api-handler";
+import { ApiError } from "@/lib/api/api-error";
+import { FormsService } from "@/lib/addon-modules/forms/forms-service";
+import type { Role } from "@prisma/client";
+
+export const GET = apiHandler(async (request, _session) => {
+  const id = new URL(request.url).pathname.split("/").pop()!;
+  const form = await FormsService.getFormById(id);
+  if (!form) throw ApiError.notFound("Form not found", "フォームが見つかりません");
+  return { form };
+}, {});
+
+export const PUT = apiHandler(async (request, session) => {
+  const userId = session.user?.id;
+  if (!userId) throw ApiError.unauthorized();
+
+  const id = new URL(request.url).pathname.split("/api/forms/")[1]?.split("/")[0];
+  if (!id) throw ApiError.badRequest("Form ID is required");
+
+  const body = await request.json();
+  const form = await FormsService.upsertForm(id, userId, body);
+  if (!form) throw ApiError.notFound("Form not found", "フォームが見つかりません");
+  return { form };
+}, { requiredRoles: ["MANAGER", "EXECUTIVE", "ADMIN"] as Role[] });
+
+export const DELETE = apiHandler(async (request, session) => {
+  const userId = session.user?.id;
+  if (!userId) throw ApiError.unauthorized();
+
+  const id = new URL(request.url).pathname.split("/api/forms/")[1]?.split("/")[0];
+  if (!id) throw ApiError.badRequest("Form ID is required");
+
+  try {
+    await FormsService.deleteForm(id);
+  } catch (e) {
+    throw ApiError.badRequest(
+      (e as Error).message,
+      "公開中のフォームは削除できません。先に締め切ってください。",
+    );
+  }
+  return { success: true };
+}, { requiredRoles: ["MANAGER", "EXECUTIVE", "ADMIN"] as Role[] });

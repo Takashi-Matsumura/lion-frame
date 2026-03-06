@@ -73,6 +73,8 @@ model User {
   announcementDismissals AnnouncementDismissal[]
   calendarEvents CalendarEvent[]
   usageLogs     UsageLog[]
+  formsCreated    Form[]           @relation("FormCreator")
+  formSubmissions FormSubmission[] @relation("FormSubmitter")
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 }
@@ -890,4 +892,114 @@ model WorkflowApproval {
 
   @@unique([requestId, step])
   @@index([approverId, status])
+}
+
+// ========================================
+// フォームモジュール
+// ========================================
+
+enum FormStatus {
+  DRAFT
+  PUBLISHED
+  CLOSED
+  ARCHIVED
+}
+
+enum FieldType {
+  TEXT
+  TEXTAREA
+  NUMBER
+  DATE
+  SELECT
+  MULTI_SELECT
+  RADIO
+  CHECKBOX_GROUP
+  RATING
+  EMPLOYEE_PICKER
+  DEPARTMENT_PICKER
+  SECTION_HEADER
+  CALCULATED
+}
+
+enum SubmissionStatus {
+  DRAFT
+  SUBMITTED
+}
+
+model Form {
+  id             String      @id @default(cuid())
+  title          String
+  titleJa        String?
+  description    String?
+  descriptionJa  String?
+  status         FormStatus  @default(DRAFT)
+  createdBy      String
+  allowMultiple  Boolean     @default(false)
+  closedAt       DateTime?
+  settings       Json        @default("{}")
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  sections       FormSection[]
+  submissions    FormSubmission[]
+  creator        User        @relation("FormCreator", fields: [createdBy], references: [id])
+
+  @@index([status, createdBy])
+}
+
+model FormSection {
+  id          String      @id @default(cuid())
+  formId      String
+  form        Form        @relation(fields: [formId], references: [id], onDelete: Cascade)
+  title       String?
+  titleJa     String?
+  description String?
+  order       Int
+  fields      FormField[]
+
+  @@index([formId, order])
+}
+
+model FormField {
+  id               String      @id @default(cuid())
+  sectionId        String
+  section          FormSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  type             FieldType
+  label            String
+  labelJa          String?
+  placeholder      String?
+  required         Boolean     @default(false)
+  order            Int
+  config           Json        @default("{}")
+  conditionalLogic Json?
+  answers          FormAnswer[]
+
+  @@index([sectionId, order])
+}
+
+model FormSubmission {
+  id          String           @id @default(cuid())
+  formId      String
+  form        Form             @relation(fields: [formId], references: [id], onDelete: Cascade)
+  submittedBy String
+  status      SubmissionStatus @default(DRAFT)
+  submittedAt DateTime?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  answers     FormAnswer[]
+  submitter   User             @relation("FormSubmitter", fields: [submittedBy], references: [id])
+
+  @@index([formId, status])
+  @@index([formId, submittedBy])
+}
+
+model FormAnswer {
+  id           String         @id @default(cuid())
+  submissionId String
+  submission   FormSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  fieldId      String
+  field        FormField      @relation(fields: [fieldId], references: [id], onDelete: Cascade)
+  value        Json?
+  createdAt    DateTime       @default(now())
+
+  @@unique([submissionId, fieldId])
 }
