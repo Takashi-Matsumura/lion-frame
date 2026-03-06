@@ -149,46 +149,44 @@ export function FormAnswerClient({
     : 100;
 
   return (
-    <div className="flex flex-col h-[calc(100vh-128px)] overflow-hidden">
-      {/* Header: BackButton + Title Card */}
-      <div className="max-w-3xl mx-auto w-full shrink-0">
-        <Card className="border-l-4 border-l-primary">
-          <CardHeader className="py-2 px-4">
-            <div className="flex items-center gap-3">
-              <BackButton onClick={() => router.push("/forms")} />
-              <div className="flex-1 min-w-0">
-                <CardTitle className="text-base">
-                  {language === "ja" && form.titleJa ? form.titleJa : form.title}
-                </CardTitle>
-                {(language === "ja" ? form.descriptionJa : form.description) && (
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {language === "ja" ? form.descriptionJa : form.description}
-                  </p>
-                )}
+    <div className="flex flex-col h-[calc(100vh-128px)] overflow-hidden max-w-3xl mx-auto">
+      {/* Header: Title Card */}
+      <Card className="shrink-0 border-l-4 border-l-primary">
+        <CardHeader className="py-2 px-4">
+          <div className="flex items-center gap-3">
+            <BackButton onClick={() => router.push("/forms")} />
+            <div className="flex-1 min-w-0">
+              <CardTitle className="text-base">
+                {language === "ja" && form.titleJa ? form.titleJa : form.title}
+              </CardTitle>
+              {(language === "ja" ? form.descriptionJa : form.description) && (
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {language === "ja" ? form.descriptionJa : form.description}
+                </p>
+              )}
+            </div>
+          </div>
+          {multiSection && (
+            <div className="space-y-0.5 pt-1.5">
+              <p className="text-xs text-muted-foreground">
+                {t.sectionOf
+                  .replace("{current}", String(currentSection + 1))
+                  .replace("{total}", String(sections.length))}
+              </p>
+              <div className="w-full bg-muted rounded-full h-1.5">
+                <div
+                  className="bg-primary h-1.5 rounded-full transition-all"
+                  style={{ width: `${progress}%` }}
+                />
               </div>
             </div>
-            {multiSection && (
-              <div className="space-y-0.5 pt-1.5">
-                <p className="text-xs text-muted-foreground">
-                  {t.sectionOf
-                    .replace("{current}", String(currentSection + 1))
-                    .replace("{total}", String(sections.length))}
-                </p>
-                <div className="w-full bg-muted rounded-full h-1.5">
-                  <div
-                    className="bg-primary h-1.5 rounded-full transition-all"
-                    style={{ width: `${progress}%` }}
-                  />
-                </div>
-              </div>
-            )}
-          </CardHeader>
-        </Card>
-      </div>
+          )}
+        </CardHeader>
+      </Card>
 
       {/* Scrollable content */}
       <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto mt-4">
-        <div className="max-w-3xl mx-auto space-y-6 pb-6">
+        <div className="space-y-6 pb-6">
 
           {/* Fields */}
           {visibleSections.map((sec) => (
