@@ -4,6 +4,7 @@ import type { Session } from "next-auth";
 import { Sidebar, SidebarContent, SidebarRail } from "@/components/ui/sidebar";
 import { useIsMobile } from "@/lib/hooks/use-mobile";
 import { useSidebarStore } from "@/lib/stores/sidebar-store";
+import { useFormBadge } from "@/lib/addon-modules/forms/use-form-badge";
 import type { AppMenu } from "@/types/module";
 import { SidebarHeaderContent } from "./sidebar/SidebarHeaderContent";
 import { SidebarMenuGroup } from "./sidebar/SidebarMenuGroup";
@@ -34,6 +35,12 @@ export function AppSidebar({
   const { width } = useSidebarStore();
   const isMobile = useIsMobile();
   const isAdmin = session.user.role === "ADMIN";
+  const formBadgeCount = useFormBadge();
+
+  const menuBadges: Record<string, number> = {};
+  if (formBadgeCount > 0) {
+    menuBadges["forms"] = formBadgeCount;
+  }
 
   return (
     <SidebarNavigationProvider>
@@ -58,6 +65,7 @@ export function AppSidebar({
                 menus={menus}
                 language={language}
                 isAdmin={isAdmin}
+                menuBadges={menuBadges}
               />
             );
           })}

@@ -10,6 +10,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import {
+  SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarMenuSub,
@@ -34,6 +35,7 @@ interface SidebarMenuItemComponentProps {
   language: string;
   showOrder: boolean;
   color?: string;
+  badgeCount?: number;
 }
 
 export function SidebarMenuItemComponent({
@@ -41,6 +43,7 @@ export function SidebarMenuItemComponent({
   language,
   showOrder,
   color,
+  badgeCount,
 }: SidebarMenuItemComponentProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const pathname = usePathname();
@@ -169,8 +172,13 @@ export function SidebarMenuItemComponent({
           {isAccessKeyGranted && (
             <Key className="size-3.5 text-amber-500 ml-auto" />
           )}
+          {badgeCount != null && badgeCount > 0 && (
+            <span className="ml-auto bg-red-500 text-white text-[10px] min-w-4 h-4 rounded-full flex items-center justify-center px-1">
+              {badgeCount}
+            </span>
+          )}
           {showOrder && menu.order !== undefined && (
-            <span className="ml-auto text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded font-mono">
+            <span className={`${badgeCount ? "" : "ml-auto"} text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded font-mono`}>
               {menu.order}
             </span>
           )}

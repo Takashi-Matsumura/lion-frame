@@ -27,6 +27,7 @@ interface SidebarMenuGroupProps {
   menus: AppMenu[];
   language: string;
   isAdmin: boolean;
+  menuBadges?: Record<string, number>;
 }
 
 export function SidebarMenuGroup({
@@ -34,6 +35,7 @@ export function SidebarMenuGroup({
   menus,
   language,
   isAdmin,
+  menuBadges,
 }: SidebarMenuGroupProps) {
   const [isExpanded, setIsExpanded] = useState(true);
   const { state } = useSidebar();
@@ -55,6 +57,7 @@ export function SidebarMenuGroup({
               language={language}
               showOrder={isAdmin}
               color={group.color}
+              badgeCount={menuBadges?.[menu.id]}
             />
           ))}
         </SidebarMenu>
@@ -87,6 +90,7 @@ export function SidebarMenuGroup({
                   language={language}
                   showOrder={isAdmin}
                   color={group.color}
+                  badgeCount={menuBadges?.[menu.id]}
                 />
               ))}
             </SidebarMenu>

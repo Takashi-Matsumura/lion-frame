@@ -25,6 +25,14 @@ interface FormItem {
   mySubmissionStatus: string | null;
   creator: { id: string; name: string | null };
   createdAt: string;
+  updatedAt: string;
+}
+
+const NEW_DAYS = 7;
+
+function isNewForm(form: FormItem): boolean {
+  const diff = Date.now() - new Date(form.updatedAt).getTime();
+  return diff < NEW_DAYS * 24 * 60 * 60 * 1000;
 }
 
 export function FormsClient({ language }: { language: Language }) {
@@ -67,10 +75,11 @@ export function FormsClient({ language }: { language: Language }) {
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {forms.map((form) => {
             const answered = form.mySubmissionStatus === "SUBMITTED";
+            const isNew = !answered && isNewForm(form);
             return (
               <Card
                 key={form.id}
-                className="cursor-pointer shadow-sm hover:shadow-md hover:border-primary/50 transition-all"
+                className={`cursor-pointer shadow-sm hover:shadow-md hover:border-primary/50 transition-all ${isNew ? "border-primary/30" : ""}`}
                 onClick={() => router.push(`/forms/${form.id}`)}
               >
                 <CardHeader className="pb-2">
@@ -80,15 +89,22 @@ export function FormsClient({ language }: { language: Language }) {
                         ? form.titleJa
                         : form.title}
                     </CardTitle>
-                    <Badge
-                      className={
-                        answered
-                          ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-                          : "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
-                      }
-                    >
-                      {answered ? t.answered : t.notAnswered}
-                    </Badge>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {isNew && (
+                        <Badge className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 text-[10px] px-1.5 py-0">
+                          New
+                        </Badge>
+                      )}
+                      <Badge
+                        className={
+                          answered
+                            ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+                            : "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
+                        }
+                      >
+                        {answered ? t.answered : t.notAnswered}
+                      </Badge>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent>
