@@ -157,11 +157,11 @@ export function FormAnswerClient({
             <BackButton onClick={() => router.push("/forms")} />
             <div className="flex-1 min-w-0">
               <CardTitle className="text-base">
-                {language === "ja" && form.titleJa ? form.titleJa : form.title}
+                {form.titleJa || form.title}
               </CardTitle>
-              {(language === "ja" ? form.descriptionJa : form.description) && (
+              {(form.descriptionJa || form.description) && (
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  {language === "ja" ? form.descriptionJa : form.description}
+                  {form.descriptionJa || form.description}
                 </p>
               )}
             </div>
@@ -194,7 +194,7 @@ export function FormAnswerClient({
               {sec.title && (
                 <CardHeader className="pb-2">
                   <CardTitle className="text-base">
-                    {language === "ja" && sec.titleJa ? sec.titleJa : sec.title}
+                    {sec.titleJa || sec.title}
                   </CardTitle>
                   {sec.description && (
                     <p className="text-sm text-muted-foreground">
@@ -269,13 +269,13 @@ export function FormAnswerClient({
               <div key={sec.id}>
                 {sec.title && (
                   <p className="text-xs font-semibold text-muted-foreground mb-1.5">
-                    {language === "ja" && sec.titleJa ? sec.titleJa : sec.title}
+                    {sec.titleJa || sec.title}
                   </p>
                 )}
                 {sec.fields
                   .filter((f) => f.type !== "SECTION_HEADER" && evaluateConditions(f.conditionalLogic, answers))
                   .map((field) => {
-                    const label = (language === "ja" && field.labelJa) || field.label;
+                    const label = field.labelJa || field.label;
                     const val = answers[field.id];
                     const display = formatAnswerDisplay(val);
                     const isEmpty = !display;
@@ -286,7 +286,7 @@ export function FormAnswerClient({
                           {field.required && <span className="text-destructive ml-0.5">*</span>}
                         </span>
                         <span className={`text-sm flex-1 ${isEmpty ? "text-muted-foreground/50 italic" : "text-foreground"}`}>
-                          {isEmpty ? (language === "ja" ? "未入力" : "No answer") : display}
+                          {isEmpty ? t.noAnswer : display}
                         </span>
                       </div>
                     );

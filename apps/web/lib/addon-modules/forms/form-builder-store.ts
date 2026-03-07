@@ -76,6 +76,10 @@ interface FormBuilderStore {
   addSection: () => void;
   updateSection: (sectionId: string, updates: Partial<Pick<FormSectionDraft, "title" | "titleJa" | "description">>) => void;
   removeSection: (sectionId: string) => void;
+  reorderSection: (fromIndex: number, toIndex: number) => void;
+
+  moveFieldToSection: (fieldId: string, fromSectionId: string, toSectionId: string, toIndex?: number) => void;
+  duplicateField: (fieldId: string) => void;
 
   markSaved: () => void;
 }
@@ -183,6 +187,72 @@ export const useFormBuilderStore = create<FormBuilderStore>((set) => ({
         .filter((s) => s.id !== sectionId)
         .map((s, i) => ({ ...s, order: i }));
       return { form: { ...state.form, sections }, isDirty: true };
+    }),
+
+  reorderSection: (fromIndex, toIndex) =>
+    set((state) => {
+      if (!state.form) return state;
+      const sections = [...state.form.sections];
+      const [moved] = sections.splice(fromIndex, 1);
+      sections.splice(toIndex, 0, moved);
+      return {
+        form: { ...state.form, sections: sections.map((s, i) => ({ ...s, order: i })) },
+        isDirty: true,
+      };
+    }),
+
+  moveFieldToSection: (fieldId, fromSectionId, toSectionId, toIndex) =>
+    set((state) => {
+      if (!state.form || fromSectionId === toSectionId) return state;
+      let movedField: FormFieldDraft | undefined;
+      const sections = state.form.sections.map((s) => {
+        if (s.id === fromSectionId) {
+          const field = s.fields.find((f) => f.id === fieldId);
+          if (field) movedField = field;
+          return {
+            ...s,
+            fields: s.fields.filter((f) => f.id !== fieldId).map((f, i) => ({ ...f, order: i })),
+          };
+        }
+        return s;
+      });
+      if (!movedField) return state;
+      const finalSections = sections.map((s) => {
+        if (s.id === toSectionId) {
+          const fields = [...s.fields];
+          const idx = toIndex ?? fields.length;
+          fields.splice(idx, 0, movedField!);
+          return { ...s, fields: fields.map((f, i) => ({ ...f, order: i })) };
+        }
+        return s;
+      });
+      return { form: { ...state.form, sections: finalSections }, isDirty: true };
+    }),
+
+  duplicateField: (fieldId) =>
+    set((state) => {
+      if (!state.form) return state;
+      let newFieldId: string | null = null;
+      const sections = state.form.sections.map((s) => {
+        const idx = s.fields.findIndex((f) => f.id === fieldId);
+        if (idx === -1) return s;
+        const original = s.fields[idx];
+        const copy: FormFieldDraft = {
+          ...original,
+          id: tempId(),
+          label: original.label + " (copy)",
+          labelJa: original.labelJa ? original.labelJa + "（コピー）" : undefined,
+        };
+        newFieldId = copy.id;
+        const fields = [...s.fields];
+        fields.splice(idx + 1, 0, copy);
+        return { ...s, fields: fields.map((f, i) => ({ ...f, order: i })) };
+      });
+      return {
+        form: { ...state.form, sections },
+        isDirty: true,
+        selectedFieldId: newFieldId ?? state.selectedFieldId,
+      };
     }),
 
   markSaved: () => set({ isDirty: false }),

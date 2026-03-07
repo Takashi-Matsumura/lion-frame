@@ -221,6 +221,8 @@ export function MyPageClient({ language, userName }: MyPageClientProps) {
 
 #### 翻訳定義 (translations.ts)
 
+**i18n対応モジュール（コアモジュール必須）:**
+
 ```typescript
 export const translations = {
   en: {
@@ -233,6 +235,32 @@ export const translations = {
   },
 } as const;
 ```
+
+**日本語専用モジュール（アドオン向け `jaOnly` パターン）:**
+
+モジュール定義で `jaOnly: true` を指定すると、翻訳を日本語のみで定義できます。
+`jaOnly()` ヘルパーが `{ en: T, ja: T }` を自動生成するため、
+コンポーネントの `translations[language]` パターンはそのまま動作します。
+
+```typescript
+// module.tsx
+export const myModule: AppModule = {
+  id: "mymodule",
+  jaOnly: true,  // ← 日本語専用
+  // ...
+};
+
+// translations.ts
+import { jaOnly } from "@/lib/i18n/ja-only";
+
+export const translations = jaOnly({
+  title: "マイページ",
+  welcome: "ようこそ",
+});
+```
+
+> **注意:** コアモジュール（`lib/core-modules/`）では `jaOnly` は使用不可。
+> 必ず en/ja 両方の翻訳を維持してください。
 
 ---
 
@@ -373,7 +401,7 @@ app/
 - [ ] レジストリに登録 (`lib/modules/registry.tsx`)
 - [ ] アイコンを追加 (`lib/modules/icons.tsx`)
 - [ ] ページを作成 (`app/(menus)/...`)
-- [ ] 翻訳ファイルを作成
+- [ ] 翻訳ファイルを作成（`jaOnly: true` の場合は `jaOnly()` ヘルパー使用）
 - [ ] 必要に応じてAPIルートを作成
 - [ ] 必要に応じてPrismaスキーマを更新
 - [ ] 開発サーバで動作確認

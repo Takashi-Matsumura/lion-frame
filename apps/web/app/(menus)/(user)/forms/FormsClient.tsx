@@ -85,9 +85,7 @@ export function FormsClient({ language }: { language: Language }) {
                 <CardHeader className="pb-2">
                   <div className="flex items-start justify-between gap-2">
                     <CardTitle className="text-base line-clamp-2">
-                      {language === "ja" && form.titleJa
-                        ? form.titleJa
-                        : form.title}
+                      {form.titleJa || form.title}
                     </CardTitle>
                     <div className="flex items-center gap-1.5 shrink-0">
                       {isNew && (
@@ -108,13 +106,9 @@ export function FormsClient({ language }: { language: Language }) {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  {(language === "ja"
-                    ? form.descriptionJa
-                    : form.description) && (
+                  {(form.descriptionJa || form.description) && (
                     <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
-                      {language === "ja"
-                        ? form.descriptionJa
-                        : form.description}
+                      {form.descriptionJa || form.description}
                     </p>
                   )}
                   <div className="flex items-center justify-between text-xs text-muted-foreground">

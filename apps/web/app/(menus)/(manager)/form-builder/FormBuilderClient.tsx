@@ -13,6 +13,7 @@ import {
   DeleteConfirmDialog,
   BackButton,
 } from "@/components/ui";
+import { FormPreviewDialog } from "@/components/business/forms/FormPreviewDialog";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -65,7 +66,10 @@ export function FormBuilderClient({ language }: { language: Language }) {
   const [detailLoading, setDetailLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState("editor");
+  const [previewOpen, setPreviewOpen] = useState(false);
   const { form, isDirty, setForm, markSaved } = useFormBuilderStore();
+
+
 
   // ─── List operations ───
 
@@ -92,7 +96,7 @@ export function FormBuilderClient({ language }: { language: Language }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          title: language === "ja" ? "新規フォーム" : "New Form",
+          title: t.newForm,
           sections: [{ order: 0, fields: [] }],
         }),
       });
@@ -190,8 +194,24 @@ export function FormBuilderClient({ language }: { language: Language }) {
     loadForms();
   }, [setForm, loadForms]);
 
+  const hasOptions = (type: string) =>
+    ["SELECT", "MULTI_SELECT", "RADIO", "CHECKBOX_GROUP"].includes(type);
+
   const handleSave = useCallback(async () => {
     if (!form || !selectedFormId) return;
+
+    // Pre-save validation warnings
+    const allFields = form.sections.flatMap((s) => s.fields);
+    if (allFields.length === 0) {
+      toast.warning(t.noFieldsWarning);
+    }
+    const emptyOptions = allFields.some(
+      (f) => hasOptions(f.type) && (!f.config?.options || (f.config.options as string[]).length === 0),
+    );
+    if (emptyOptions) {
+      toast.warning(t.emptyOptionsWarning);
+    }
+
     setSaving(true);
     try {
       const res = await fetch(`/api/forms/${selectedFormId}`, {
@@ -229,10 +249,31 @@ export function FormBuilderClient({ language }: { language: Language }) {
     } finally {
       setSaving(false);
     }
-  }, [form, selectedFormId, markSaved, setForm, t.saved, t.saveError]);
+  }, [form, selectedFormId, markSaved, setForm, t.saved, t.saveError, t.noFieldsWarning, t.emptyOptionsWarning]);
+
+  // Cmd+S / Ctrl+S save shortcut
+  useEffect(() => {
+    if (!selectedFormId) return;
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "s") {
+        e.preventDefault();
+        handleSave();
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [selectedFormId, handleSave]);
 
   const handleEditorPublish = async () => {
-    if (!selectedFormId) return;
+    if (!selectedFormId || !form) return;
+
+    // Block publish if no fields
+    const allFields = form.sections.flatMap((s) => s.fields);
+    if (allFields.length === 0) {
+      toast.error(t.noFieldsPublishError);
+      return;
+    }
+
     try {
       const res = await fetch(`/api/forms/${selectedFormId}/publish`, {
         method: "POST",
@@ -260,7 +301,7 @@ export function FormBuilderClient({ language }: { language: Language }) {
             <BackButton onClick={handleBack} />
             <div>
               <h2 className="text-lg font-semibold">
-                {language === "ja" && form.titleJa ? form.titleJa : form.title}
+                {form.titleJa || form.title}
               </h2>
               <div className="flex items-center gap-2 mt-0.5">
                 <Badge className={statusColors[form.status] ?? ""}>
@@ -268,7 +309,7 @@ export function FormBuilderClient({ language }: { language: Language }) {
                 </Badge>
                 {isDirty && (
                   <span className="text-xs text-muted-foreground">
-                    ({language === "ja" ? "未保存の変更" : "Unsaved changes"})
+                    ({t.unsavedChanges})
                   </span>
                 )}
               </div>
@@ -278,8 +319,17 @@ export function FormBuilderClient({ language }: { language: Language }) {
             <Button
               variant="outline"
               size="sm"
+              onClick={() => setPreviewOpen(true)}
+            >
+              {t.preview}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
               onClick={handleSave}
               disabled={saving || !isDirty}
+              loading={saving}
+              shortcut="Mod+S"
             >
               {saving ? t.saving : t.save}
             </Button>
@@ -320,6 +370,13 @@ export function FormBuilderClient({ language }: { language: Language }) {
             <FormResponsesPanel formId={selectedFormId} language={language} />
           </TabsContent>
         </Tabs>
+
+        <FormPreviewDialog
+          open={previewOpen}
+          onOpenChange={setPreviewOpen}
+          form={form}
+          language={language}
+        />
       </div>
     );
   }
@@ -348,9 +405,7 @@ export function FormBuilderClient({ language }: { language: Language }) {
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between gap-2">
                   <CardTitle className="text-base line-clamp-2">
-                    {language === "ja" && formItem.titleJa
-                      ? formItem.titleJa
-                      : formItem.title}
+                    {formItem.titleJa || formItem.title}
                   </CardTitle>
                   <Badge className={statusColors[formItem.status] ?? ""}>
                     {getStatusLabel(formItem.status)}
@@ -364,7 +419,7 @@ export function FormBuilderClient({ language }: { language: Language }) {
                   </span>
                   <span>
                     {new Date(formItem.updatedAt).toLocaleDateString(
-                      language === "ja" ? "ja-JP" : "en-US",
+                      "ja-JP",
                     )}
                   </span>
                 </div>

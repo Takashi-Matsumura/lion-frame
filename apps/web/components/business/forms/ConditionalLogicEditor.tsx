@@ -118,7 +118,7 @@ export function ConditionalLogicEditor({
                 <SelectContent>
                   {otherFields.map((f) => (
                     <SelectItem key={f.id} value={f.id}>
-                      {(language === "ja" && f.labelJa) || f.label || f.id}
+                      {f.labelJa || f.label || f.id}
                     </SelectItem>
                   ))}
                 </SelectContent>

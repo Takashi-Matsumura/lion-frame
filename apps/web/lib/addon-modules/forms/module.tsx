@@ -17,6 +17,7 @@ export const formsModule: AppModule = {
   icon: getModuleIcon("forms"),
   enabled: true,
   order: 30,
+  jaOnly: true,
   dependencies: ["system", "organization"],
   menus: [
     {

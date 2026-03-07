@@ -1,8 +1,30 @@
 import { Slot } from "@radix-ui/react-slot";
 import { cva, type VariantProps } from "class-variance-authority";
+import { useMemo } from "react";
 import type * as React from "react";
 
 import { cn } from "@/lib/utils";
+
+/**
+ * OS検出でショートカットキーの修飾子を解決
+ * "mod" → Mac: ⌘, Windows/Linux: Ctrl
+ */
+function useModKey(): string {
+  return useMemo(() => {
+    if (typeof navigator === "undefined") return "Ctrl";
+    return /Mac|iPod|iPhone|iPad/.test(navigator.userAgent) ? "⌘" : "Ctrl";
+  }, []);
+}
+
+function ShortcutBadge({ shortcut }: { shortcut: string }) {
+  const modKey = useModKey();
+  const display = shortcut.replace(/mod/gi, modKey);
+  return (
+    <kbd className="ml-1.5 text-[10px] text-muted-foreground/70 bg-muted px-1 py-0.5 rounded font-sans">
+      {display}
+    </kbd>
+  );
+}
 
 const buttonVariants = cva(
   "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
@@ -47,6 +69,7 @@ function Button({
   size = "default",
   asChild = false,
   loading = false,
+  shortcut,
   children,
   disabled,
   ...props
@@ -54,6 +77,8 @@ function Button({
   VariantProps<typeof buttonVariants> & {
     asChild?: boolean;
     loading?: boolean;
+    /** ショートカットキー表示（例: "Mod+S"）。"Mod"はOS検出で⌘/Ctrlに自動変換 */
+    shortcut?: string;
   }) {
   const Comp = asChild ? Slot : "button";
 
@@ -89,6 +114,7 @@ function Button({
         </svg>
       )}
       {children}
+      {shortcut && !loading && <ShortcutBadge shortcut={shortcut} />}
     </Comp>
   );
 }
@@ -97,6 +123,7 @@ type ButtonProps = React.ComponentProps<"button"> &
   VariantProps<typeof buttonVariants> & {
     asChild?: boolean;
     loading?: boolean;
+    shortcut?: string;
   };
 
 type ButtonVariant = NonNullable<

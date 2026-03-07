@@ -96,6 +96,41 @@ export const pageTitles = {
 } as const;
 ```
 
+## 日本語専用アドオンモジュール（jaOnly パターン）
+
+アドオンモジュールは `jaOnly: true` を設定すると、翻訳を日本語のみで定義できます。
+
+```typescript
+// lib/addon-modules/mymodule/module.tsx
+export const myModule: AppModule = {
+  id: "mymodule",
+  jaOnly: true,  // ← 日本語専用
+  // ...
+};
+```
+
+```typescript
+// translations.ts
+import { jaOnly } from "@/lib/i18n/ja-only";
+
+export const translations = jaOnly({
+  title: "マイページ",
+  save: "保存",
+  cancel: "キャンセル",
+});
+
+export type Language = keyof typeof translations;
+```
+
+`jaOnly()` ヘルパーは `{ en: T, ja: T }` を返すため、コンポーネントの
+`translations[language]` パターンはそのまま動作します。
+
+**注意:**
+- コアモジュール（`lib/core-modules/`）では使用不可
+- モジュール定義の `name`/`nameJa` はサイドバー表示で使われるため両方必要
+- コンポーネント内の `language === "ja"` 分岐は不要（常にjaと同じ結果）
+- ただし、ユーザーデータ（`titleJa || title`）の表示切替パターンは残してよい
+
 ## ベストプラクティス
 
 ### ✅ 推奨

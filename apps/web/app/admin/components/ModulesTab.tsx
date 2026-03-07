@@ -347,16 +347,26 @@ export function ModulesTab({ language }: ModulesTabProps) {
                               : t("Disabled", "無効")}
                           </span>
                         </div>
-                        <Badge
-                          variant="outline"
-                          className={
-                            module.type === "core"
-                              ? "bg-green-50 text-green-700 border-green-200"
-                              : "bg-purple-50 text-purple-700 border-purple-200"
-                          }
-                        >
-                          {module.type === "core" ? "Core" : "Addon"}
-                        </Badge>
+                        <div className="flex items-center gap-1">
+                          <Badge
+                            variant="outline"
+                            className={
+                              module.type === "core"
+                                ? "bg-green-50 text-green-700 border-green-200"
+                                : "bg-purple-50 text-purple-700 border-purple-200"
+                            }
+                          >
+                            {module.type === "core" ? "Core" : "Addon"}
+                          </Badge>
+                          {module.jaOnly && (
+                            <Badge
+                              variant="outline"
+                              className="bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900 dark:text-amber-200 dark:border-amber-700"
+                            >
+                              JA
+                            </Badge>
+                          )}
+                        </div>
                       </div>
 
                       {/* モジュールヘッダー */}
@@ -537,17 +547,24 @@ export function ModulesTab({ language }: ModulesTabProps) {
                 <h3 className="text-sm font-medium text-muted-foreground mb-2">
                   {t("Type", "タイプ")}
                 </h3>
-                <span
-                  className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                    selectedModule.type === "core"
-                      ? "bg-green-100 text-green-800"
-                      : "bg-purple-100 text-purple-800"
-                  }`}
-                >
-                  {selectedModule.type === "core"
-                    ? "Core Module"
-                    : "Addon Module"}
-                </span>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span
+                    className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+                      selectedModule.type === "core"
+                        ? "bg-green-100 text-green-800"
+                        : "bg-purple-100 text-purple-800"
+                    }`}
+                  >
+                    {selectedModule.type === "core"
+                      ? "Core Module"
+                      : "Addon Module"}
+                  </span>
+                  {selectedModule.jaOnly && (
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">
+                      {t("Japanese Only", "日本語専用")}
+                    </span>
+                  )}
+                </div>
               </div>
 
               <div>

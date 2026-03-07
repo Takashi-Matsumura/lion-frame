@@ -118,6 +118,7 @@ export const GET = apiHandler(async () => {
         descriptionJa: module.descriptionJa,
         enabled: isEnabled,
         type: isCore ? ("core" as const) : ("addon" as const),
+        jaOnly: module.jaOnly ?? false,
         dependencies: module.dependencies ?? [],
         menuCount: module.menus.filter(
           (m) => menuEnabledOverrides[m.id] ?? m.enabled,

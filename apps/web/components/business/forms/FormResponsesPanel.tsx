@@ -97,7 +97,7 @@ export function FormResponsesPanel({
                 <TableHead>{t.submittedAt}</TableHead>
                 {fieldOrder.map((f) => (
                   <TableHead key={f.id}>
-                    {(language === "ja" && f.labelJa) || f.label}
+                    {f.labelJa || f.label}
                   </TableHead>
                 ))}
               </TableRow>

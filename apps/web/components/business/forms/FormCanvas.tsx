@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   DndContext,
   closestCenter,
@@ -16,10 +17,26 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Button, Card, CardContent, CardHeader, CardTitle } from "@/components/ui";
+import { Button, Card, CardContent, CardHeader, CardTitle, DeleteConfirmDialog } from "@/components/ui";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import {
+  Type,
+  AlignLeft,
+  Hash,
+  Calendar,
+  ChevronDown,
+  ListFilter,
+  CircleDot,
+  CheckSquare,
+  Star,
+  User,
+  Building2,
+  Heading,
+  List,
+} from "lucide-react";
 import {
   useFormBuilderStore,
   type FormFieldDraft,
@@ -27,15 +44,35 @@ import {
 } from "@/lib/addon-modules/forms/form-builder-store";
 import { formBuilderTranslations, type Language } from "@/app/(menus)/(manager)/form-builder/translations";
 
+const fieldTypeIcon: Record<string, React.ComponentType<{ className?: string }>> = {
+  TEXT: Type,
+  TEXTAREA: AlignLeft,
+  NUMBER: Hash,
+  DATE: Calendar,
+  SELECT: ChevronDown,
+  MULTI_SELECT: ListFilter,
+  RADIO: CircleDot,
+  CHECKBOX_GROUP: CheckSquare,
+  RATING: Star,
+  EMPLOYEE_PICKER: User,
+  DEPARTMENT_PICKER: Building2,
+  SECTION_HEADER: Heading,
+};
+
 function SortableField({
   field,
+  index,
   language,
+  onRequestDelete,
+  onRequestDuplicate,
 }: {
   field: FormFieldDraft;
+  index: number;
   language: Language;
+  onRequestDelete: (fieldId: string) => void;
+  onRequestDuplicate: (fieldId: string) => void;
 }) {
-  const { selectedFieldId, selectField, removeField } =
-    useFormBuilderStore();
+  const { selectedFieldId, selectField } = useFormBuilderStore();
   const {
     attributes,
     listeners,
@@ -62,20 +99,28 @@ function SortableField({
       }`}
       onClick={() => selectField(field.id)}
     >
+      <span className="text-xs text-muted-foreground w-5 text-center shrink-0">
+        {index + 1}
+      </span>
       <span
         {...attributes}
         {...listeners}
-        className="cursor-grab text-muted-foreground hover:text-foreground"
+        className="cursor-grab text-muted-foreground hover:text-foreground p-1 rounded hover:bg-accent transition-colors text-base leading-none"
       >
-        &#x2630;
+        ⋮⋮
       </span>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <span className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono">
-            {field.type}
-          </span>
+          {(() => {
+            const Icon = fieldTypeIcon[field.type] ?? List;
+            return (
+              <span className="w-5 h-5 flex items-center justify-center bg-muted rounded shrink-0">
+                <Icon className="size-3" />
+              </span>
+            );
+          })()}
           <span className="text-sm truncate">
-            {(language === "ja" && field.labelJa) || field.label || "(untitled)"}
+            {field.labelJa || field.label || "(未設定)"}
           </span>
           {field.required && (
             <span className="text-destructive text-xs">*</span>
@@ -84,10 +129,21 @@ function SortableField({
       </div>
       <button
         type="button"
+        className="text-muted-foreground hover:text-foreground text-sm"
+        onClick={(e) => {
+          e.stopPropagation();
+          onRequestDuplicate(field.id);
+        }}
+        title={formBuilderTranslations[language].duplicateField}
+      >
+        ⧉
+      </button>
+      <button
+        type="button"
         className="text-muted-foreground hover:text-destructive text-sm"
         onClick={(e) => {
           e.stopPropagation();
-          removeField(field.id);
+          onRequestDelete(field.id);
         }}
       >
         x
@@ -96,25 +152,43 @@ function SortableField({
   );
 }
 
-function SectionBlock({
+function SortableSectionBlock({
   section,
   language,
+  onRequestDeleteField,
+  onRequestDeleteSection,
+  onRequestDuplicateField,
 }: {
   section: FormSectionDraft;
   language: Language;
+  onRequestDeleteField: (fieldId: string) => void;
+  onRequestDeleteSection: (sectionId: string) => void;
+  onRequestDuplicateField: (fieldId: string) => void;
 }) {
   const t = formBuilderTranslations[language];
-  const { reorderField, updateSection, removeSection, form } =
-    useFormBuilderStore();
+  const { reorderField, updateSection, form, selectField } = useFormBuilderStore();
 
-  const sensors = useSensors(
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+  } = useSortable({ id: `section_${section.id}` });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  const fieldSensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     }),
   );
 
-  const handleDragEnd = (event: DragEndEvent) => {
+  const handleFieldDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
 
@@ -128,85 +202,155 @@ function SectionBlock({
   const canRemove = (form?.sections.length ?? 0) > 1;
 
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <div className="flex items-center gap-2">
-          <Input
-            value={(language === "ja" ? section.titleJa : section.title) ?? ""}
-            onChange={(e) =>
-              updateSection(section.id, language === "ja" ? { titleJa: e.target.value } : { title: e.target.value })
-            }
-            placeholder={t.sectionTitle}
-            className="text-sm font-medium border-0 p-0 h-auto bg-transparent shadow-none focus-visible:ring-0"
-          />
-          {canRemove && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-muted-foreground hover:text-destructive"
-              onClick={() => removeSection(section.id)}
+    <div ref={setNodeRef} style={style}>
+      <Card>
+        <CardHeader className="pb-3" onClick={() => selectField(null)}>
+          <div className="flex items-center gap-2">
+            <span
+              {...attributes}
+              {...listeners}
+              className="cursor-grab text-muted-foreground hover:text-foreground p-1 rounded hover:bg-accent transition-colors text-sm leading-none shrink-0"
+              title={t.dragSection}
             >
-              x
-            </Button>
-          )}
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-2">
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragEnd={handleDragEnd}
-        >
-          <SortableContext
-            items={section.fields.map((f) => f.id)}
-            strategy={verticalListSortingStrategy}
+              ⋮⋮
+            </span>
+            <div className="flex-1 min-w-0 space-y-1">
+              <Input
+                value={section.titleJa ?? section.title ?? ""}
+                onChange={(e) =>
+                  updateSection(section.id, { title: e.target.value, titleJa: e.target.value })
+                }
+                placeholder={t.sectionTitle}
+                className="text-sm font-medium border-0 p-0 h-auto bg-transparent shadow-none focus-visible:ring-0"
+              />
+              <Input
+                value={section.description ?? ""}
+                onChange={(e) =>
+                  updateSection(section.id, { description: e.target.value })
+                }
+                placeholder={t.sectionDescription}
+                className="text-xs border-0 p-0 h-auto bg-transparent shadow-none focus-visible:ring-0 text-muted-foreground"
+              />
+            </div>
+            {canRemove ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-muted-foreground hover:text-destructive shrink-0"
+                onClick={() => onRequestDeleteSection(section.id)}
+              >
+                x
+              </Button>
+            ) : (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-muted-foreground shrink-0"
+                      disabled
+                    >
+                      x
+                    </Button>
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>{t.sectionMinimum}</TooltipContent>
+              </Tooltip>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          <DndContext
+            sensors={fieldSensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleFieldDragEnd}
           >
-            {section.fields.map((field) => (
-              <SortableField key={field.id} field={field} language={language} />
-            ))}
-          </SortableContext>
-        </DndContext>
+            <SortableContext
+              items={section.fields.map((f) => f.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              {section.fields.map((field, idx) => (
+                <SortableField
+                  key={field.id}
+                  field={field}
+                  index={idx}
+                  language={language}
+                  onRequestDelete={onRequestDeleteField}
+                  onRequestDuplicate={onRequestDuplicateField}
+                />
+              ))}
+            </SortableContext>
+          </DndContext>
 
-        {section.fields.length === 0 && (
-          <p className="text-center text-sm text-muted-foreground py-8">
-            {t.addField}
-          </p>
-        )}
-      </CardContent>
-    </Card>
+          {section.fields.length === 0 && (
+            <p className="text-center text-sm text-muted-foreground py-8">
+              {t.addField}
+            </p>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 
 export function FormCanvas({ language }: { language: Language }) {
   const t = formBuilderTranslations[language];
-  const { form, updateFormMeta, addSection } = useFormBuilderStore();
+  const { form, updateFormMeta, addSection, removeField, removeSection, reorderSection, duplicateField, selectField } =
+    useFormBuilderStore();
+
+  // Delete confirmation state
+  const [deleteFieldTarget, setDeleteFieldTarget] = useState<string | null>(null);
+  const [deleteSectionTarget, setDeleteSectionTarget] = useState<string | null>(null);
+
+  // Section DnD
+  const sectionSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 10 } }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
+
+  const handleSectionDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const sections = form?.sections ?? [];
+    const fromIndex = sections.findIndex((s) => `section_${s.id}` === active.id);
+    const toIndex = sections.findIndex((s) => `section_${s.id}` === over.id);
+    if (fromIndex !== -1 && toIndex !== -1) {
+      reorderSection(fromIndex, toIndex);
+    }
+  };
+
+  const handleRequestDeleteSection = (sectionId: string) => {
+    const section = form?.sections.find((s) => s.id === sectionId);
+    if (section && section.fields.length > 0) {
+      setDeleteSectionTarget(sectionId);
+    } else {
+      removeSection(sectionId);
+    }
+  };
 
   if (!form) return null;
 
   return (
     <div className="space-y-4">
       {/* Form meta */}
-      <Card>
+      <Card onClick={() => selectField(null)}>
         <CardContent className="pt-4 space-y-3">
           <div>
             <Label className="text-xs">{t.formTitleLabel}</Label>
             <Input
               value={form.title}
-              onChange={(e) => updateFormMeta({ title: e.target.value })}
-            />
-          </div>
-          <div>
-            <Label className="text-xs">{t.formTitleJa}</Label>
-            <Input
-              value={form.titleJa ?? ""}
-              onChange={(e) => updateFormMeta({ titleJa: e.target.value })}
+              onChange={(e) => updateFormMeta({ title: e.target.value, titleJa: e.target.value })}
             />
           </div>
           <div>
             <Label className="text-xs">{t.formDescription}</Label>
             <Input
               value={form.description ?? ""}
-              onChange={(e) => updateFormMeta({ description: e.target.value })}
+              onChange={(e) => updateFormMeta({ description: e.target.value, descriptionJa: e.target.value })}
             />
           </div>
           <div className="flex items-center gap-2">
@@ -219,14 +363,60 @@ export function FormCanvas({ language }: { language: Language }) {
         </CardContent>
       </Card>
 
-      {/* Sections */}
-      {form.sections.map((section) => (
-        <SectionBlock key={section.id} section={section} language={language} />
-      ))}
+      {/* Sections with DnD */}
+      <DndContext
+        sensors={sectionSensors}
+        collisionDetection={closestCenter}
+        onDragEnd={handleSectionDragEnd}
+      >
+        <SortableContext
+          items={form.sections.map((s) => `section_${s.id}`)}
+          strategy={verticalListSortingStrategy}
+        >
+          {form.sections.map((section) => (
+            <SortableSectionBlock
+              key={section.id}
+              section={section}
+              language={language}
+              onRequestDeleteField={setDeleteFieldTarget}
+              onRequestDeleteSection={handleRequestDeleteSection}
+              onRequestDuplicateField={duplicateField}
+            />
+          ))}
+        </SortableContext>
+      </DndContext>
 
       <Button variant="outline" className="w-full" onClick={addSection}>
         {t.addSection}
       </Button>
+
+      {/* Field delete confirmation */}
+      <DeleteConfirmDialog
+        open={!!deleteFieldTarget}
+        onOpenChange={(open) => !open && setDeleteFieldTarget(null)}
+        onDelete={() => {
+          if (deleteFieldTarget) {
+            removeField(deleteFieldTarget);
+            setDeleteFieldTarget(null);
+          }
+        }}
+        title={t.deleteFieldTitle}
+        description={t.deleteFieldDescription}
+      />
+
+      {/* Section delete confirmation */}
+      <DeleteConfirmDialog
+        open={!!deleteSectionTarget}
+        onOpenChange={(open) => !open && setDeleteSectionTarget(null)}
+        onDelete={() => {
+          if (deleteSectionTarget) {
+            removeSection(deleteSectionTarget);
+            setDeleteSectionTarget(null);
+          }
+        }}
+        title={t.deleteSectionTitle}
+        description={t.deleteSectionDescription}
+      />
     </div>
   );
 }

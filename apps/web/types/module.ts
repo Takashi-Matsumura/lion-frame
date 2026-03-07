@@ -86,6 +86,14 @@ export interface AppModule {
   /** このモジュールに属するメニュー一覧 */
   menus: AppMenu[];
 
+  /**
+   * 日本語専用モジュール
+   * trueの場合、UI翻訳は日本語のみ。英語UIは提供しない。
+   * コアモジュールは常にi18n対応（このフラグは使用不可）。
+   * アドオンモジュール専用のオプション。
+   */
+  jaOnly?: boolean;
+
   /** このモジュールが提供するサービス一覧（画面を持たないAPI・ロジック） */
   services?: AppService[];
 
