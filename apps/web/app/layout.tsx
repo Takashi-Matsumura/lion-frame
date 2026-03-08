@@ -162,11 +162,13 @@ export default async function RootLayout({
               language={language}
               accessKeyTabPermissions={accessKeyPermissions.tabPermissions}
             />
-            <main
-              className={`container mx-auto px-4 py-8 ${session ? "pt-24" : "pt-20"}`}
+            <div
+              className={`flex-1 overflow-y-auto ${session ? "pt-24" : "pt-20"}`}
             >
-              {children}
-            </main>
+              <main className="container mx-auto px-4 py-8">
+                {children}
+              </main>
+            </div>
           </ClientLayout>
         </ThemeProvider>
       </body>
