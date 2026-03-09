@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Button, BackButton, Card, CardContent, CardHeader, CardTitle, PageSkeleton } from "@/components/ui";
+import { Button, BackButton, Card, CardContent, CardHeader, CardTitle } from "@/components/ui";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Dialog,
   DialogContent,
@@ -124,7 +125,52 @@ export function FormAnswerClient({
     }
   };
 
-  if (loading || !form) return <PageSkeleton />;
+  if (loading || !form)
+    return (
+      <div className="flex flex-col h-[calc(100vh-128px)] overflow-hidden max-w-3xl mx-auto">
+        {/* Title card skeleton */}
+        <Card className="shrink-0 border-l-4 border-l-primary">
+          <CardHeader className="py-2 px-4">
+            <div className="flex items-center gap-3">
+              <Skeleton className="h-8 w-8 rounded-full" />
+              <div className="flex-1 space-y-1.5">
+                <Skeleton className="h-5 w-48" />
+                <Skeleton className="h-3 w-72" />
+              </div>
+            </div>
+          </CardHeader>
+        </Card>
+        {/* Form fields skeleton */}
+        <div className="flex-1 min-h-0 overflow-hidden mt-4 space-y-6">
+          <Card>
+            <CardHeader className="pb-2">
+              <Skeleton className="h-5 w-32" />
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-9 w-48 rounded-md" />
+              </div>
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-20 w-full rounded-md" />
+              </div>
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-28" />
+                <div className="flex gap-1">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <Skeleton key={i} className="h-6 w-6 rounded" />
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <div className="flex justify-end">
+            <Skeleton className="h-9 w-20 rounded-md" />
+          </div>
+        </div>
+      </div>
+    );
 
   if (form.status !== "PUBLISHED") {
     return (
