@@ -28,6 +28,7 @@ const colorMap: Record<string, string> = {
   "text-green-700": "#15803d",
   "text-rose-700": "#be123c",
   "text-purple-700": "#7e22ce",
+  "text-amber-700": "#b45309",
 };
 
 interface SidebarMenuItemComponentProps {

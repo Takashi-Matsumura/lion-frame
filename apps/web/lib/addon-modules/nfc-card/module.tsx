@@ -3,7 +3,7 @@
  *
  * 社員証（NFCカード）と社員情報の紐付け管理を行うアドオンモジュール。
  * RC-S300 カードリーダーを使用したNFCカードの読み取りに対応。
- * デベロッパーセクション専用（開発環境のみ表示）。
+ * バックオフィスセクションに配置。
  */
 
 import { getMenuIcon, getModuleIcon } from "@/lib/modules/icons";
@@ -26,8 +26,9 @@ export const nfcCardModule: AppModule = {
       name: "NFC Registration",
       nameJa: "NFC登録",
       path: "/nfc-registration",
-      menuGroup: "developer",
-      requiredRoles: ["ADMIN"],
+      menuGroup: "backoffice",
+      requiredRoles: ["USER", "MANAGER", "EXECUTIVE", "ADMIN"],
+      requiredAccessKey: "nfc_registration",
       enabled: true,
       order: 10,
       icon: getMenuIcon("nfc-registration", "nfc-card"),
