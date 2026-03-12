@@ -1,0 +1,1 @@
+export { nfcCardModule } from "./module";

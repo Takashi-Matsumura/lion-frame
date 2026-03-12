@@ -126,6 +126,13 @@ export default async function RootLayout({
       }
     }
 
+    // 本番環境ではdeveloperグループのメニューを除外
+    if (process.env.NODE_ENV !== "development") {
+      accessibleMenus = accessibleMenus.filter(
+        (menu) => menu.menuGroup !== "developer",
+      );
+    }
+
     // メニューグループごとにメニューをグループ化
     groupedMenus = groupMenusByMenuGroup(accessibleMenus);
 

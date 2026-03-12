@@ -117,6 +117,7 @@ cd apps/web && npx prisma db push && pnpm db:seed
 | 利用状況 | UsageLog, UsageStat |
 | ページガイド | PageGuide, PageGuideRevision |
 | 依存関係チェック | DependencyReport, DependencyItem |
+| NFCカード | NfcCard |
 | システム | SystemSetting |
 
 ## 重要なルール
@@ -176,10 +177,10 @@ GUEST → USER → MANAGER → EXECUTIVE → ADMIN
 | USER | ゲスト、ユーザ |
 | MANAGER | ゲスト、ユーザ、マネージャー |
 | EXECUTIVE | + エグゼクティブ |
-| ADMIN | 全セクション |
+| ADMIN | 全セクション（+ developer: 開発環境のみ） |
 
 ```typescript
-type MenuGroupId = "guest" | "user" | "manager" | "executive" | "admin";
+type MenuGroupId = "guest" | "user" | "manager" | "executive" | "admin" | "backoffice" | "developer";
 ```
 
 ### ロールカラースキーム

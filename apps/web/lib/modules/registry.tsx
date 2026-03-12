@@ -5,6 +5,7 @@ import { scheduleModule } from "@/lib/core-modules/schedule";
 import { systemModule } from "@/lib/core-modules/system";
 // アドオンモジュール
 import { formsModule } from "@/lib/addon-modules/forms";
+import { nfcCardModule } from "@/lib/addon-modules/nfc-card";
 import { workflowModule } from "@/lib/addon-modules/workflow";
 import { prisma } from "@/lib/prisma";
 import type {
@@ -62,6 +63,13 @@ export const menuGroups: Record<string, MenuGroup> = {
     nameJa: "バックオフィス",
     color: "text-amber-700",
     order: 6,
+  },
+  developer: {
+    id: "developer",
+    name: "DEVELOPER",
+    nameJa: "デベロッパー",
+    color: "text-orange-600",
+    order: 99,
   },
 };
 
@@ -124,6 +132,7 @@ export const moduleRegistry: ModuleRegistry = {
   // アドオンモジュール
   forms: formsModule,
   workflow: workflowModule,
+  "nfc-card": nfcCardModule,
 };
 
 /**

@@ -421,6 +421,9 @@ model Employee {
   workflowApprovals  WorkflowApproval[] @relation("WorkflowApprover")
   workflowDecisions  WorkflowApproval[] @relation("WorkflowDecider")
 
+  // === NFCカード ===
+  nfcCards            NfcCard[]
+
   @@index([positionCode])
   @@index([supervisorId])
   @@index([deputyId])
@@ -1002,4 +1005,24 @@ model FormAnswer {
   createdAt    DateTime       @default(now())
 
   @@unique([submissionId, fieldId])
+}
+
+// ========================================
+// NFCカード管理
+// ========================================
+
+model NfcCard {
+  id           String    @id @default(cuid())
+  cardId       String    @unique // NFC カード UID (hex)
+  employeeId   String
+  employee     Employee  @relation(fields: [employeeId], references: [id])
+  issuedAt     DateTime  @default(now())
+  revokedAt    DateTime?
+  isActive     Boolean   @default(true)
+  note         String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([employeeId])
+  @@index([cardId])
 }

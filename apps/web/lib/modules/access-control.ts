@@ -26,7 +26,7 @@ const ROLE_HIERARCHY: Record<Role, MenuGroupId[]> = {
   USER: ["guest", "user"],
   MANAGER: ["guest", "user", "manager"],
   EXECUTIVE: ["guest", "user", "manager", "executive"],
-  ADMIN: ["guest", "user", "manager", "executive", "admin"],
+  ADMIN: ["guest", "user", "manager", "executive", "admin", "developer"],
 };
 
 /**

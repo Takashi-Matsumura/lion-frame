@@ -20,7 +20,8 @@ export type MenuGroupId =
   | "manager"
   | "executive"
   | "admin"
-  | "backoffice";
+  | "backoffice"
+  | "developer";
 
 /**
  * 日付範囲型

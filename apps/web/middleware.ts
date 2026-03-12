@@ -174,6 +174,13 @@ export default auth(async (req) => {
     }
   }
 
+  // Developer routes - accessible only by ADMIN (layout.tsx additionally gates by NODE_ENV)
+  if (pathname.startsWith("/nfc-registration")) {
+    if (session.user.role !== "ADMIN") {
+      return NextResponse.redirect(redirectUrl("/dashboard"));
+    }
+  }
+
   // Fire-and-forget: ページアクセスログ（レスポンスをブロックしない）
   // 静的ファイル・認証ページ・設定ページは除外
   const excludedLogPaths = ["/login", "/auth/", "/settings", "/_next/", "/api/"];
