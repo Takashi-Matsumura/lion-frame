@@ -115,7 +115,7 @@ function HeaderInner({
   const isEvaluationMaster = pathname === "/admin/evaluation-master";
   const isEvaluationRag = pathname === "/admin/evaluation-rag";
   const isCalendarManagement = pathname === "/admin/calendar-management";
-  const isKioskManager = pathname === "/kiosk-manager";
+  const isKioskManager = pathname === "/backoffice/kiosk-manager";
 
   // 組織分析タブ
   const analyticsTab = searchParams.get("tab") || "overview";
@@ -285,12 +285,12 @@ function HeaderInner({
 
   // キオスク管理タブ（レジストリから取得）
   const kioskManagerTab = searchParams.get("tab") || "events";
-  const registryKioskManagerTabs = getTabsByMenuPath("/kiosk-manager");
+  const registryKioskManagerTabs = getTabsByMenuPath("/backoffice/kiosk-manager");
   const kioskManagerTabs =
     registryKioskManagerTabs?.map((tab) => ({
       name: language === "ja" ? tab.nameJa : tab.name,
       icon: tab.icon,
-      path: `/kiosk-manager?tab=${tab.id}`,
+      path: `/backoffice/kiosk-manager?tab=${tab.id}`,
       active: kioskManagerTab === tab.id,
     })) || [];
 
