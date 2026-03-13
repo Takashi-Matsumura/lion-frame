@@ -12,6 +12,22 @@ importers:
         specifier: ^2
         version: 2.8.10
 
+  addons/sample-hello:
+    dependencies:
+      '@lionframe/module-types':
+        specifier: workspace:*
+        version: link:../../packages/module-types
+      react:
+        specifier: ^19
+        version: 19.2.4
+    devDependencies:
+      '@types/react':
+        specifier: ^19
+        version: 19.2.14
+      typescript:
+        specifier: ^5
+        version: 5.9.3
+
   apps/web:
     dependencies:
       '@auth/prisma-adapter':
@@ -26,6 +42,12 @@ importers:
       '@dnd-kit/utilities':
         specifier: ^3.2.2
         version: 3.2.2(react@19.2.4)
+      '@lionframe/addon-sample-hello':
+        specifier: workspace:*
+        version: link:../../addons/sample-hello
+      '@lionframe/module-types':
+        specifier: workspace:*
+        version: link:../../packages/module-types
       '@prisma/client':
         specifier: ^6.19.1
         version: 6.19.2(prisma@6.19.2(typescript@5.9.3))(typescript@5.9.3)
@@ -231,6 +253,12 @@ importers:
         version: 22.19.11
       typescript:
         specifier: ^5.8.3
+        version: 5.9.3
+
+  packages/module-types:
+    devDependencies:
+      typescript:
+        specifier: ^5
         version: 5.9.3
 
 packages:

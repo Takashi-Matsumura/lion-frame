@@ -3,12 +3,15 @@ import { aiModule } from "@/lib/core-modules/ai";
 import { organizationModule } from "@/lib/core-modules/organization";
 import { scheduleModule } from "@/lib/core-modules/schedule";
 import { systemModule } from "@/lib/core-modules/system";
-// アドオンモジュール
+// アドオンモジュール（内部）
 import { formsModule } from "@/lib/addon-modules/forms";
 import { nfcCardModule } from "@/lib/addon-modules/nfc-card";
 import { workflowModule } from "@/lib/addon-modules/workflow";
 // キオスクモジュール
 import { eventAttendanceModule } from "@/lib/kiosk-modules/event-attendance";
+// 外部アドオンモジュール
+import { externalAddons } from "@/addons";
+import { loadExternalAddons } from "@/lib/modules/addon-loader";
 import { prisma } from "@/lib/prisma";
 import type {
   AppMenu,
@@ -122,8 +125,8 @@ export async function getAllModules(): Promise<AppModule[]> {
 /**
  * モジュールレジストリ
  *
- * 新しいモジュールを追加する場合は、ここにインポートして登録してください。
- * 例: mymodule: myModule,
+ * 内部モジュール: ここに直接登録
+ * 外部アドオン: addons.ts に登録 → 自動的にレジストリに統合
  */
 export const moduleRegistry: ModuleRegistry = {
   // コアモジュール
@@ -131,12 +134,16 @@ export const moduleRegistry: ModuleRegistry = {
   system: systemModule,
   organization: organizationModule,
   schedule: scheduleModule,
-  // アドオンモジュール
+  // アドオンモジュール（内部）
   forms: formsModule,
   workflow: workflowModule,
   "nfc-card": nfcCardModule,
   // キオスクモジュール
   "event-attendance": eventAttendanceModule,
+  // 外部アドオンモジュール（addons.ts から自動登録）
+  ...Object.fromEntries(
+    loadExternalAddons(externalAddons).map((m) => [m.id, m]),
+  ),
 };
 
 /**

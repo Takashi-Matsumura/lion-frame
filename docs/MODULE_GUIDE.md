@@ -408,9 +408,114 @@ app/
 
 ---
 
+## 外部アドオンモジュール
+
+独立したnpmパッケージとしてモジュールを開発・配布できます。
+
+### 外部アドオンの構造
+
+```
+addons/my-addon/
+├── package.json             # @lionframe/module-types に依存
+├── tsconfig.json
+└── src/
+    ├── index.ts             # モジュール定義のエクスポート
+    ├── module.ts            # AddonModuleDefinition（SVGパス文字列でアイコン定義）
+    └── pages/
+        └── MyPage.tsx       # ページコンポーネント
+```
+
+### 外部アドオンのモジュール定義
+
+内部アドオンとの違い:
+- `@lionframe/module-types` の `AddonModuleDefinition` 型を使用（React/Prisma非依存）
+- アイコンは `ReactNode` ではなく **SVGパス文字列**（`iconPath`）で定義
+- フレームワーク側で自動的にReactNodeに変換される
+
+```typescript
+// src/module.ts
+import type { AddonModuleDefinition } from "@lionframe/module-types";
+
+export const myAddonModule: AddonModuleDefinition = {
+  id: "my-addon",
+  name: "My Addon",
+  nameJa: "マイアドオン",
+  iconPath: "M12 6v12m6-6H6",  // SVGパス文字列
+  enabled: true,
+  order: 50,
+  menus: [
+    {
+      id: "my-addon-menu",
+      moduleId: "my-addon",
+      name: "My Menu",
+      nameJa: "マイメニュー",
+      path: "/my-addon",
+      menuGroup: "user",
+      requiredRoles: ["USER", "MANAGER", "EXECUTIVE", "ADMIN"],
+      enabled: true,
+      order: 50,
+      isImplemented: true,
+    },
+  ],
+};
+```
+
+### 外部アドオンの登録
+
+```typescript
+// apps/web/addons.ts
+import type { AddonModuleDefinition } from "@lionframe/module-types";
+import { myAddonModule } from "@lionframe/addon-my-addon";
+
+export const externalAddons: AddonModuleDefinition[] = [
+  myAddonModule,
+];
+```
+
+### プロキシページの作成
+
+Next.js App Routerはファイルシステムベースのルーティングのため、
+外部パッケージのページコンポーネントをre-exportするプロキシページが必要です。
+
+```typescript
+// app/(main)/(menus)/(user)/my-addon/page.tsx
+import { redirect } from "next/navigation";
+import { auth } from "@/auth";
+import { getLanguage } from "@/lib/i18n/get-language";
+import { MyPage } from "@lionframe/addon-my-addon/pages/MyPage";
+
+export default async function Page() {
+  const session = await auth();
+  if (!session?.user) redirect("/login");
+  const language = await getLanguage();
+  return <MyPage language={language} />;
+}
+```
+
+### package.json の設定
+
+```json
+{
+  "name": "@lionframe/addon-my-addon",
+  "exports": {
+    ".": "./src/index.ts",
+    "./pages/MyPage": "./src/pages/MyPage.tsx"
+  },
+  "dependencies": {
+    "@lionframe/module-types": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": "^19"
+  }
+}
+```
+
+---
+
 ## 参考リンク
 
 - [テンプレートモジュール](/template) - 実際に動作するテンプレート
+- [サンプル外部アドオン](../addons/sample-hello/) - 外部アドオンのサンプル実装
 - [Next.js App Router](https://nextjs.org/docs/app)
 - [Prisma Documentation](https://www.prisma.io/docs)
 - [Heroicons](https://heroicons.com/) - アイコン素材
