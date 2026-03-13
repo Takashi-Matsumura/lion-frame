@@ -353,10 +353,12 @@ export function ModulesTab({ language }: ModulesTabProps) {
                             className={
                               module.type === "core"
                                 ? "bg-green-50 text-green-700 border-green-200"
-                                : "bg-purple-50 text-purple-700 border-purple-200"
+                                : module.type === "kiosk"
+                                  ? "bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-900 dark:text-indigo-200 dark:border-indigo-700"
+                                  : "bg-purple-50 text-purple-700 border-purple-200"
                             }
                           >
-                            {module.type === "core" ? "Core" : "Addon"}
+                            {module.type === "core" ? "Core" : module.type === "kiosk" ? "Kiosk" : "Addon"}
                           </Badge>
                           {module.jaOnly && (
                             <Badge
@@ -560,12 +562,16 @@ export function ModulesTab({ language }: ModulesTabProps) {
                     className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
                       selectedModule.type === "core"
                         ? "bg-green-100 text-green-800"
-                        : "bg-purple-100 text-purple-800"
+                        : selectedModule.type === "kiosk"
+                          ? "bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200"
+                          : "bg-purple-100 text-purple-800"
                     }`}
                   >
                     {selectedModule.type === "core"
                       ? "Core Module"
-                      : "Addon Module"}
+                      : selectedModule.type === "kiosk"
+                        ? "Kiosk Module"
+                        : "Addon Module"}
                   </span>
                   {selectedModule.jaOnly && (
                     <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">

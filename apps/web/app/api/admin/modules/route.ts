@@ -92,6 +92,7 @@ export const GET = apiHandler(async () => {
   const modules = await Promise.all(
     Object.values(moduleRegistry).map(async (module) => {
       const isCore = CORE_MODULE_IDS.has(module.id);
+      const isKiosk = !!module.kiosk;
 
       // コンテナステータスをチェック
       const containersWithStatus = module.containers
@@ -118,7 +119,7 @@ export const GET = apiHandler(async () => {
         description: module.description,
         descriptionJa: module.descriptionJa,
         enabled: isEnabled,
-        type: isCore ? ("core" as const) : ("addon" as const),
+        type: isCore ? ("core" as const) : isKiosk ? ("kiosk" as const) : ("addon" as const),
         external: EXTERNAL_MODULE_IDS.has(module.id),
         jaOnly: module.jaOnly ?? false,
         dependencies: module.dependencies ?? [],

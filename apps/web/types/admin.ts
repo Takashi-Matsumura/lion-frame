@@ -92,7 +92,7 @@ export interface ModuleInfo {
   description?: string;
   descriptionJa?: string;
   enabled: boolean;
-  type: "core" | "addon";
+  type: "core" | "addon" | "kiosk";
   external?: boolean;
   jaOnly?: boolean;
   menuCount: number;
@@ -260,7 +260,7 @@ export interface ModuleHealthResult {
   moduleNameJa: string;
   status: ModuleHealthStatus;
   enabled: boolean;
-  type: "core" | "addon";
+  type: "core" | "addon" | "kiosk";
   reasonJa: string;
   reason: string;
   containers: ContainerHealthDetail[];
