@@ -10,8 +10,8 @@
  */
 
 import type { AddonModuleDefinition } from "@lionframe/module-types";
-import { sampleHelloModule } from "@lionframe/addon-sample-hello";
 
 export const externalAddons: AddonModuleDefinition[] = [
-  sampleHelloModule,
+  // 外部アドオンをここに登録
+  // 例: sampleHelloModule,
 ];

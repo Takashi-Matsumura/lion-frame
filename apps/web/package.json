@@ -19,7 +19,6 @@
   },
   "dependencies": {
     "@lionframe/module-types": "workspace:*",
-    "@lionframe/addon-sample-hello": "github:Takashi-Matsumura/lionframe-addon-sample-hello",
     "@auth/prisma-adapter": "^2.10.0",
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",

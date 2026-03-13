@@ -102,6 +102,21 @@ npm run dev
 
 アドオンモジュールは `lib/addon-modules/` に配置します。作成手順は [アドオンモジュールガイド](docs/ADDON_MODULE_GUIDE.md) を参照してください。
 
+### 外部アドオンモジュール
+
+内部アドオンに加えて、独立した npm パッケージ（GitHub リポジトリ）として開発・配布する外部アドオンにも対応しています。
+
+外部アドオンのサンプル実装:
+- **[lionframe-addon-sample-hello](https://github.com/Takashi-Matsumura/lionframe-addon-sample-hello)** — 外部パッケージ連携のデモ用サンプルモジュール
+- **[lionframe-module-types](https://github.com/Takashi-Matsumura/lionframe-module-types)** — 外部アドオン開発用の共有型定義
+
+外部アドオンの仕組み:
+1. `@lionframe/module-types` に依存してモジュール定義を作成（React/Prisma 非依存）
+2. アイコンは SVG パス文字列で定義（`iconPath`）、フレームワーク側で ReactNode に変換
+3. `apps/web/addons.ts` に登録 + プロキシページを作成するだけで統合完了
+
+詳細は [モジュール作成ガイド](docs/MODULE_GUIDE.md) の「外部アドオンモジュール」セクションを参照してください。
+
 ### ロール階層
 
 ```
