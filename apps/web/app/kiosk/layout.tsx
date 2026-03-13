@@ -11,6 +11,8 @@ export const metadata = {
   title: "Kiosk - LionFrame",
 };
 
+export const dynamic = "force-dynamic";
+
 export default function KioskLayout({ children }: { children: ReactNode }) {
   return (
     <div className="bg-gray-950 text-white min-h-screen antialiased">

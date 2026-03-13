@@ -9,7 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { WorkflowFormDisplay } from "@/app/(menus)/(user)/workflow/WorkflowFormFields";
+import { WorkflowFormDisplay } from "@/app/(main)/(menus)/(user)/workflow/WorkflowFormFields";
 import { workflowApprovalsTranslations, type Language } from "./translations";
 
 interface Approval {

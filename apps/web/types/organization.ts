@@ -1,4 +1,4 @@
-import type { DataManagementTranslation } from "@/app/admin/data-management/translations";
+import type { DataManagementTranslation } from "@/app/(main)/admin/data-management/translations";
 
 /**
  * Manager reference (used in org tree)

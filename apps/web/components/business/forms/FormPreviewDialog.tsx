@@ -11,7 +11,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui";
 import { FormFieldRenderer } from "./FormFieldRenderer";
 import { evaluateConditions, type ConditionalLogic } from "@/lib/addon-modules/forms/condition-evaluator";
-import { formBuilderTranslations, type Language } from "@/app/(menus)/(manager)/form-builder/translations";
+import { formBuilderTranslations, type Language } from "@/app/(main)/(menus)/(manager)/form-builder/translations";
 import type { FormDraft } from "@/lib/addon-modules/forms/form-builder-store";
 
 interface Props {

@@ -24,7 +24,7 @@ import {
 import { LoadingSpinner } from "@/components/ui/Icons";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
-import { HolidayManagementSkeleton } from "@/app/admin/calendar-management/CalendarManagementSkeleton";
+import { HolidayManagementSkeleton } from "@/app/(main)/admin/calendar-management/CalendarManagementSkeleton";
 import {
   Table,
   TableBody,

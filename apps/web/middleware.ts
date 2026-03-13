@@ -8,11 +8,10 @@ const { auth } = NextAuth(authConfig);
 export default auth(async (req) => {
   const { pathname } = req.nextUrl;
 
-  // /kiosk パスは独立アプリ — 認証チェックをスキップし、キオスクモードヘッダーを付与
-  if (pathname.startsWith("/kiosk")) {
-    const response = NextResponse.next();
-    response.headers.set("x-kiosk-mode", "1");
-    return response;
+  // /kiosk/ パスは独立アプリ — 認証チェックをスキップ
+  // ルートグループ分離により、キオスクは独自レイアウトで動作する
+  if (pathname.startsWith("/kiosk/") || pathname === "/kiosk") {
+    return NextResponse.next();
   }
 
   const session = req.auth;

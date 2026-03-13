@@ -4,7 +4,7 @@ import { useSearchParams } from "next/navigation";
 import { useIsMobile } from "@/lib/hooks/use-mobile";
 import { useSidebar } from "@/components/ui/sidebar";
 import { useSidebarStore } from "@/lib/stores/sidebar-store";
-import { HolidayManagementClient } from "@/app/admin/holidays/HolidayManagementClient";
+import { HolidayManagementClient } from "@/app/(main)/admin/holidays/HolidayManagementClient";
 import { CompanyEventsTab } from "./components/CompanyEventsTab";
 import { CalendarSettingsTab } from "./components/CalendarSettingsTab";
 

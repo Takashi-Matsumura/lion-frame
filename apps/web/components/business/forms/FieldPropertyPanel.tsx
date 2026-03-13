@@ -18,7 +18,7 @@ import {
   type FormFieldDraft,
 } from "@/lib/addon-modules/forms/form-builder-store";
 import { ConditionalLogicEditor } from "./ConditionalLogicEditor";
-import { formBuilderTranslations, type Language } from "@/app/(menus)/(manager)/form-builder/translations";
+import { formBuilderTranslations, type Language } from "@/app/(main)/(menus)/(manager)/form-builder/translations";
 
 const hasOptions = (type: string) =>
   ["SELECT", "MULTI_SELECT", "RADIO", "CHECKBOX_GROUP"].includes(type);

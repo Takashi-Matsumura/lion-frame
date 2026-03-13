@@ -18,7 +18,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { formBuilderTranslations, type Language } from "@/app/(menus)/(manager)/form-builder/translations";
+import { formBuilderTranslations, type Language } from "@/app/(main)/(menus)/(manager)/form-builder/translations";
 
 interface Answer {
   id: string;
