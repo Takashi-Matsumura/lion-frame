@@ -42,7 +42,7 @@ const statusConfig = {
   },
 };
 
-export function KioskCheckInResult({ result }: { result: CheckInResultData }) {
+export function KioskCheckInResult({ result, language = "ja" }: { result: CheckInResultData; language?: "en" | "ja" }) {
   const config = statusConfig[result.status];
 
   return (
@@ -98,7 +98,7 @@ export function KioskCheckInResult({ result }: { result: CheckInResultData }) {
 
       {/* Status Label */}
       <p className={`text-2xl font-bold ${config.text} mb-4`}>
-        {config.label}
+        {language === "en" ? config.labelEn : config.label}
       </p>
 
       {/* Employee Info */}

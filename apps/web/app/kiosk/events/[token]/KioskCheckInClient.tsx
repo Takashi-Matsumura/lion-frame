@@ -26,11 +26,39 @@ interface EventInfo {
   capacity: number | null;
 }
 
+const kioskTranslations = {
+  en: {
+    attendees: "Attendees",
+    holdNfc: "Hold your NFC card to the reader",
+    processing: "Processing...",
+    nfcStandby: "NFC standby...",
+    cardReadFailed: "Card reading failed",
+    checkInFailed: "Check-in failed",
+    connectionError: "Connection error",
+    webUsbNotSupported: "WebUSB not supported. Please use Chrome/Edge.",
+    selectNfcReader: "Please select an NFC reader.",
+    retry: "Retry",
+  },
+  ja: {
+    attendees: "出席者",
+    holdNfc: "NFCカードをかざしてください",
+    processing: "処理中...",
+    nfcStandby: "NFC待機中...",
+    cardReadFailed: "カード読み取りに失敗しました",
+    checkInFailed: "チェックインに失敗しました",
+    connectionError: "通信エラー",
+    webUsbNotSupported: "WebUSB未対応のブラウザです。Chrome/Edgeをご利用ください。",
+    selectNfcReader: "NFCリーダーを選択してください。",
+    retry: "再試行",
+  },
+};
+
 interface KioskCheckInClientProps {
   token: string;
   sessionName: string;
   initialAttendanceCount: number;
   event: EventInfo | null;
+  language?: "en" | "ja";
 }
 
 function formatTime(isoString: string): string {
@@ -57,7 +85,9 @@ export function KioskCheckInClient({
   sessionName,
   initialAttendanceCount,
   event,
+  language = "ja",
 }: KioskCheckInClientProps) {
+  const t = kioskTranslations[language];
   const [attendanceCount, setAttendanceCount] = useState(initialAttendanceCount);
   const [result, setResult] = useState<CheckInResult | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -105,15 +135,15 @@ export function KioskCheckInClient({
             setAttendanceCount((prev) => prev + 1);
           }
         } else {
-          setError("チェックインに失敗しました");
+          setError(t.checkInFailed);
         }
       } catch {
-        setError("通信エラー");
+        setError(t.connectionError);
       } finally {
         setIsProcessing(false);
       }
     },
-    [token],
+    [token, t],
   );
 
   /**
@@ -132,7 +162,7 @@ export function KioskCheckInClient({
     try {
       const nfc = await loadNfcModule();
       if (!nfc.isWebUsbSupported()) {
-        setError("WebUSB未対応のブラウザです。Chrome/Edgeをご利用ください。");
+        setError(t.webUsbNotSupported);
         setNfcState("idle");
         pollingRef.current = false;
         return;
@@ -166,17 +196,17 @@ export function KioskCheckInClient({
       // モジュール読み込みエラー等
       const msg = err instanceof Error ? err.message : "NFC初期化エラー";
       if (msg.includes("WebUSB")) {
-        setError("WebUSB未対応のブラウザです。Chrome/Edgeをご利用ください。");
+        setError(t.webUsbNotSupported);
       } else if (msg.includes("No device selected") || msg.includes("user cancelled")) {
         // ユーザーがデバイス選択をキャンセル
-        setError("NFCリーダーを選択してください。");
+        setError(t.selectNfcReader);
       } else {
         setError(`NFC接続エラー: ${msg}`);
       }
       setNfcState("idle");
       pollingRef.current = false;
     }
-  }, [loadNfcModule, handleCheckIn]);
+  }, [loadNfcModule, handleCheckIn, t]);
 
   const stopPolling = useCallback(() => {
     pollingRef.current = false;
@@ -237,7 +267,7 @@ export function KioskCheckInClient({
               </span>
             )}
           </p>
-          <p className="text-sm text-gray-400">出席者</p>
+          <p className="text-sm text-gray-400">{t.attendees}</p>
         </div>
       </header>
 
@@ -245,7 +275,7 @@ export function KioskCheckInClient({
       <main className="flex-1 flex items-center justify-center p-8">
         {result ? (
           <div className="w-full max-w-lg">
-            <KioskCheckInResult result={result} />
+            <KioskCheckInResult result={result} language={language} />
           </div>
         ) : (
           <div className="text-center space-y-8">
@@ -282,14 +312,16 @@ export function KioskCheckInClient({
             <div>
               <p className="text-2xl text-gray-300">
                 {isProcessing
-                  ? "処理中..."
+                  ? t.processing
                   : nfcState === "polling"
-                    ? "NFCカードをかざしてください"
-                    : "NFC待機中..."}
+                    ? t.holdNfc
+                    : t.nfcStandby}
               </p>
-              <p className="text-lg text-gray-500 mt-2">
-                Hold your NFC card to the reader
-              </p>
+              {language === "ja" && (
+                <p className="text-lg text-gray-500 mt-2">
+                  Hold your NFC card to the reader
+                </p>
+              )}
             </div>
 
             {error && (
@@ -303,7 +335,7 @@ export function KioskCheckInClient({
                     startPolling();
                   }}
                 >
-                  再試行
+                  {t.retry}
                 </button>
               </div>
             )}

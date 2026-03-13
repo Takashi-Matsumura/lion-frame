@@ -21,6 +21,7 @@ export default async function KioskEventPage({
       token={token}
       sessionName={session.name}
       initialAttendanceCount={session._count.attendances}
+      language="ja"
       event={
         event
           ? {

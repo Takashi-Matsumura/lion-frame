@@ -11,10 +11,18 @@ import { KIOSK_COOKIE_NAME } from "@/lib/kiosk/verify-session";
  */
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
+    let body: Record<string, unknown>;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json(
+        { error: "Invalid request body" },
+        { status: 400 },
+      );
+    }
     const { token } = body;
 
-    if (!token) {
+    if (!token || typeof token !== "string") {
       return NextResponse.json(
         { error: "Token is required" },
         { status: 400 },

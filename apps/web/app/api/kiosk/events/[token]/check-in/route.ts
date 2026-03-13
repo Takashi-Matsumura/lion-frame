@@ -32,8 +32,17 @@ export async function POST(
       );
     }
 
-    const body = await request.json();
-    const { nfcCardId, employeeId } = body;
+    let body: Record<string, unknown>;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json(
+        { error: "Invalid request body" },
+        { status: 400 },
+      );
+    }
+    const nfcCardId = typeof body.nfcCardId === "string" ? body.nfcCardId : undefined;
+    const employeeId = typeof body.employeeId === "string" ? body.employeeId : undefined;
 
     if (!nfcCardId && !employeeId) {
       return NextResponse.json(
@@ -44,7 +53,7 @@ export async function POST(
 
     const result = nfcCardId
       ? await checkInByNfc(session.id, nfcCardId)
-      : await checkInManual(session.id, employeeId);
+      : await checkInManual(session.id, employeeId!);
 
     return NextResponse.json(result);
   } catch {

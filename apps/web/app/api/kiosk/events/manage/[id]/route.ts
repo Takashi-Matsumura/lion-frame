@@ -10,8 +10,10 @@ import type { Role } from "@prisma/client";
 export const PATCH = apiHandler(
   async (request) => {
     const url = new URL(request.url);
-    const id = url.pathname.split("/").pop();
-    if (!id) throw ApiError.badRequest("id is required", "IDは必須です");
+    const segments = url.pathname.split("/");
+    const manageIdx = segments.indexOf("manage");
+    const id = manageIdx >= 0 ? segments[manageIdx + 1] : undefined;
+    if (!id || id.trim() === "") throw ApiError.badRequest("id is required", "IDは必須です");
 
     const body = await request.json();
 
@@ -121,8 +123,10 @@ export const PATCH = apiHandler(
 export const DELETE = apiHandler(
   async (request) => {
     const url = new URL(request.url);
-    const id = url.pathname.split("/").pop();
-    if (!id) throw ApiError.badRequest("id is required", "IDは必須です");
+    const segments = url.pathname.split("/");
+    const manageIdx = segments.indexOf("manage");
+    const id = manageIdx >= 0 ? segments[manageIdx + 1] : undefined;
+    if (!id || id.trim() === "") throw ApiError.badRequest("id is required", "IDは必須です");
 
     await prisma.kioskEvent.delete({ where: { id } });
     return { success: true };

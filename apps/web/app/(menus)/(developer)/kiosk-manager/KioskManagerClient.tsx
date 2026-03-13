@@ -136,6 +136,13 @@ export function KioskManagerClient({ language }: { language: Language }) {
   const [copiedTokenId, setCopiedTokenId] = useState<string | null>(null);
   const copiedTimerRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Cleanup copiedTimerRef on unmount
+  useEffect(() => {
+    return () => {
+      if (copiedTimerRef.current) clearTimeout(copiedTimerRef.current);
+    };
+  }, []);
+
   // Event form state
   const [eventForm, setEventForm] = useState({
     name: "",
