@@ -1,6 +1,20 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { verifyKioskSession } from "@/lib/kiosk/verify-session";
 import { KioskCheckInClient } from "./KioskCheckInClient";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ token: string }>;
+}): Promise<Metadata> {
+  const { token } = await params;
+  const session = await verifyKioskSession();
+  const eventName = session?.kioskEvent?.name;
+  return {
+    title: eventName || `Kiosk - ${token.slice(0, 8)}`,
+  };
+}
 
 export default async function KioskEventPage({
   params,

@@ -8,7 +8,10 @@
 import type { ReactNode } from "react";
 
 export const metadata = {
-  title: "Kiosk - LionFrame",
+  title: {
+    default: "Kiosk",
+    template: "%s - Kiosk",
+  },
 };
 
 export const dynamic = "force-dynamic";
