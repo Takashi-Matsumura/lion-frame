@@ -12,22 +12,6 @@ importers:
         specifier: ^2
         version: 2.8.10
 
-  addons/sample-hello:
-    dependencies:
-      '@lionframe/module-types':
-        specifier: workspace:*
-        version: link:../../packages/module-types
-      react:
-        specifier: ^19
-        version: 19.2.4
-    devDependencies:
-      '@types/react':
-        specifier: ^19
-        version: 19.2.14
-      typescript:
-        specifier: ^5
-        version: 5.9.3
-
   apps/web:
     dependencies:
       '@auth/prisma-adapter':
@@ -43,8 +27,8 @@ importers:
         specifier: ^3.2.2
         version: 3.2.2(react@19.2.4)
       '@lionframe/addon-sample-hello':
-        specifier: workspace:*
-        version: link:../../addons/sample-hello
+        specifier: github:Takashi-Matsumura/lionframe-addon-sample-hello
+        version: https://codeload.github.com/Takashi-Matsumura/lionframe-addon-sample-hello/tar.gz/622615588cef66abbd61bb425db82f1224ec3b17(react@19.2.4)
       '@lionframe/module-types':
         specifier: workspace:*
         version: link:../../packages/module-types
@@ -1033,6 +1017,16 @@ packages:
 
   '@jridgewell/trace-mapping@0.3.9':
     resolution: {integrity: sha512-3Belt6tdc8bPgAtbcmdtNJlirVoTmEb5e2gC94PnkwEW9jI6CAHUeoG85tjWP5WquqfavoMtMwiG4P926ZKKuQ==}
+
+  '@lionframe/addon-sample-hello@https://codeload.github.com/Takashi-Matsumura/lionframe-addon-sample-hello/tar.gz/622615588cef66abbd61bb425db82f1224ec3b17':
+    resolution: {tarball: https://codeload.github.com/Takashi-Matsumura/lionframe-addon-sample-hello/tar.gz/622615588cef66abbd61bb425db82f1224ec3b17}
+    version: 0.1.0
+    peerDependencies:
+      react: ^19
+
+  '@lionframe/module-types@https://codeload.github.com/Takashi-Matsumura/lionframe-module-types/tar.gz/faa2c0240c9ff28a98d6c27951257b1bf21f9529':
+    resolution: {tarball: https://codeload.github.com/Takashi-Matsumura/lionframe-module-types/tar.gz/faa2c0240c9ff28a98d6c27951257b1bf21f9529}
+    version: 0.1.0
 
   '@modelcontextprotocol/sdk@1.26.0':
     resolution: {integrity: sha512-Y5RmPncpiDtTXDbLKswIJzTqu2hyBKxTNsgKqKclDbhIgg1wgtf1fRuvxgTnRfcnxtvvgbIEcqUOzZrJ6iSReg==}
@@ -5242,6 +5236,13 @@ snapshots:
     dependencies:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
+
+  '@lionframe/addon-sample-hello@https://codeload.github.com/Takashi-Matsumura/lionframe-addon-sample-hello/tar.gz/622615588cef66abbd61bb425db82f1224ec3b17(react@19.2.4)':
+    dependencies:
+      '@lionframe/module-types': https://codeload.github.com/Takashi-Matsumura/lionframe-module-types/tar.gz/faa2c0240c9ff28a98d6c27951257b1bf21f9529
+      react: 19.2.4
+
+  '@lionframe/module-types@https://codeload.github.com/Takashi-Matsumura/lionframe-module-types/tar.gz/faa2c0240c9ff28a98d6c27951257b1bf21f9529': {}
 
   '@modelcontextprotocol/sdk@1.26.0(zod@4.3.6)':
     dependencies:

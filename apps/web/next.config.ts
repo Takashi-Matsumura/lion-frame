@@ -11,6 +11,11 @@ try {
 }
 
 const nextConfig: NextConfig = {
+  // 外部アドオンパッケージのTypeScriptをトランスパイル
+  transpilePackages: [
+    "@lionframe/addon-sample-hello",
+    "@lionframe/module-types",
+  ],
   env: {
     NEXT_BUILD_ID: buildId,
   },

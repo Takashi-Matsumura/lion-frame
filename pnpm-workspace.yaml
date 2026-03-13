@@ -1,7 +1,6 @@
 packages:
   - apps/*
   - packages/*
-  - addons/*
   - mcp-servers/*
 onlyBuiltDependencies:
   - '@prisma/client'
