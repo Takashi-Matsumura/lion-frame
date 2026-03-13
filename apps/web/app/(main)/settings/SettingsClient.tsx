@@ -4,7 +4,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useState } from "react";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { Card, CardContent } from "@/components/ui/card";
-import { useIsMobile } from "@/lib/hooks/use-mobile";
 import { PasswordChangeSection } from "./PasswordChangeSection";
 import { TwoFactorSection } from "./TwoFactorSection";
 import type { settingsTranslations } from "./translations";
@@ -27,7 +26,6 @@ export function SettingsClient({
   twoFactorEnabled: initialTwoFactorEnabled,
   mustChangePassword: initialMustChangePassword,
 }: SettingsClientProps) {
-  const isMobile = useIsMobile();
   const router = useRouter();
   const searchParams = useSearchParams();
   const activeTab = (searchParams.get("tab") as "basic" | "keys") || "basic";
@@ -52,68 +50,52 @@ export function SettingsClient({
   }, [passwordReset, router]);
 
   return (
-    <>
-      <style jsx global>{`
-        body {
-          overflow: hidden !important;
-        }
-      `}</style>
+    <div className="max-w-4xl mx-auto">
+      {activeTab === "basic" && (
+        <div className="space-y-6">
+          {/* Password Change Section */}
+          <Card>
+            <CardContent className="pt-6">
+              <PasswordChangeSection
+                translations={t.passwordChange}
+                mustChangePassword={mustChangePassword || passwordReset}
+                onPasswordChanged={handlePasswordChanged}
+              />
+            </CardContent>
+          </Card>
 
-      <div
-        className="fixed inset-0 flex flex-col bg-muted/30 transition-all duration-300"
-        style={{ top: "6rem", left: isMobile ? "0" : "4rem" }}
-      >
-        {/* スクロール可能なコンテンツエリア */}
-        <div className="flex-1 overflow-y-auto p-6">
-          <div className="max-w-4xl mx-auto">
-            {activeTab === "basic" && (
-              <div className="space-y-6">
-                {/* Password Change Section */}
-                <Card>
-                  <CardContent className="pt-6">
-                    <PasswordChangeSection
-                      translations={t.passwordChange}
-                      mustChangePassword={mustChangePassword || passwordReset}
-                      onPasswordChanged={handlePasswordChanged}
-                    />
-                  </CardContent>
-                </Card>
+          {/* Language Settings */}
+          <Card>
+            <CardContent className="pt-6">
+              <LanguageSwitcher
+                currentLanguage={language}
+                translations={t.language}
+              />
+            </CardContent>
+          </Card>
 
-                {/* Language Settings */}
-                <Card>
-                  <CardContent className="pt-6">
-                    <LanguageSwitcher
-                      currentLanguage={language}
-                      translations={t.language}
-                    />
-                  </CardContent>
-                </Card>
-
-                {/* Two-Factor Authentication */}
-                <Card>
-                  <CardContent className="pt-6">
-                    <TwoFactorSection
-                      isEnabled={twoFactorEnabled}
-                      translations={t.twoFactor}
-                      onStatusChange={handleTwoFactorStatusChange}
-                    />
-                  </CardContent>
-                </Card>
-              </div>
-            )}
-
-            {activeTab === "keys" && (
-              <div className="space-y-6">
-                <Card>
-                  <CardContent className="pt-6">
-                    <UserAccessKeySection language={language} />
-                  </CardContent>
-                </Card>
-              </div>
-            )}
-          </div>
+          {/* Two-Factor Authentication */}
+          <Card>
+            <CardContent className="pt-6">
+              <TwoFactorSection
+                isEnabled={twoFactorEnabled}
+                translations={t.twoFactor}
+                onStatusChange={handleTwoFactorStatusChange}
+              />
+            </CardContent>
+          </Card>
         </div>
-      </div>
-    </>
+      )}
+
+      {activeTab === "keys" && (
+        <div className="space-y-6">
+          <Card>
+            <CardContent className="pt-6">
+              <UserAccessKeySection language={language} />
+            </CardContent>
+          </Card>
+        </div>
+      )}
+    </div>
   );
 }
