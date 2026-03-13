@@ -28,7 +28,7 @@ export const eventAttendanceModule: AppModule = {
       moduleId: "event-attendance",
       name: "Kiosk Manager",
       nameJa: "キオスク管理",
-      path: "/backoffice/kiosk-manager",
+      path: "/kiosk-manager",
       menuGroup: "backoffice",
       requiredRoles: ["ADMIN"],
       enabled: true,
