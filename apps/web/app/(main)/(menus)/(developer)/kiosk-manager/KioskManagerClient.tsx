@@ -1,8 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { useSearchParams } from "next/navigation";
-import { Check, Link2, Plus } from "lucide-react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
+import { Check, ChevronDown, ChevronRight, Link2, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { Button, Card, CardContent } from "@/components/ui";
 import { Badge } from "@/components/ui/badge";
@@ -34,8 +33,6 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { kioskManagerTranslations, type Language } from "./translations";
 
-type TabType = "events" | "attendance";
-
 // ─── Types ───
 
 interface KioskEventData {
@@ -59,18 +56,6 @@ interface KioskEventData {
     expiresAt: string;
     _count: { attendances: number };
   } | null;
-}
-
-interface KioskSessionData {
-  id: string;
-  token: string;
-  name: string;
-  moduleId: string;
-  isActive: boolean;
-  expiresAt: string;
-  createdAt: string;
-  creator: { name: string | null };
-  _count: { attendances: number };
 }
 
 interface AttendanceRecord {
@@ -113,7 +98,8 @@ const categoryConfig: Record<string, { color: string; colorDark: string }> = {
 
 const statusColors: Record<string, string> = {
   draft: "bg-muted text-muted-foreground",
-  published: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+  published:
+    "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
   closed: "bg-muted text-muted-foreground",
 };
 
@@ -121,8 +107,6 @@ const statusColors: Record<string, string> = {
 
 export function KioskManagerClient({ language }: { language: Language }) {
   const t = kioskManagerTranslations[language];
-  const searchParams = useSearchParams();
-  const activeTab = (searchParams.get("tab") as TabType) || "events";
 
   // Events state
   const [events, setEvents] = useState<KioskEventData[]>([]);
@@ -135,6 +119,11 @@ export function KioskManagerClient({ language }: { language: Language }) {
 
   const [copiedTokenId, setCopiedTokenId] = useState<string | null>(null);
   const copiedTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Inline attendance state
+  const [expandedEventId, setExpandedEventId] = useState<string | null>(null);
+  const [attendances, setAttendances] = useState<AttendanceRecord[]>([]);
+  const [isLoadingAttendance, setIsLoadingAttendance] = useState(false);
 
   // Cleanup copiedTimerRef on unmount
   useEffect(() => {
@@ -155,15 +144,6 @@ export function KioskManagerClient({ language }: { language: Language }) {
     location: "",
     capacity: "",
   });
-
-  // Sessions state (出席記録タブ用)
-  const [sessions, setSessions] = useState<KioskSessionData[]>([]);
-  const [isLoadingSessions, setIsLoadingSessions] = useState(true);
-
-  // Attendance state
-  const [selectedSessionId, setSelectedSessionId] = useState("");
-  const [attendances, setAttendances] = useState<AttendanceRecord[]>([]);
-  const [isLoadingAttendance, setIsLoadingAttendance] = useState(false);
 
   // ─── Category / Status label helpers ───
 
@@ -210,8 +190,8 @@ export function KioskManagerClient({ language }: { language: Language }) {
   }, [statusFilter]);
 
   useEffect(() => {
-    if (activeTab === "events") fetchEvents();
-  }, [activeTab, fetchEvents]);
+    fetchEvents();
+  }, [fetchEvents]);
 
   const openCreateEvent = useCallback(() => {
     setEditingEvent(null);
@@ -328,46 +308,35 @@ export function KioskManagerClient({ language }: { language: Language }) {
     [t, fetchEvents],
   );
 
-  // ─── Sessions fetch / CRUD ───
+  // ─── Inline attendance ───
 
-  const fetchSessions = useCallback(async () => {
-    setIsLoadingSessions(true);
-    try {
-      const res = await fetch("/api/kiosk/sessions?moduleId=event-attendance");
-      if (res.ok) {
-        const data = await res.json();
-        setSessions(data.sessions);
+  const toggleAttendance = useCallback(
+    async (event: KioskEventData) => {
+      if (!event.kioskSession) return;
+      const sessionId = event.kioskSession.id;
+
+      if (expandedEventId === event.id) {
+        setExpandedEventId(null);
+        setAttendances([]);
+        return;
       }
-    } finally {
-      setIsLoadingSessions(false);
-    }
-  }, []);
 
-  useEffect(() => {
-    if (activeTab === "attendance") fetchSessions();
-  }, [activeTab, fetchSessions]);
-
-  // ─── Attendance fetch ───
-
-  const fetchAttendance = useCallback(async (sessionId: string) => {
-    if (!sessionId) return;
-    setIsLoadingAttendance(true);
-    try {
-      const res = await fetch(`/api/kiosk/attendance?sessionId=${sessionId}`);
-      if (res.ok) {
-        const data = await res.json();
-        setAttendances(data.attendances);
+      setExpandedEventId(event.id);
+      setIsLoadingAttendance(true);
+      try {
+        const res = await fetch(
+          `/api/kiosk/attendance?sessionId=${sessionId}`,
+        );
+        if (res.ok) {
+          const data = await res.json();
+          setAttendances(data.attendances);
+        }
+      } finally {
+        setIsLoadingAttendance(false);
       }
-    } finally {
-      setIsLoadingAttendance(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (selectedSessionId) {
-      fetchAttendance(selectedSessionId);
-    }
-  }, [selectedSessionId, fetchAttendance]);
+    },
+    [expandedEventId],
+  );
 
   // ─── Date formatting helper ───
 
@@ -387,77 +356,98 @@ export function KioskManagerClient({ language }: { language: Language }) {
 
   return (
     <div className="max-w-7xl mx-auto mt-8">
-      {/* ────── Events Tab ────── */}
-      {activeTab === "events" && (
-        <Card>
-          <CardContent className="p-6">
-            {/* Header */}
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold text-foreground">
-                {t.eventList}
-              </h2>
-              <div className="flex items-center gap-3">
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">{t.statusAll}</SelectItem>
-                    <SelectItem value="draft">{t.statusDraft}</SelectItem>
-                    <SelectItem value="published">
-                      {t.statusPublished}
-                    </SelectItem>
-                    <SelectItem value="closed">{t.statusClosed}</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Button onClick={openCreateEvent}>
-                  <Plus className="w-4 h-4 mr-2" />
+      <Card>
+        <CardContent className="p-6">
+          {/* Header */}
+          <div className="flex items-center justify-end mb-6">
+            <div className="flex items-center gap-3">
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t.statusAll}</SelectItem>
+                  <SelectItem value="draft">{t.statusDraft}</SelectItem>
+                  <SelectItem value="published">
+                    {t.statusPublished}
+                  </SelectItem>
+                  <SelectItem value="closed">{t.statusClosed}</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button onClick={openCreateEvent}>
+                <Plus className="w-4 h-4 mr-2" />
+                {t.createEvent}
+              </Button>
+            </div>
+          </div>
+
+          {/* Table */}
+          {isLoadingEvents ? (
+            <div className="space-y-3">
+              {[...Array(3)].map((_, i) => (
+                <Skeleton key={`ev-skel-${i}`} className="h-12 w-full" />
+              ))}
+            </div>
+          ) : events.length === 0 ? (
+            <EmptyState
+              message={t.noEvents}
+              description={t.noEventsDescription}
+              action={
+                <Button
+                  onClick={openCreateEvent}
+                  variant="outline"
+                  className="gap-2"
+                >
+                  <Plus className="h-4 w-4" />
                   {t.createEvent}
                 </Button>
-              </div>
-            </div>
+              }
+            />
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-8" />
+                  <TableHead>{t.eventName}</TableHead>
+                  <TableHead>{t.eventCategory}</TableHead>
+                  <TableHead>{t.eventStatus}</TableHead>
+                  <TableHead>{t.eventDate}</TableHead>
+                  <TableHead>{t.eventLocation}</TableHead>
+                  <TableHead className="text-right">
+                    {t.attendeeCount}
+                  </TableHead>
+                  <TableHead className="text-right">{t.actions}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {events.map((event) => {
+                  const catCfg = categoryConfig[event.category] || {
+                    color: "bg-muted text-muted-foreground",
+                    colorDark: "",
+                  };
+                  const count =
+                    event.kioskSession?._count.attendances ?? 0;
+                  const isExpanded = expandedEventId === event.id;
+                  const hasSession = !!event.kioskSession;
 
-            {/* Table */}
-            {isLoadingEvents ? (
-              <div className="space-y-3">
-                {[...Array(3)].map((_, i) => (
-                  <Skeleton key={`ev-skel-${i}`} className="h-12 w-full" />
-                ))}
-              </div>
-            ) : events.length === 0 ? (
-              <EmptyState
-                message={t.noEvents}
-                description={t.noEventsDescription}
-                action={
-                  <Button onClick={openCreateEvent} variant="outline" className="gap-2">
-                    <Plus className="h-4 w-4" />
-                    {t.createEvent}
-                  </Button>
-                }
-              />
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{t.eventName}</TableHead>
-                    <TableHead>{t.eventCategory}</TableHead>
-                    <TableHead>{t.eventStatus}</TableHead>
-                    <TableHead>{t.eventDate}</TableHead>
-                    <TableHead>{t.eventLocation}</TableHead>
-                    <TableHead className="text-right">
-                      {t.attendeeCount}
-                    </TableHead>
-                    <TableHead className="text-right">{t.actions}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {events.map((event) => {
-                    const catCfg = categoryConfig[event.category] || {
-                      color: "bg-muted text-muted-foreground",
-                      colorDark: "",
-                    };
-                    return (
-                      <TableRow key={event.id}>
+                  return (
+                    <Fragment key={event.id}>
+                      <TableRow>
+                        <TableCell className="w-8 px-2">
+                          {hasSession && count > 0 && (
+                            <button
+                              type="button"
+                              className="p-0.5 rounded hover:bg-muted transition-colors cursor-pointer"
+                              onClick={() => toggleAttendance(event)}
+                            >
+                              {isExpanded ? (
+                                <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                              ) : (
+                                <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                              )}
+                            </button>
+                          )}
+                        </TableCell>
                         <TableCell className="font-medium">
                           {event.name}
                         </TableCell>
@@ -469,7 +459,9 @@ export function KioskManagerClient({ language }: { language: Language }) {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <Badge className={statusColors[event.status] || ""}>
+                          <Badge
+                            className={statusColors[event.status] || ""}
+                          >
                             {getStatusLabel(event.status)}
                           </Badge>
                         </TableCell>
@@ -480,7 +472,17 @@ export function KioskManagerClient({ language }: { language: Language }) {
                           {event.location || "—"}
                         </TableCell>
                         <TableCell className="text-right">
-                          {event.kioskSession?._count.attendances ?? 0}
+                          {hasSession && count > 0 ? (
+                            <button
+                              type="button"
+                              className="text-primary hover:underline cursor-pointer"
+                              onClick={() => toggleAttendance(event)}
+                            >
+                              {count}
+                            </button>
+                          ) : (
+                            count
+                          )}
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-1">
@@ -488,7 +490,9 @@ export function KioskManagerClient({ language }: { language: Language }) {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => handlePublishEvent(event.id)}
+                                onClick={() =>
+                                  handlePublishEvent(event.id)
+                                }
                                 title={t.publish}
                               >
                                 {t.publish}
@@ -504,9 +508,15 @@ export function KioskManagerClient({ language }: { language: Language }) {
                                     event.kioskSession!.token,
                                   )
                                 }
-                                title={copiedTokenId === event.kioskSession.token ? t.copied : t.copyUrl}
+                                title={
+                                  copiedTokenId ===
+                                  event.kioskSession.token
+                                    ? t.copied
+                                    : t.copyUrl
+                                }
                               >
-                                {copiedTokenId === event.kioskSession.token ? (
+                                {copiedTokenId ===
+                                event.kioskSession.token ? (
                                   <Check className="w-4 h-4" />
                                 ) : (
                                   <Link2 className="w-4 h-4" />
@@ -581,102 +591,101 @@ export function KioskManagerClient({ language }: { language: Language }) {
                           </div>
                         </TableCell>
                       </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            )}
-          </CardContent>
-        </Card>
-      )}
 
-      {/* ────── Attendance Tab ────── */}
-      {activeTab === "attendance" && (
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4 mb-6">
-              <Select
-                value={selectedSessionId}
-                onValueChange={setSelectedSessionId}
-              >
-                <SelectTrigger className="w-[300px]">
-                  <SelectValue placeholder={t.selectSession} />
-                </SelectTrigger>
-                <SelectContent>
-                  {sessions.map((s) => (
-                    <SelectItem key={s.id} value={s.id}>
-                      {s.name} ({s._count.attendances} {t.attendees})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {selectedSessionId && (
-                <Badge className="bg-primary text-primary-foreground">
-                  {t.totalAttendees}:{" "}
-                  {sessions.find((s) => s.id === selectedSessionId)?._count
-                    .attendances || 0}
-                </Badge>
-              )}
-            </div>
-
-            {!selectedSessionId ? (
-              <EmptyState message={t.selectSession} />
-            ) : isLoadingAttendance ? (
-              <div className="space-y-2">
-                {[...Array(3)].map((_, i) => (
-                  <Skeleton key={`att-skel-${i}`} className="h-12 w-full" />
-                ))}
-              </div>
-            ) : attendances.length === 0 ? (
-              <EmptyState message={t.noAttendance} />
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{t.employeeName}</TableHead>
-                    <TableHead>{t.employeeId}</TableHead>
-                    <TableHead>{t.department}</TableHead>
-                    <TableHead>{t.checkedInAt}</TableHead>
-                    <TableHead>{t.checkedInVia}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {attendances.map((a) => (
-                    <TableRow key={a.id}>
-                      <TableCell className="font-medium">
-                        {a.employee.name}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {a.employee.employeeId}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {a.employee.department.name}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {new Date(a.checkedInAt).toLocaleString(
-                          language === "ja" ? "ja-JP" : "en-US",
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant="outline"
-                          className={
-                            a.checkedInVia === "nfc"
-                              ? "border-blue-500 text-blue-700 dark:text-blue-300"
-                              : ""
-                          }
-                        >
-                          {a.checkedInVia === "nfc" ? t.nfc : t.manual}
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-          </CardContent>
-        </Card>
-      )}
+                      {/* Inline attendance records */}
+                      {isExpanded && (
+                        <TableRow key={`${event.id}-attendance`}>
+                          <TableCell colSpan={8} className="p-0">
+                            <div className="bg-muted/50 px-8 py-4">
+                              <h4 className="text-sm font-medium text-foreground mb-3">
+                                {t.attendeeCount}: {count}
+                              </h4>
+                              {isLoadingAttendance ? (
+                                <div className="space-y-2">
+                                  {[...Array(2)].map((_, i) => (
+                                    <Skeleton
+                                      key={`att-skel-${i}`}
+                                      className="h-8 w-full"
+                                    />
+                                  ))}
+                                </div>
+                              ) : attendances.length === 0 ? (
+                                <p className="text-sm text-muted-foreground">
+                                  {t.noAttendance}
+                                </p>
+                              ) : (
+                                <Table>
+                                  <TableHeader>
+                                    <TableRow>
+                                      <TableHead>
+                                        {t.employeeName}
+                                      </TableHead>
+                                      <TableHead>
+                                        {t.employeeId}
+                                      </TableHead>
+                                      <TableHead>
+                                        {t.department}
+                                      </TableHead>
+                                      <TableHead>
+                                        {t.checkedInAt}
+                                      </TableHead>
+                                      <TableHead>
+                                        {t.checkedInVia}
+                                      </TableHead>
+                                    </TableRow>
+                                  </TableHeader>
+                                  <TableBody>
+                                    {attendances.map((a) => (
+                                      <TableRow key={a.id}>
+                                        <TableCell className="font-medium">
+                                          {a.employee.name}
+                                        </TableCell>
+                                        <TableCell className="text-muted-foreground">
+                                          {a.employee.employeeId}
+                                        </TableCell>
+                                        <TableCell className="text-muted-foreground">
+                                          {a.employee.department.name}
+                                        </TableCell>
+                                        <TableCell className="text-muted-foreground">
+                                          {new Date(
+                                            a.checkedInAt,
+                                          ).toLocaleString(
+                                            language === "ja"
+                                              ? "ja-JP"
+                                              : "en-US",
+                                          )}
+                                        </TableCell>
+                                        <TableCell>
+                                          <Badge
+                                            variant="outline"
+                                            className={
+                                              a.checkedInVia === "nfc"
+                                                ? "border-blue-500 text-blue-700 dark:text-blue-300"
+                                                : ""
+                                            }
+                                          >
+                                            {a.checkedInVia === "nfc"
+                                              ? t.nfc
+                                              : t.manual}
+                                          </Badge>
+                                        </TableCell>
+                                      </TableRow>
+                                    ))}
+                                  </TableBody>
+                                </Table>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </Fragment>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
 
       {/* ────── Event Create/Edit Dialog ────── */}
       <Dialog open={eventDialogOpen} onOpenChange={setEventDialogOpen}>
@@ -724,7 +733,10 @@ export function KioskManagerClient({ language }: { language: Language }) {
                 className="w-full px-3 py-2 border border-input rounded-md bg-background text-foreground text-sm resize-y min-h-[80px]"
                 value={eventForm.description}
                 onChange={(e) =>
-                  setEventForm((f) => ({ ...f, description: e.target.value }))
+                  setEventForm((f) => ({
+                    ...f,
+                    description: e.target.value,
+                  }))
                 }
               />
             </div>
