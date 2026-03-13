@@ -1,4 +1,5 @@
 import { ApiError, apiHandler } from "@/lib/api";
+import { EXTERNAL_MODULE_IDS } from "@/lib/modules/addon-loader";
 import { CORE_MODULE_IDS } from "@/lib/modules/constants";
 import { moduleRegistry } from "@/lib/modules/registry";
 import { prisma } from "@/lib/prisma";
@@ -118,6 +119,7 @@ export const GET = apiHandler(async () => {
         descriptionJa: module.descriptionJa,
         enabled: isEnabled,
         type: isCore ? ("core" as const) : ("addon" as const),
+        external: EXTERNAL_MODULE_IDS.has(module.id),
         jaOnly: module.jaOnly ?? false,
         dependencies: module.dependencies ?? [],
         menuCount: module.menus.filter(

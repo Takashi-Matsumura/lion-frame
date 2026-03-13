@@ -93,6 +93,7 @@ export interface ModuleInfo {
   descriptionJa?: string;
   enabled: boolean;
   type: "core" | "addon";
+  external?: boolean;
   jaOnly?: boolean;
   menuCount: number;
   menus: Array<{

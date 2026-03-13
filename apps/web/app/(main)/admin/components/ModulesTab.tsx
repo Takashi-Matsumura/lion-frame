@@ -366,6 +366,14 @@ export function ModulesTab({ language }: ModulesTabProps) {
                               JA
                             </Badge>
                           )}
+                          {module.external && (
+                            <Badge
+                              variant="outline"
+                              className="bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-900 dark:text-sky-200 dark:border-sky-700"
+                            >
+                              External
+                            </Badge>
+                          )}
                         </div>
                       </div>
 
@@ -562,6 +570,11 @@ export function ModulesTab({ language }: ModulesTabProps) {
                   {selectedModule.jaOnly && (
                     <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">
                       {t("Japanese Only", "日本語専用")}
+                    </span>
+                  )}
+                  {selectedModule.external && (
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-sky-100 text-sky-800 dark:bg-sky-900 dark:text-sky-200">
+                      {t("External Package", "外部パッケージ")}
                     </span>
                   )}
                 </div>

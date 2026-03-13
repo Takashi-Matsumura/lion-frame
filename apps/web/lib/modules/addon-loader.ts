@@ -6,9 +6,18 @@
  */
 
 import type { AddonModuleDefinition } from "@lionframe/module-types";
+import { externalAddons as externalAddonsList } from "@/addons";
 import type { AppMenu, AppModule, AppTab } from "@/types/module";
 import { createIcon } from "./icons";
 import { iconPaths } from "./icons";
+
+/**
+ * 外部アドオンモジュールのIDセット
+ * Core / Addon / External の判定に使用する
+ */
+export const EXTERNAL_MODULE_IDS = new Set(
+  externalAddonsList.map((addon) => addon.id),
+);
 
 /**
  * AddonModuleDefinition → AppModule に変換
