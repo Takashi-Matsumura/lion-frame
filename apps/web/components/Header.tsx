@@ -115,6 +115,7 @@ function HeaderInner({
   const isEvaluationMaster = pathname === "/admin/evaluation-master";
   const isEvaluationRag = pathname === "/admin/evaluation-rag";
   const isCalendarManagement = pathname === "/admin/calendar-management";
+  const isKioskManager = pathname === "/kiosk-manager";
 
   // 組織分析タブ
   const analyticsTab = searchParams.get("tab") || "overview";
@@ -282,6 +283,17 @@ function HeaderInner({
       active: calendarManagementTab === tab.id,
     })) || [];
 
+  // キオスク管理タブ（レジストリから取得）
+  const kioskManagerTab = searchParams.get("tab") || "events";
+  const registryKioskManagerTabs = getTabsByMenuPath("/kiosk-manager");
+  const kioskManagerTabs =
+    registryKioskManagerTabs?.map((tab) => ({
+      name: language === "ja" ? tab.nameJa : tab.name,
+      icon: tab.icon,
+      path: `/kiosk-manager?tab=${tab.id}`,
+      active: kioskManagerTab === tab.id,
+    })) || [];
+
   const renderTabs = (tabs: TabItem[], label: string) => (
     <div className="border-t border-border bg-muted">
       <nav className="flex gap-1 px-6" aria-label={label}>
@@ -397,6 +409,7 @@ function HeaderInner({
           ),
           "Calendar Management Tabs",
         )}
+      {isKioskManager && renderTabs(kioskManagerTabs, "Kiosk Manager Tabs")}
       <PageGuideSheet
         open={pageGuideOpen}
         onOpenChange={setPageGuideOpen}

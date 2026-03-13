@@ -94,6 +94,14 @@ export interface AppModule {
    */
   jaOnly?: boolean;
 
+  /** キオスクモジュール設定（独立画面を提供するモジュール用） */
+  kiosk?: {
+    /** キオスク画面のベースパス（例: "/kiosk/events"） */
+    basePath: string;
+    /** NFC読み取り機能が必要かどうか */
+    requiresNfc: boolean;
+  };
+
   /** このモジュールが提供するサービス一覧（画面を持たないAPI・ロジック） */
   services?: AppService[];
 

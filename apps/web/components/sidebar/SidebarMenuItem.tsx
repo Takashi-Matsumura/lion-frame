@@ -29,6 +29,7 @@ const colorMap: Record<string, string> = {
   "text-rose-700": "#be123c",
   "text-purple-700": "#7e22ce",
   "text-amber-700": "#b45309",
+  "text-orange-600": "#ea580c",
 };
 
 interface SidebarMenuItemComponentProps {
@@ -83,16 +84,20 @@ export function SidebarMenuItemComponent({
     // TailwindクラスをHEX値に変換
     const hexColor = color ? colorMap[color] || color : undefined;
     const isAddonModule = !CORE_MODULE_IDS.has(menu.moduleId);
+    // デベロッパーセクションは目立たない色に（アイコン・アンダーバーとも）
+    const isDeveloperMenu = menu.menuGroup === "developer";
+    const iconColor = isDeveloperMenu ? undefined : hexColor;
+    const barColor = isDeveloperMenu ? "currentColor" : hexColor;
 
     return (
       <div className="relative flex items-center justify-center size-5 [&>svg]:size-4">
-        <div style={hexColor ? { color: hexColor } : undefined}>
+        <div style={iconColor ? { color: iconColor } : undefined}>
           {menu.icon}
         </div>
-        {isAddonModule && hexColor && (
+        {isAddonModule && barColor && (
           <div
             className="absolute -bottom-1 left-0.5 right-0.5 h-0.5 rounded-full"
-            style={{ backgroundColor: hexColor }}
+            style={{ backgroundColor: barColor }}
           />
         )}
       </div>

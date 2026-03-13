@@ -187,7 +187,7 @@ export const systemModule: AppModule = {
           className="w-5 h-5 flex-shrink-0"
           fill="none"
           stroke="currentColor"
-          viewBox="0 0 24 24"
+          viewBox="-4 -4 32 32"
         >
           <path
             key="icon-path"

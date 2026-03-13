@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { headers } from "next/headers";
 import "./globals.css";
 import { auth } from "@/auth";
 import { ClientLayout } from "@/components/ClientLayout";
@@ -44,6 +45,20 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // /kiosk パスは独立アプリとしてレンダリング（サイドバー・ヘッダーなし）
+  const headerStore = await headers();
+  const isKioskMode = headerStore.get("x-kiosk-mode") === "1";
+
+  if (isKioskMode) {
+    return (
+      <html lang="ja" suppressHydrationWarning>
+        <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+          {children}
+        </body>
+      </html>
+    );
+  }
+
   const session = await auth();
 
   let userPermissions: string[] = [];

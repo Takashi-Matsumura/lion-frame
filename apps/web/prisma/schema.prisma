@@ -75,6 +75,8 @@ model User {
   usageLogs     UsageLog[]
   formsCreated    Form[]           @relation("FormCreator")
   formSubmissions FormSubmission[] @relation("FormSubmitter")
+  kioskSessions   KioskSession[]
+  kioskEvents     KioskEvent[]   @relation("KioskEventCreator")
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 }
@@ -423,6 +425,9 @@ model Employee {
 
   // === NFCカード ===
   nfcCards            NfcCard[]
+
+  // === キオスク ===
+  eventAttendances    EventAttendance[]
 
   @@index([positionCode])
   @@index([supervisorId])
@@ -1025,4 +1030,70 @@ model NfcCard {
 
   @@index([employeeId])
   @@index([cardId])
+}
+
+// ========================================
+// キオスクセッション
+// ========================================
+
+model KioskSession {
+  id          String   @id @default(cuid())
+  token       String   @unique @default(cuid())
+  name        String
+  moduleId    String
+  referenceId String?
+  createdBy   String
+  creator     User     @relation(fields: [createdBy], references: [id])
+  expiresAt   DateTime
+  isActive    Boolean  @default(true)
+  config      Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  attendances EventAttendance[]
+  kioskEvent  KioskEvent?
+
+  @@index([token])
+  @@index([moduleId])
+  @@index([isActive, expiresAt])
+}
+
+model KioskEvent {
+  id              String        @id @default(cuid())
+  name            String
+  nameEn          String?
+  description     String?
+  category        String        @default("meeting")
+  status          String        @default("draft")
+  date            DateTime      @db.Date
+  startTime       DateTime?
+  endTime         DateTime?
+  location        String?
+  capacity        Int?
+  createdBy       String
+  creator         User          @relation("KioskEventCreator", fields: [createdBy], references: [id])
+  kioskSessionId  String?       @unique
+  kioskSession    KioskSession? @relation(fields: [kioskSessionId], references: [id])
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([status])
+  @@index([date])
+}
+
+model EventAttendance {
+  id              String       @id @default(cuid())
+  kioskSessionId  String
+  kioskSession    KioskSession @relation(fields: [kioskSessionId], references: [id])
+  employeeId      String
+  employee        Employee     @relation(fields: [employeeId], references: [id])
+  status          String       @default("checked_in")
+  checkedInAt     DateTime     @default(now())
+  checkedInVia    String       @default("nfc")
+  nfcCardId       String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  @@unique([kioskSessionId, employeeId])
+  @@index([kioskSessionId])
+  @@index([employeeId])
 }

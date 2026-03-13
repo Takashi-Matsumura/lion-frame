@@ -7,6 +7,8 @@ import { systemModule } from "@/lib/core-modules/system";
 import { formsModule } from "@/lib/addon-modules/forms";
 import { nfcCardModule } from "@/lib/addon-modules/nfc-card";
 import { workflowModule } from "@/lib/addon-modules/workflow";
+// キオスクモジュール
+import { eventAttendanceModule } from "@/lib/kiosk-modules/event-attendance";
 import { prisma } from "@/lib/prisma";
 import type {
   AppMenu,
@@ -133,6 +135,8 @@ export const moduleRegistry: ModuleRegistry = {
   forms: formsModule,
   workflow: workflowModule,
   "nfc-card": nfcCardModule,
+  // キオスクモジュール
+  "event-attendance": eventAttendanceModule,
 };
 
 /**

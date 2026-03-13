@@ -160,6 +160,14 @@ export const iconPaths = {
   "nfc-registration":
     "M15 9h3.75M15 12h3.75M15 15h3.75M4.5 19.5h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15A2.25 2.25 0 002.25 6.75v10.5A2.25 2.25 0 004.5 19.5zm6-10.125a1.875 1.875 0 11-3.75 0 1.875 1.875 0 013.75 0zm-1.875 4.875a3.375 3.375 0 00-3.375 3.375h6.75a3.375 3.375 0 00-3.375-3.375z",
 
+  // イベント出席 - チケット/チェックインアイコン
+  "event-attendance":
+    "M16.5 6v.75m0 3v.75m0 3v.75m0 3V18m-9-5.25h5.25M7.5 15h3M3.375 5.25c-.621 0-1.125.504-1.125 1.125v3.026a2.999 2.999 0 010 5.198v3.026c0 .621.504 1.125 1.125 1.125h17.25c.621 0 1.125-.504 1.125-1.125v-3.026a2.999 2.999 0 010-5.198V6.375c0-.621-.504-1.125-1.125-1.125H3.375z",
+
+  // キオスク管理 - タブレットキオスク（タブレット+NFCタッチ）
+  "kiosk-manager":
+    "M10.5 19.5h3m-6.75 2.25h10.5a2.25 2.25 0 002.25-2.25v-15a2.25 2.25 0 00-2.25-2.25H6.75A2.25 2.25 0 004.5 4.5v15a2.25 2.25 0 002.25 2.25z",
+
   // デフォルト - グリッドアイコン
   default:
     "M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z",
@@ -185,14 +193,25 @@ export const reactIcons: Record<string, (className: string) => ReactElement> = {
 /**
  * アイコンパスからSVG要素を生成
  */
+/**
+ * アイコンごとのviewBox拡張（サイドバーでのサイズ感を調整）
+ * 値が大きいほどアイコンが小さく見える（周囲に余白が増える）
+ * 例: 4 → viewBox="-4 -4 32 32" → 元の75%サイズに見える
+ */
+const iconPadding: Partial<Record<IconName, number>> = {
+  "kiosk-manager": 4,
+};
+
 export function createIcon(
   pathOrName: string,
   className = "w-5 h-5",
   key?: string,
 ): ReactElement {
   // アイコン名が渡された場合はパスを取得
-  const path =
-    pathOrName in iconPaths ? iconPaths[pathOrName as IconName] : pathOrName;
+  const iconName = pathOrName in iconPaths ? (pathOrName as IconName) : null;
+  const path = iconName ? iconPaths[iconName] : pathOrName;
+  const pad = iconName ? iconPadding[iconName] ?? 0 : 0;
+  const viewBox = pad ? `${-pad} ${-pad} ${24 + pad * 2} ${24 + pad * 2}` : "0 0 24 24";
 
   return (
     <svg
@@ -200,7 +219,7 @@ export function createIcon(
       className={`${className} flex-shrink-0`}
       fill="none"
       stroke="currentColor"
-      viewBox="0 0 24 24"
+      viewBox={viewBox}
     >
       <path
         key={key ? `${key}-path` : undefined}
@@ -251,8 +270,11 @@ export function getModuleIcon(
     return createTextIcon(textIcons[moduleId], className, `${moduleId}-icon`);
   }
 
-  const path = iconPaths[moduleId as IconName] || iconPaths.default;
-  return createIcon(path, className, `${moduleId}-icon`);
+  // moduleIdがiconPathsに存在する場合は名前で渡す（iconPadding等が適用される）
+  if (moduleId in iconPaths) {
+    return createIcon(moduleId, className, `${moduleId}-icon`);
+  }
+  return createIcon(iconPaths.default, className, `${moduleId}-icon`);
 }
 
 /**

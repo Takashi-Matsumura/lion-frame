@@ -7,6 +7,14 @@ const { auth } = NextAuth(authConfig);
 
 export default auth(async (req) => {
   const { pathname } = req.nextUrl;
+
+  // /kiosk パスは独立アプリ — 認証チェックをスキップし、キオスクモードヘッダーを付与
+  if (pathname.startsWith("/kiosk")) {
+    const response = NextResponse.next();
+    response.headers.set("x-kiosk-mode", "1");
+    return response;
+  }
+
   const session = req.auth;
 
   // Reverse proxy support: construct correct redirect base URL
