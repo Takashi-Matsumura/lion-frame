@@ -83,6 +83,33 @@ export async function revokeCard(id: string) {
 }
 
 /**
+ * アクティブ社員一覧（NFCカード情報付き）
+ */
+export async function listActiveEmployeesWithNfc() {
+  return prisma.employee.findMany({
+    where: { isActive: true },
+    orderBy: { employeeId: "asc" },
+    select: {
+      id: true,
+      employeeId: true,
+      name: true,
+      position: true,
+      department: { select: { id: true, name: true } },
+      section: { select: { id: true, name: true } },
+      nfcCards: {
+        where: { isActive: true },
+        select: {
+          id: true,
+          cardId: true,
+          issuedAt: true,
+        },
+        take: 1,
+      },
+    },
+  });
+}
+
+/**
  * NFCカード一覧（管理用）
  */
 export async function listCards(options?: {

@@ -49,6 +49,7 @@ export const nfcCardModule: AppModule = {
         "/api/nfc-card",
         "/api/nfc-card/[id]",
         "/api/nfc-card/employee/[employeeId]",
+        "/api/nfc-card/employees",
       ],
       enabled: true,
     },

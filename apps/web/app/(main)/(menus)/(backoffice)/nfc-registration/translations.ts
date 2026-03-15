@@ -1,7 +1,7 @@
 export const nfcRegistrationTranslations = {
   en: {
     title: "NFC Registration",
-    employeeIdPlaceholder: "Enter employee ID...",
+    employeeIdPlaceholder: "Search by employee ID...",
     search: "Search",
     searching: "Searching...",
     employeeNotFound: "Employee not found",
@@ -24,10 +24,27 @@ export const nfcRegistrationTranslations = {
     webUsbNotSupported:
       "WebUSB is not supported in this browser. Please use Chrome or Edge.",
     historyTitle: "Card History",
+    // テーブル用
+    totalCount: "Total:",
+    columnEmployeeId: "Employee ID",
+    columnName: "Name",
+    columnDepartment: "Department",
+    columnPosition: "Position",
+    columnNfcStatus: "NFC Status",
+    columnAction: "Action",
+    registered: "Registered",
+    unregistered: "Unregistered",
+    selectEmployee: "Select",
+    loading: "Loading...",
+    noEmployees: "No employees found",
+    prev: "Prev",
+    next: "Next",
+    close: "Close",
+    backToList: "Back to list",
   },
   ja: {
     title: "NFC登録",
-    employeeIdPlaceholder: "社員番号を入力...",
+    employeeIdPlaceholder: "社員番号で検索...",
     search: "検索",
     searching: "検索中...",
     employeeNotFound: "社員が見つかりません",
@@ -50,6 +67,23 @@ export const nfcRegistrationTranslations = {
     webUsbNotSupported:
       "WebUSB はこのブラウザでサポートされていません。Chrome または Edge を使用してください。",
     historyTitle: "カード履歴",
+    // テーブル用
+    totalCount: "合計:",
+    columnEmployeeId: "社員番号",
+    columnName: "氏名",
+    columnDepartment: "部署",
+    columnPosition: "役職",
+    columnNfcStatus: "NFC状態",
+    columnAction: "操作",
+    registered: "登録済み",
+    unregistered: "未登録",
+    selectEmployee: "選択",
+    loading: "読み込み中...",
+    noEmployees: "社員が見つかりません",
+    prev: "前へ",
+    next: "次へ",
+    close: "閉じる",
+    backToList: "一覧に戻る",
   },
 };
 

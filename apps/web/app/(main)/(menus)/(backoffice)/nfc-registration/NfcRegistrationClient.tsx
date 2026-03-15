@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useState, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ArrowLeft, CreditCard, Search } from "lucide-react";
 import { toast } from "sonner";
 import {
   Button,
@@ -9,11 +10,29 @@ import {
 } from "@/components/ui";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { nfcRegistrationTranslations, type Language } from "./translations";
 
 type NfcReaderModule = typeof import("@/lib/addon-modules/nfc-card/nfc-reader");
 
-interface EmployeeData {
+interface EmployeeListItem {
+  id: string;
+  employeeId: string;
+  name: string;
+  position: string | null;
+  department: { id: string; name: string } | null;
+  section: { id: string; name: string } | null;
+  nfcCards: { id: string; cardId: string; issuedAt: string }[];
+}
+
+interface EmployeeDetail {
   id: string;
   employeeId: string;
   name: string;
@@ -30,6 +49,14 @@ interface NfcCardData {
   issuedAt: string;
   revokedAt: string | null;
 }
+
+const PAGE_SIZE = 20;
+
+/**
+ * ページ全体の高さ（ヘッダー pt-24 = 96px + main py-8 = 64px を差し引く）
+ * flex レイアウトでテーブルが残り領域を自動的に埋める
+ */
+const PAGE_HEIGHT = "calc(100vh - 160px)";
 
 /** ソナーアニメーション（NFC読み取り中） */
 function NfcSonarAnimation() {
@@ -60,8 +87,14 @@ function NfcSonarAnimation() {
 export function NfcRegistrationClient({ language }: { language: Language }) {
   const t = nfcRegistrationTranslations[language];
 
-  const [searchId, setSearchId] = useState("");
-  const [employee, setEmployee] = useState<EmployeeData | null>(null);
+  // 一覧用の状態
+  const [allEmployees, setAllEmployees] = useState<EmployeeListItem[]>([]);
+  const [isLoadingList, setIsLoadingList] = useState(true);
+  const [searchFilter, setSearchFilter] = useState("");
+  const [page, setPage] = useState(1);
+
+  // 詳細表示用の状態
+  const [selectedEmployee, setSelectedEmployee] = useState<EmployeeDetail | null>(null);
   const [isSearching, setIsSearching] = useState(false);
   const [isReading, setIsReading] = useState(false);
   const [readCardId, setReadCardId] = useState("");
@@ -69,6 +102,76 @@ export function NfcRegistrationClient({ language }: { language: Language }) {
 
   const nfcModuleRef = useRef<NfcReaderModule | null>(null);
 
+  // 社員一覧を取得
+  const fetchEmployees = useCallback(async () => {
+    try {
+      setIsLoadingList(true);
+      const res = await fetch("/api/nfc-card/employees");
+      if (res.ok) {
+        const data = await res.json();
+        setAllEmployees(data.employees);
+      }
+    } catch {
+      console.error("Failed to fetch employees");
+    } finally {
+      setIsLoadingList(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchEmployees();
+  }, [fetchEmployees]);
+
+  // 社員番号でフィルタリング
+  const filteredEmployees = useMemo(() => {
+    if (!searchFilter.trim()) return allEmployees;
+    const query = searchFilter.trim().toLowerCase();
+    return allEmployees.filter((emp) =>
+      emp.employeeId.toLowerCase().includes(query),
+    );
+  }, [allEmployees, searchFilter]);
+
+  // ページネーション
+  const totalPages = Math.max(1, Math.ceil(filteredEmployees.length / PAGE_SIZE));
+  const pagedEmployees = useMemo(() => {
+    const start = (page - 1) * PAGE_SIZE;
+    return filteredEmployees.slice(start, start + PAGE_SIZE);
+  }, [filteredEmployees, page]);
+
+  const handleFilterChange = useCallback((value: string) => {
+    setSearchFilter(value);
+    setPage(1);
+  }, []);
+
+  // 社員選択 → 詳細取得
+  const handleSelectEmployee = useCallback(async (empId: string) => {
+    setIsSearching(true);
+    setSelectedEmployee(null);
+    setReadCardId("");
+    try {
+      const res = await fetch(`/api/nfc-card/employee/${encodeURIComponent(empId)}`);
+      if (!res.ok) {
+        const err = await res.json();
+        toast.error(err.messageJa || err.message || t.employeeNotFound);
+        return;
+      }
+      const data = await res.json();
+      setSelectedEmployee(data.employee);
+    } catch {
+      toast.error(t.employeeNotFound);
+    } finally {
+      setIsSearching(false);
+    }
+  }, [t]);
+
+  // 一覧に戻る
+  const handleBackToList = useCallback(() => {
+    setSelectedEmployee(null);
+    setReadCardId("");
+    fetchEmployees();
+  }, [fetchEmployees]);
+
+  // NFC関連
   const loadNfcModule = useCallback(async () => {
     if (!nfcModuleRef.current) {
       nfcModuleRef.current = await import(
@@ -77,30 +180,6 @@ export function NfcRegistrationClient({ language }: { language: Language }) {
     }
     return nfcModuleRef.current;
   }, []);
-
-  const handleSearch = useCallback(async () => {
-    if (!searchId.trim()) return;
-    setIsSearching(true);
-    setEmployee(null);
-    setReadCardId("");
-
-    try {
-      const res = await fetch(
-        `/api/nfc-card/employee/${encodeURIComponent(searchId.trim())}`,
-      );
-      if (!res.ok) {
-        const err = await res.json();
-        toast.error(err.messageJa || err.message || t.employeeNotFound);
-        return;
-      }
-      const data = await res.json();
-      setEmployee(data.employee);
-    } catch {
-      toast.error(t.employeeNotFound);
-    } finally {
-      setIsSearching(false);
-    }
-  }, [searchId, t]);
 
   const handleRead = useCallback(async () => {
     try {
@@ -122,18 +201,18 @@ export function NfcRegistrationClient({ language }: { language: Language }) {
   }, [loadNfcModule, t]);
 
   const refreshEmployee = useCallback(async () => {
-    if (!employee) return;
+    if (!selectedEmployee) return;
     const res = await fetch(
-      `/api/nfc-card/employee/${encodeURIComponent(employee.employeeId)}`,
+      `/api/nfc-card/employee/${encodeURIComponent(selectedEmployee.employeeId)}`,
     );
     if (res.ok) {
       const data = await res.json();
-      setEmployee(data.employee);
+      setSelectedEmployee(data.employee);
     }
-  }, [employee]);
+  }, [selectedEmployee]);
 
   const handleRegister = useCallback(async () => {
-    if (!readCardId || !employee) return;
+    if (!readCardId || !selectedEmployee) return;
     setIsRegistering(true);
     try {
       const res = await fetch("/api/nfc-card", {
@@ -141,7 +220,7 @@ export function NfcRegistrationClient({ language }: { language: Language }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           cardId: readCardId,
-          employeeId: employee.id,
+          employeeId: selectedEmployee.id,
         }),
       });
       if (!res.ok) {
@@ -157,7 +236,7 @@ export function NfcRegistrationClient({ language }: { language: Language }) {
     } finally {
       setIsRegistering(false);
     }
-  }, [readCardId, employee, t, refreshEmployee]);
+  }, [readCardId, selectedEmployee, t, refreshEmployee]);
 
   const handleRevoke = useCallback(
     async (cardDbId: string) => {
@@ -179,45 +258,25 @@ export function NfcRegistrationClient({ language }: { language: Language }) {
     [t, refreshEmployee],
   );
 
-  const activeCard = employee?.nfcCards.find((c) => c.isActive);
-  const inactiveCards = employee?.nfcCards.filter((c) => !c.isActive) ?? [];
+  const activeCard = selectedEmployee?.nfcCards.find((c) => c.isActive);
+  const inactiveCards = selectedEmployee?.nfcCards.filter((c) => !c.isActive) ?? [];
 
-  return (
-    <div className="max-w-2xl mx-auto space-y-4">
-      {/* 検索 */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex gap-3">
-            <input
-              type="text"
-              value={searchId}
-              onChange={(e) => setSearchId(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-              placeholder={t.employeeIdPlaceholder}
-              className="flex-1 px-3 py-2 border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-            />
-            <Button
-              onClick={handleSearch}
-              disabled={isSearching || !searchId.trim()}
-            >
-              {isSearching ? t.searching : t.search}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+  // 社員詳細（カード登録）画面
+  if (selectedEmployee) {
+    return (
+      <div className="max-w-2xl mx-auto space-y-4">
+        {/* 戻るボタン */}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleBackToList}
+          className="gap-1"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          {t.backToList}
+        </Button>
 
-      {/* 検索中 */}
-      {isSearching && (
-        <Card>
-          <CardContent className="pt-6 space-y-3">
-            <Skeleton className="h-5 w-48" />
-            <Skeleton className="h-4 w-64" />
-          </CardContent>
-        </Card>
-      )}
-
-      {/* 社員情報 + カード読み取り/登録 */}
-      {employee && (
+        {/* 社員情報 + カード読み取り/登録 */}
         <Card>
           <CardContent className="pt-6 space-y-4">
             {/* 社員情報 */}
@@ -225,12 +284,12 @@ export function NfcRegistrationClient({ language }: { language: Language }) {
               <div>
                 <p className="font-semibold">
                   <span className="font-mono text-muted-foreground text-sm mr-2">
-                    {employee.employeeId}
+                    {selectedEmployee.employeeId}
                   </span>
-                  {employee.name}
+                  {selectedEmployee.name}
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  {[employee.department?.name, employee.section?.name, employee.position]
+                  {[selectedEmployee.department?.name, selectedEmployee.section?.name, selectedEmployee.position]
                     .filter(Boolean)
                     .join(" / ")}
                 </p>
@@ -299,28 +358,166 @@ export function NfcRegistrationClient({ language }: { language: Language }) {
             )}
           </CardContent>
         </Card>
+
+        {/* カード履歴 */}
+        {inactiveCards.length > 0 && (
+          <Card>
+            <CardContent className="pt-4 pb-3">
+              <p className="text-xs font-semibold text-muted-foreground mb-2">{t.historyTitle}</p>
+              <div className="space-y-1">
+                {inactiveCards.map((card) => (
+                  <div
+                    key={card.id}
+                    className="flex items-center gap-3 py-1 text-xs text-muted-foreground"
+                  >
+                    <span className="font-mono">{card.cardId}</span>
+                    <span>
+                      {new Date(card.issuedAt).toLocaleDateString("ja-JP")}
+                      {card.revokedAt &&
+                        ` → ${new Date(card.revokedAt).toLocaleDateString("ja-JP")}`}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    );
+  }
+
+  // 社員一覧画面
+  return (
+    <div className="flex flex-col gap-4" style={{ height: PAGE_HEIGHT }}>
+      {/* 検索バー */}
+      <div className="shrink-0 flex items-center gap-3">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <input
+            type="text"
+            value={searchFilter}
+            onChange={(e) => handleFilterChange(e.target.value)}
+            placeholder={t.employeeIdPlaceholder}
+            className="w-full pl-9 pr-3 py-2 border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+          />
+        </div>
+      </div>
+
+      {/* 件数 + ページネーション */}
+      <div className="shrink-0 flex items-center justify-between">
+        <p className="text-sm text-muted-foreground">
+          {t.totalCount} {filteredEmployees.length}
+          {searchFilter.trim() && (
+            <span> / {allEmployees.length}</span>
+          )}
+        </p>
+        {totalPages > 1 && (
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page <= 1}
+              onClick={() => setPage(page - 1)}
+            >
+              {t.prev}
+            </Button>
+            <span className="text-sm text-muted-foreground">
+              {page} / {totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page >= totalPages}
+              onClick={() => setPage(page + 1)}
+            >
+              {t.next}
+            </Button>
+          </div>
+        )}
+      </div>
+
+      {/* 社員テーブル */}
+      {isLoadingList ? (
+        <Card className="shrink-0">
+          <CardContent className="pt-6 space-y-3">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Skeleton key={i} className="h-10 w-full" />
+            ))}
+          </CardContent>
+        </Card>
+      ) : filteredEmployees.length === 0 ? (
+        <Card className="shrink-0">
+          <CardContent className="py-12 text-center text-muted-foreground">
+            {t.noEmployees}
+          </CardContent>
+        </Card>
+      ) : (
+        <Card className="flex-1 min-h-0 flex flex-col">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[120px]">{t.columnEmployeeId}</TableHead>
+                <TableHead>{t.columnName}</TableHead>
+                <TableHead>{t.columnDepartment}</TableHead>
+                <TableHead>{t.columnPosition}</TableHead>
+                <TableHead className="w-[140px]">{t.columnNfcStatus}</TableHead>
+                <TableHead className="w-[80px]">{t.columnAction}</TableHead>
+              </TableRow>
+            </TableHeader>
+          </Table>
+          <div className="flex-1 min-h-0 overflow-y-auto">
+            <Table>
+              <TableBody>
+                {pagedEmployees.map((emp) => {
+                  const hasCard = emp.nfcCards.length > 0;
+                  return (
+                    <TableRow key={emp.id}>
+                      <TableCell className="font-mono text-sm w-[120px]">
+                        {emp.employeeId}
+                      </TableCell>
+                      <TableCell className="font-medium">{emp.name}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {[emp.department?.name, emp.section?.name]
+                          .filter(Boolean)
+                          .join(" / ")}
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {emp.position || "—"}
+                      </TableCell>
+                      <TableCell className="w-[140px]">
+                        {hasCard ? (
+                          <Badge variant="default" className="bg-green-600 gap-1">
+                            <CreditCard className="h-3 w-3" />
+                            {t.registered}
+                          </Badge>
+                        ) : (
+                          <Badge variant="secondary">{t.unregistered}</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="w-[80px]">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleSelectEmployee(emp.employeeId)}
+                        >
+                          {t.selectEmployee}
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
+        </Card>
       )}
 
-      {/* カード履歴 */}
-      {employee && inactiveCards.length > 0 && (
-        <Card>
-          <CardContent className="pt-4 pb-3">
-            <p className="text-xs font-semibold text-muted-foreground mb-2">{t.historyTitle}</p>
-            <div className="space-y-1">
-              {inactiveCards.map((card) => (
-                <div
-                  key={card.id}
-                  className="flex items-center gap-3 py-1 text-xs text-muted-foreground"
-                >
-                  <span className="font-mono">{card.cardId}</span>
-                  <span>
-                    {new Date(card.issuedAt).toLocaleDateString("ja-JP")}
-                    {card.revokedAt &&
-                      ` → ${new Date(card.revokedAt).toLocaleDateString("ja-JP")}`}
-                  </span>
-                </div>
-              ))}
-            </div>
+      {/* 検索中のローディング */}
+      {isSearching && (
+        <Card className="shrink-0">
+          <CardContent className="pt-6 space-y-3">
+            <Skeleton className="h-5 w-48" />
+            <Skeleton className="h-4 w-64" />
           </CardContent>
         </Card>
       )}
