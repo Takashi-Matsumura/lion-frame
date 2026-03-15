@@ -55,18 +55,18 @@ export const menuGroups: Record<string, MenuGroup> = {
     color: "text-rose-700",
     order: 4,
   },
-  admin: {
-    id: "admin",
-    name: "ADMIN",
-    nameJa: "管理者",
-    color: "text-purple-700",
-    order: 5,
-  },
   backoffice: {
     id: "backoffice",
     name: "BACKOFFICE",
     nameJa: "バックオフィス",
     color: "text-amber-700",
+    order: 5,
+  },
+  admin: {
+    id: "admin",
+    name: "ADMIN",
+    nameJa: "管理者",
+    color: "text-purple-700",
     order: 6,
   },
   developer: {
