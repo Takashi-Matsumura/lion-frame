@@ -48,7 +48,7 @@ const fieldTypeLabels: Record<string, string> = {
   MULTI_SELECT: "複数選択",
   RADIO: "ラジオ",
   CHECKBOX_GROUP: "チェック",
-  RATING: "評価",
+  RATING: "スター",
   EMPLOYEE_PICKER: "社員",
   DEPARTMENT_PICKER: "部署",
   SECTION_HEADER: "セクション",
@@ -62,8 +62,8 @@ interface FieldGroup {
 
 const fieldGroups: FieldGroup[] = [
   { label: "基本", types: ["TEXT", "NUMBER", "DATE"] },
-  { label: "選択", types: ["SELECT", "RADIO", "CHECKBOX_GROUP", "YES_NO"] },
-  { label: "特殊", types: ["RATING", "EMPLOYEE_PICKER", "DEPARTMENT_PICKER"] },
+  { label: "選択", types: ["SELECT", "RADIO", "CHECKBOX_GROUP", "YES_NO", "RATING"] },
+  { label: "特殊", types: ["EMPLOYEE_PICKER", "DEPARTMENT_PICKER"] },
   { label: "レイアウト", types: ["SECTION_HEADER"] },
 ];
 
