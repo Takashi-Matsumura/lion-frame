@@ -19,6 +19,7 @@ import {
 } from "@/lib/addon-modules/forms/form-builder-store";
 import { ConditionalLogicEditor } from "./ConditionalLogicEditor";
 import { formBuilderTranslations, type Language } from "@/app/(main)/(menus)/(manager)/form-builder/translations";
+import { DatePicker } from "@/components/ui/date-picker";
 
 const hasOptions = (type: string) =>
   ["SELECT", "MULTI_SELECT", "RADIO", "CHECKBOX_GROUP"].includes(type);
@@ -254,6 +255,34 @@ export function FieldPropertyPanel({ language }: { language: Language }) {
                   <SelectItem value="right">{t.numberButtonRight}</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+          </div>
+        )}
+
+        {/* Date config */}
+        {field.type === "DATE" && (
+          <div className="space-y-3">
+            <div>
+              <Label className="text-xs">{t.dateMin}</Label>
+              <DatePicker
+                value={(field.config?.dateMin as string) ?? ""}
+                onChange={(v) =>
+                  updateField(field!.id, {
+                    config: { ...field!.config, dateMin: v || undefined },
+                  })
+                }
+              />
+            </div>
+            <div>
+              <Label className="text-xs">{t.dateMax}</Label>
+              <DatePicker
+                value={(field.config?.dateMax as string) ?? ""}
+                onChange={(v) =>
+                  updateField(field!.id, {
+                    config: { ...field!.config, dateMax: v || undefined },
+                  })
+                }
+              />
             </div>
           </div>
         )}

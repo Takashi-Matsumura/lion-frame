@@ -2,13 +2,15 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
+import { FaCalendarAlt, FaChevronLeft, FaChevronRight } from "react-icons/fa";
 import { cn } from "@/lib/utils";
 
 interface DatePickerProps {
   value: string; // YYYY-MM-DD
   onChange: (value: string) => void;
   className?: string;
+  min?: string; // YYYY-MM-DD
+  max?: string; // YYYY-MM-DD
 }
 
 const WEEKDAYS_JA = ["日", "月", "火", "水", "木", "金", "土"];
@@ -17,7 +19,7 @@ const WEEKDAYS_JA = ["日", "月", "火", "水", "木", "金", "土"];
  * カスタム日付ピッカー
  * ネイティブ<input type="date">と異なり、月移動時にカレンダーが閉じない
  */
-export function DatePicker({ value, onChange, className }: DatePickerProps) {
+export function DatePicker({ value, onChange, className, min, max }: DatePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [viewYear, setViewYear] = useState(() => {
     if (value) {
@@ -134,8 +136,15 @@ export function DatePicker({ value, onChange, className }: DatePickerProps) {
     });
   };
 
+  const isDateDisabled = (dateStr: string) => {
+    if (min && dateStr < min) return true;
+    if (max && dateStr > max) return true;
+    return false;
+  };
+
   const selectDay = (day: number) => {
     const dateStr = `${viewYear}-${String(viewMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    if (isDateDisabled(dateStr)) return;
     onChange(dateStr);
     setIsOpen(false);
   };
@@ -157,11 +166,13 @@ export function DatePicker({ value, onChange, className }: DatePickerProps) {
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         className={cn(
-          "px-2 py-1 text-sm border border-input rounded-md bg-background text-foreground text-left tabular-nums",
+          "flex items-center gap-2 px-2 py-1 text-sm border border-input rounded-md bg-background text-left tabular-nums",
+          value ? "text-foreground" : "text-muted-foreground",
           className,
         )}
       >
-        {displayValue}
+        <FaCalendarAlt className="w-3.5 h-3.5 shrink-0" />
+        {displayValue || "----/--/--"}
       </button>
       {isOpen &&
         createPortal(
@@ -211,6 +222,7 @@ export function DatePicker({ value, onChange, className }: DatePickerProps) {
               {days.map((day) => {
                 const dateStr = `${viewYear}-${String(viewMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
                 const isSelected = dateStr === value;
+                const disabled = isDateDisabled(dateStr);
                 const isToday =
                   dateStr ===
                   new Intl.DateTimeFormat("sv-SE", {
@@ -221,14 +233,17 @@ export function DatePicker({ value, onChange, className }: DatePickerProps) {
                   <button
                     key={day}
                     type="button"
+                    disabled={disabled}
                     onClick={() => selectDay(day)}
                     className={cn(
                       "h-8 rounded text-sm transition-colors",
-                      isSelected
-                        ? "bg-primary text-primary-foreground"
-                        : isToday
-                          ? "bg-accent text-accent-foreground font-medium"
-                          : "text-foreground hover:bg-muted",
+                      disabled
+                        ? "text-muted-foreground/40 cursor-not-allowed"
+                        : isSelected
+                          ? "bg-primary text-primary-foreground"
+                          : isToday
+                            ? "bg-accent text-accent-foreground font-medium"
+                            : "text-foreground hover:bg-muted",
                     )}
                   >
                     {day}

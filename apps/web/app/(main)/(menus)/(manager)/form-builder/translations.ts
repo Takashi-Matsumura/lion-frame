@@ -140,6 +140,9 @@ export const formBuilderTranslations = jaOnly({
   numberButtonLayout: "ボタン配置",
   numberButtonSides: "左右",
   numberButtonRight: "右寄せ",
+  // 日付フィールド
+  dateMin: "開始日",
+  dateMax: "終了日",
 });
 
 export type Language = keyof typeof formBuilderTranslations;

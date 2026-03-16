@@ -14,6 +14,7 @@ import { EmployeePickerField } from "./EmployeePickerField";
 import { DepartmentPickerField } from "./DepartmentPickerField";
 import { NumberInputField } from "./NumberInputField";
 import { RatingField } from "./RatingField";
+import { DatePicker } from "@/components/ui/date-picker";
 
 interface FieldConfig {
   options?: string[];
@@ -21,6 +22,8 @@ interface FieldConfig {
   min?: number;
   step?: number;
   buttonLayout?: "sides" | "right";
+  dateMin?: string; // YYYY-MM-DD
+  dateMax?: string; // YYYY-MM-DD
   [key: string]: unknown;
 }
 
@@ -89,10 +92,11 @@ export function FormFieldRenderer({ field, value, onChange, language }: Props) {
 
       case "DATE":
         return (
-          <Input
-            type="date"
+          <DatePicker
             value={String(value ?? "")}
-            onChange={(e) => onChange(e.target.value)}
+            onChange={(v) => onChange(v)}
+            min={field.config?.dateMin}
+            max={field.config?.dateMax}
           />
         );
 
