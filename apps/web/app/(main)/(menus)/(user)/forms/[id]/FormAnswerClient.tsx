@@ -49,8 +49,9 @@ interface FormData {
   sections: FormSection[];
 }
 
-function formatAnswerDisplay(val: unknown): string {
+function formatAnswerDisplay(val: unknown, fieldType?: string): string {
   if (val == null || val === "") return "";
+  if (fieldType === "YES_NO") return val === true || val === "true" ? "はい" : "いいえ";
   if (Array.isArray(val)) return val.length > 0 ? val.join(", ") : "";
   if (typeof val === "number") return String(val);
   return String(val);
@@ -323,7 +324,7 @@ export function FormAnswerClient({
                   .map((field) => {
                     const label = field.labelJa || field.label;
                     const val = answers[field.id];
-                    const display = formatAnswerDisplay(val);
+                    const display = formatAnswerDisplay(val, field.type);
                     const isEmpty = !display;
                     return (
                       <div key={field.id} className="flex items-baseline gap-2 py-1 border-b border-border last:border-0">

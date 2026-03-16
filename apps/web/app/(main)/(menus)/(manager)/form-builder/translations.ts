@@ -56,6 +56,11 @@ export const formBuilderTranslations = jaOnly({
   properties: "プロパティ",
   fieldLabel: "ラベル",
   fieldPlaceholder: "プレースホルダー",
+  fieldDescription: "説明",
+  fieldDescriptionPlaceholder: "マークダウン形式で入力できます",
+  advancedOptions: "詳細オプション",
+  fieldMultiline: "長文対応",
+  fieldMaxLength: "文字数制限",
   fieldRequired: "必須",
   fieldOptions: "選択肢",
   addOption: "選択肢を追加",
@@ -143,6 +148,15 @@ export const formBuilderTranslations = jaOnly({
   // 日付フィールド
   dateMin: "開始日",
   dateMax: "終了日",
+  // 選択フィールドレイアウト
+  optionsLayout: "レイアウト",
+  layoutVertical: "縦並び",
+  layoutHorizontal: "横並び",
+  // YES_NOフィールド
+  fieldYesNo: "はい/いいえ",
+  yesNoYesLabel: "ONラベル",
+  yesNoNoLabel: "OFFラベル",
+  yesNoDefaultValue: "デフォルトON",
 });
 
 export type Language = keyof typeof formBuilderTranslations;

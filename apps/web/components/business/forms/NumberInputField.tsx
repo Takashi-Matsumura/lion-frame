@@ -119,6 +119,15 @@ export function NumberInputField({
           onChange(result);
         }
       }}
+      onWheel={(e) => {
+        if (document.activeElement !== e.currentTarget) return;
+        e.preventDefault();
+        if (e.deltaY < 0) {
+          increment();
+        } else if (e.deltaY > 0) {
+          decrement();
+        }
+      }}
       onDrop={(e) => {
         e.preventDefault();
       }}

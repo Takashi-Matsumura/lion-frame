@@ -927,6 +927,7 @@ enum FieldType {
   DEPARTMENT_PICKER
   SECTION_HEADER
   CALCULATED
+  YES_NO
 }
 
 enum SubmissionStatus {

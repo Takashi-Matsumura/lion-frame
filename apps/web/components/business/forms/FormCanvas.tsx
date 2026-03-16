@@ -36,6 +36,7 @@ import {
   Building2,
   Heading,
   List,
+  ToggleLeft,
 } from "lucide-react";
 import {
   useFormBuilderStore,
@@ -57,6 +58,7 @@ const fieldTypeIcon: Record<string, React.ComponentType<{ className?: string }>>
   EMPLOYEE_PICKER: User,
   DEPARTMENT_PICKER: Building2,
   SECTION_HEADER: Heading,
+  YES_NO: ToggleLeft,
 };
 
 function SortableField({

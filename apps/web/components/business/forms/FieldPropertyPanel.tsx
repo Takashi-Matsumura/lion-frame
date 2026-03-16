@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import { ChevronRight } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, Button } from "@/components/ui";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,6 +18,7 @@ import {
   useFormBuilderStore,
   type FormFieldDraft,
 } from "@/lib/addon-modules/forms/form-builder-store";
+import { NumberInputField } from "./NumberInputField";
 import { ConditionalLogicEditor } from "./ConditionalLogicEditor";
 import { formBuilderTranslations, type Language } from "@/app/(main)/(menus)/(manager)/form-builder/translations";
 import { DatePicker } from "@/components/ui/date-picker";
@@ -24,10 +26,36 @@ import { DatePicker } from "@/components/ui/date-picker";
 const hasOptions = (type: string) =>
   ["SELECT", "MULTI_SELECT", "RADIO", "CHECKBOX_GROUP"].includes(type);
 
+function AdvancedToggle({
+  label,
+  hasContent,
+  children,
+}: {
+  label: string;
+  hasContent: boolean;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(hasContent);
+  return (
+    <div>
+      <button
+        type="button"
+        className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors py-1 cursor-pointer"
+        onClick={() => setOpen((v) => !v)}
+      >
+        <ChevronRight className={`size-3.5 transition-transform ${open ? "rotate-90" : ""}`} />
+        {label}
+        {hasContent && !open && <span className="size-1.5 rounded-full bg-primary ml-1" />}
+      </button>
+      {open && <div className="space-y-4 mt-2">{children}</div>}
+    </div>
+  );
+}
+
 export function FieldPropertyPanel({ language }: { language: Language }) {
   const t = formBuilderTranslations[language];
   const { form, selectedFieldId, updateField, moveFieldToSection } = useFormBuilderStore();
-  const [bulkMode, setBulkMode] = useState(false);
+  const [bulkMode, setBulkMode] = useState(true);
 
   // Find field and its section
   let field: FormFieldDraft | undefined;
@@ -105,15 +133,71 @@ export function FieldPropertyPanel({ language }: { language: Language }) {
 
         {field.type !== "SECTION_HEADER" && (
           <>
-            <div>
-              <Label className="text-xs">{t.fieldPlaceholder}</Label>
-              <Input
-                value={field.placeholder ?? ""}
-                onChange={(e) =>
-                  updateField(field!.id, { placeholder: e.target.value })
-                }
-              />
-            </div>
+            <AdvancedToggle
+              label={t.advancedOptions}
+              hasContent={!!(field.placeholder || (field.config?.description as string))}
+            >
+              <div>
+                <Label className="text-xs">{t.fieldPlaceholder}</Label>
+                <Input
+                  value={field.placeholder ?? ""}
+                  onChange={(e) =>
+                    updateField(field!.id, { placeholder: e.target.value })
+                  }
+                />
+              </div>
+
+              <div>
+                <Label className="text-xs">{t.fieldDescription}</Label>
+                <Textarea
+                  value={(field.config?.description as string) ?? ""}
+                  onChange={(e) =>
+                    updateField(field!.id, {
+                      config: { ...field!.config, description: e.target.value || undefined },
+                    })
+                  }
+                  placeholder={t.fieldDescriptionPlaceholder}
+                  rows={3}
+                  className="text-sm"
+                />
+              </div>
+            </AdvancedToggle>
+
+            {(field.type === "TEXT" || field.type === "TEXTAREA") && (
+              <>
+                <div className="flex items-center gap-2">
+                  <Switch
+                    checked={field.type === "TEXTAREA" || field.config?.multiline === true}
+                    onCheckedChange={(v) =>
+                      updateField(field!.id, {
+                        config: { ...field!.config, multiline: v },
+                      })
+                    }
+                  />
+                  <Label className="text-xs">{t.fieldMultiline}</Label>
+                </div>
+                {(field.type === "TEXTAREA" || field.config?.multiline === true) && (
+                  <div>
+                    <Label className="text-xs">{t.fieldMaxLength}</Label>
+                    <NumberInputField
+                      value={field.config?.maxLength != null ? Number(field.config.maxLength) : ""}
+                      onChange={(v) =>
+                        updateField(field!.id, {
+                          config: {
+                            ...field!.config,
+                            maxLength: v === "" ? undefined : Number(v),
+                          },
+                        })
+                      }
+                      placeholder="—"
+                      min={1}
+                      step={10}
+                      buttonLayout="right"
+                    />
+                  </div>
+                )}
+              </>
+            )}
 
             <div className="flex items-center gap-2">
               <Switch
@@ -195,6 +279,29 @@ export function FieldPropertyPanel({ language }: { language: Language }) {
                 </Button>
               </>
             )}
+          </div>
+        )}
+
+        {/* Options layout for radio/checkbox */}
+        {(field.type === "RADIO" || field.type === "CHECKBOX_GROUP" || field.type === "MULTI_SELECT") && (
+          <div>
+            <Label className="text-xs">{t.optionsLayout}</Label>
+            <Select
+              value={String(field.config?.layout ?? "vertical")}
+              onValueChange={(v) =>
+                updateField(field!.id, {
+                  config: { ...field!.config, layout: v },
+                })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="vertical">{t.layoutVertical}</SelectItem>
+                <SelectItem value="horizontal">{t.layoutHorizontal}</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         )}
 
@@ -310,6 +417,49 @@ export function FieldPropertyPanel({ language }: { language: Language }) {
                 ))}
               </SelectContent>
             </Select>
+          </div>
+        )}
+
+        {/* YES_NO config */}
+        {field.type === "YES_NO" && (
+          <div className="space-y-3">
+            <div>
+              <Label className="text-xs">{t.yesNoYesLabel}</Label>
+              <Input
+                value={(field.config?.yesLabel as string) ?? ""}
+                onChange={(e) =>
+                  updateField(field!.id, {
+                    config: { ...field!.config, yesLabel: e.target.value || undefined },
+                  })
+                }
+                placeholder="はい"
+                className="text-sm"
+              />
+            </div>
+            <div>
+              <Label className="text-xs">{t.yesNoNoLabel}</Label>
+              <Input
+                value={(field.config?.noLabel as string) ?? ""}
+                onChange={(e) =>
+                  updateField(field!.id, {
+                    config: { ...field!.config, noLabel: e.target.value || undefined },
+                  })
+                }
+                placeholder="いいえ"
+                className="text-sm"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Switch
+                checked={field.config?.defaultValue === true}
+                onCheckedChange={(v) =>
+                  updateField(field!.id, {
+                    config: { ...field!.config, defaultValue: v },
+                  })
+                }
+              />
+              <Label className="text-xs">{t.yesNoDefaultValue}</Label>
+            </div>
           </div>
         )}
 

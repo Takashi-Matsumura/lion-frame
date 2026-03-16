@@ -17,6 +17,7 @@ import {
   Building2,
   Heading,
   ChevronRight,
+  ToggleLeft,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui";
 import { useFormBuilderStore } from "@/lib/addon-modules/forms/form-builder-store";
@@ -35,6 +36,7 @@ const fieldTypeIcon: Record<string, React.ComponentType<{ className?: string }>>
   EMPLOYEE_PICKER: User,
   DEPARTMENT_PICKER: Building2,
   SECTION_HEADER: Heading,
+  YES_NO: ToggleLeft,
 };
 
 const fieldTypeLabels: Record<string, string> = {
@@ -42,14 +44,15 @@ const fieldTypeLabels: Record<string, string> = {
   TEXTAREA: "長文テキスト",
   NUMBER: "数値",
   DATE: "日付",
-  SELECT: "ドロップダウン",
+  SELECT: "ドロップ",
   MULTI_SELECT: "複数選択",
   RADIO: "ラジオ",
-  CHECKBOX_GROUP: "チェックボックス",
+  CHECKBOX_GROUP: "チェック",
   RATING: "評価",
   EMPLOYEE_PICKER: "社員",
   DEPARTMENT_PICKER: "部署",
   SECTION_HEADER: "セクション",
+  YES_NO: "はい/いいえ",
 };
 
 interface FieldGroup {
@@ -58,8 +61,8 @@ interface FieldGroup {
 }
 
 const fieldGroups: FieldGroup[] = [
-  { label: "基本", types: ["TEXT", "TEXTAREA", "NUMBER", "DATE"] },
-  { label: "選択", types: ["SELECT", "MULTI_SELECT", "RADIO", "CHECKBOX_GROUP"] },
+  { label: "基本", types: ["TEXT", "NUMBER", "DATE"] },
+  { label: "選択", types: ["SELECT", "RADIO", "CHECKBOX_GROUP", "YES_NO"] },
   { label: "特殊", types: ["RATING", "EMPLOYEE_PICKER", "DEPARTMENT_PICKER"] },
   { label: "レイアウト", types: ["SECTION_HEADER"] },
 ];

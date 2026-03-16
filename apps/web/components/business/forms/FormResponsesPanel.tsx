@@ -75,8 +75,9 @@ export function FormResponsesPanel({
   // フィールドの順序を最初の回答から取得
   const fieldOrder = responses[0]?.answers.map((a) => a.field) ?? [];
 
-  const formatValue = (value: unknown): string => {
+  const formatValue = (value: unknown, fieldType?: string): string => {
     if (value === null || value === undefined) return "-";
+    if (fieldType === "YES_NO") return value === true || value === "true" ? "はい" : "いいえ";
     if (Array.isArray(value)) return value.join(", ");
     return String(value);
   };
@@ -119,7 +120,7 @@ export function FormResponsesPanel({
                     </TableCell>
                     {fieldOrder.map((f) => (
                       <TableCell key={f.id}>
-                        {formatValue(answerMap.get(f.id))}
+                        {formatValue(answerMap.get(f.id), f.type)}
                       </TableCell>
                     ))}
                   </TableRow>
