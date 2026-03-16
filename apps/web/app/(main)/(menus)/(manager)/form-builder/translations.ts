@@ -134,6 +134,12 @@ export const formBuilderTranslations = jaOnly({
   bulkInput: "一括",
   listInput: "リスト",
   bulkPlaceholder: "1行に1つの選択肢を入力",
+  // 数値フィールド
+  numberMin: "最小値",
+  numberMax: "最大値",
+  numberButtonLayout: "ボタン配置",
+  numberButtonSides: "左右",
+  numberButtonRight: "右寄せ",
 });
 
 export type Language = keyof typeof formBuilderTranslations;

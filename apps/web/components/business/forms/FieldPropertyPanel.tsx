@@ -197,6 +197,67 @@ export function FieldPropertyPanel({ language }: { language: Language }) {
           </div>
         )}
 
+        {/* Number config */}
+        {field.type === "NUMBER" && (
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <Label className="text-xs">{t.numberMin}</Label>
+                <Input
+                  type="number"
+                  value={field.config?.min != null ? String(field.config.min) : ""}
+                  onChange={(e) =>
+                    updateField(field!.id, {
+                      config: {
+                        ...field!.config,
+                        min: e.target.value === "" ? undefined : Number(e.target.value),
+                      },
+                    })
+                  }
+                  placeholder="—"
+                  className="text-sm"
+                />
+              </div>
+              <div>
+                <Label className="text-xs">{t.numberMax}</Label>
+                <Input
+                  type="number"
+                  value={field.config?.max != null ? String(field.config.max) : ""}
+                  onChange={(e) =>
+                    updateField(field!.id, {
+                      config: {
+                        ...field!.config,
+                        max: e.target.value === "" ? undefined : Number(e.target.value),
+                      },
+                    })
+                  }
+                  placeholder="—"
+                  className="text-sm"
+                />
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs">{t.numberButtonLayout}</Label>
+              <Select
+                value={String(field.config?.buttonLayout ?? "sides")}
+                onValueChange={(v) =>
+                  updateField(field!.id, {
+                    config: { ...field!.config, buttonLayout: v },
+                  })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="sides">{t.numberButtonSides}</SelectItem>
+                  <SelectItem value="right">{t.numberButtonRight}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        )}
+
         {/* Rating config */}
         {field.type === "RATING" && (
           <div>

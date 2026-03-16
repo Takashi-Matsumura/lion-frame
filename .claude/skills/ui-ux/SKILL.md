@@ -372,6 +372,43 @@ import { PageSkeleton } from "@/components/ui/page-skeleton";
 </div>
 ```
 
+### 数値入力（NumberInputField）
+
+フォームモジュール用のカスタム数値入力コンポーネント。ネイティブスピナーを非表示にし、大きな＋/−ボタンで操作性を向上。
+
+```tsx
+import { NumberInputField } from "@/components/business/forms/NumberInputField";
+
+// 基本（左右ボタン配置）
+<NumberInputField
+  value={value}
+  onChange={(v) => setValue(v)}
+  placeholder="数値を入力"
+/>
+
+// 右寄せボタン配置 + 範囲制限
+<NumberInputField
+  value={value}
+  onChange={(v) => setValue(v)}
+  min={0}
+  max={100}
+  step={1}
+  buttonLayout="right"
+/>
+```
+
+| prop | 型 | デフォルト | 説明 |
+|------|----|-----------|------|
+| `value` | `number \| ""` | — | 現在の値 |
+| `onChange` | `(v: number \| "") => void` | — | 値変更コールバック |
+| `min` | `number?` | — | 最小値 |
+| `max` | `number?` | — | 最大値 |
+| `step` | `number?` | `1` | ＋/−ボタンの増減幅 |
+| `buttonLayout` | `"sides" \| "right"` | `"sides"` | ボタン配置（左右 or 右寄せ） |
+| `placeholder` | `string?` | — | プレースホルダー |
+
+入力制御: 数字・制御キーのみ許可、`e/E/+/.`ブロック、ペースト時サニタイズ、IME（全角数字→半角変換）対応、ボタン長押しで連続増減。
+
 ### セレクト
 
 ```tsx

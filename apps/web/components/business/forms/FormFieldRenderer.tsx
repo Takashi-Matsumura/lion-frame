@@ -12,11 +12,15 @@ import {
 } from "@/components/ui/select";
 import { EmployeePickerField } from "./EmployeePickerField";
 import { DepartmentPickerField } from "./DepartmentPickerField";
+import { NumberInputField } from "./NumberInputField";
 import { RatingField } from "./RatingField";
 
 interface FieldConfig {
   options?: string[];
   max?: number;
+  min?: number;
+  step?: number;
+  buttonLayout?: "sides" | "right";
   [key: string]: unknown;
 }
 
@@ -72,11 +76,14 @@ export function FormFieldRenderer({ field, value, onChange, language }: Props) {
 
       case "NUMBER":
         return (
-          <Input
-            type="number"
-            value={String(value ?? "")}
-            onChange={(e) => onChange(e.target.value ? Number(e.target.value) : "")}
+          <NumberInputField
+            value={value === "" || value == null ? "" : Number(value)}
+            onChange={(v) => onChange(v)}
             placeholder={placeholder}
+            min={field.config?.min}
+            max={field.config?.max}
+            step={field.config?.step}
+            buttonLayout={field.config?.buttonLayout}
           />
         );
 
