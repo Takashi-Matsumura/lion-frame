@@ -210,8 +210,16 @@ export function getMenuById(menuId: string): AppMenu | undefined {
  * パスからメニューを取得
  */
 export function getMenuByPath(path: string): AppMenu | undefined {
+  // 完全一致
   for (const module of Object.values(moduleRegistry)) {
     const menu = module.menus.find((m) => m.path === path);
+    if (menu) return menu;
+  }
+  // 前方一致（動的ルート: /forms/[id] → /forms）
+  for (const module of Object.values(moduleRegistry)) {
+    const menu = module.menus.find(
+      (m) => m.path !== "/" && path.startsWith(m.path + "/"),
+    );
     if (menu) return menu;
   }
   return undefined;
