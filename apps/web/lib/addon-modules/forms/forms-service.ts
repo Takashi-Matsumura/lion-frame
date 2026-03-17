@@ -45,6 +45,8 @@ interface AnswerInput {
   value: unknown;
 }
 
+const isPersistedId = (id?: string | null) => id != null && !id.startsWith("temp_");
+
 // ─── Helpers ───
 
 const formInclude = {
@@ -122,12 +124,12 @@ export const FormsService = {
       });
       if (!existing) return null;
 
-      // 送信されたセクション/フィールドIDを収集
+      // 送信されたセクション/フィールドIDを収集（temp_は除外）
       const incomingSectionIds = new Set(
-        data.sections.filter((s) => s.id).map((s) => s.id!),
+        data.sections.filter((s) => isPersistedId(s.id)).map((s) => s.id!),
       );
       const incomingFieldIds = new Set(
-        data.sections.flatMap((s) => s.fields.filter((f) => f.id).map((f) => f.id!)),
+        data.sections.flatMap((s) => s.fields.filter((f) => isPersistedId(f.id)).map((f) => f.id!)),
       );
 
       // 孤立したフィールドとセクションを削除
@@ -160,7 +162,7 @@ export const FormsService = {
             order: section.order,
           };
 
-          const upsertedSection = section.id
+          const upsertedSection = isPersistedId(section.id)
             ? await tx.formSection.update({
                 where: { id: section.id },
                 data: sectionData,
@@ -181,7 +183,7 @@ export const FormsService = {
               conditionalLogic: (field.conditionalLogic as unknown as Prisma.InputJsonValue) ?? undefined,
             };
 
-            if (field.id) {
+            if (isPersistedId(field.id)) {
               await tx.formField.update({
                 where: { id: field.id },
                 data: fieldData,
@@ -279,6 +281,32 @@ export const FormsService = {
         status: newStatus,
         ...(newStatus === "CLOSED" ? { closedAt: new Date() } : {}),
       },
+    });
+  },
+
+  /**
+   * 公開解除（PUBLISHED → DRAFT）
+   * 回答が0件の場合のみ許可
+   */
+  async unpublishForm(formId: string) {
+    const form = await prisma.form.findUnique({ where: { id: formId } });
+    if (!form) return null;
+
+    if (form.status !== "PUBLISHED") {
+      throw new Error("公開中のフォームのみ解除できます");
+    }
+
+    const responseCount = await prisma.formSubmission.count({
+      where: { formId, status: "SUBMITTED" },
+    });
+
+    if (responseCount > 0) {
+      throw new Error("回答があるフォームは公開解除できません");
+    }
+
+    return prisma.form.update({
+      where: { id: formId },
+      data: { status: "DRAFT" },
     });
   },
 

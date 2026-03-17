@@ -97,6 +97,10 @@ export const formBuilderTranslations = jaOnly({
   formTitleLabel: "タイトル",
   formDescription: "説明",
   allowMultiple: "複数回答を許可",
+  // 公開解除
+  unpublish: "公開解除",
+  unpublished: "公開を解除しました。",
+  unpublishError: "公開解除に失敗しました。",
   // エラー
   loadError: "フォームの読み込みに失敗しました。",
   saveError: "フォームの保存に失敗しました。",

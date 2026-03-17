@@ -51,7 +51,7 @@ function defaultField(type: FieldType, order: number): FormFieldDraft {
   return {
     id: tempId(),
     type,
-    label: type === "SECTION_HEADER" ? "Section" : "",
+    label: type === "SECTION_HEADER" ? "Header" : "",
     required: false,
     order,
     config: {},

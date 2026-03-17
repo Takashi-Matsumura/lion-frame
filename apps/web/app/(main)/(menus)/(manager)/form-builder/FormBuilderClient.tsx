@@ -219,7 +219,10 @@ export function FormBuilderClient({ language }: { language: Language }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
       });
-      if (!res.ok) throw new Error();
+      if (!res.ok) {
+        const errData = await res.json().catch(() => null);
+        throw new Error(errData?.messageJa || errData?.error || "Save failed");
+      }
       const data = await res.json();
       const f = data.form;
       setForm({
@@ -244,8 +247,8 @@ export function FormBuilderClient({ language }: { language: Language }) {
       });
       markSaved();
       toast.success(t.saved);
-    } catch {
-      toast.error(t.saveError);
+    } catch (e) {
+      toast.error((e as Error).message || t.saveError);
     } finally {
       setSaving(false);
     }
@@ -283,6 +286,23 @@ export function FormBuilderClient({ language }: { language: Language }) {
       openEditor(selectedFormId, activeTab);
     } catch {
       toast.error(t.publishError);
+    }
+  };
+
+  const handleUnpublish = async () => {
+    if (!selectedFormId) return;
+    try {
+      const res = await fetch(`/api/forms/${selectedFormId}/unpublish`, {
+        method: "POST",
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || data.messageJa || "Unpublish failed");
+      }
+      toast.success(t.unpublished);
+      openEditor(selectedFormId, activeTab);
+    } catch (e) {
+      toast.error((e as Error).message || t.unpublishError);
     }
   };
 
@@ -444,9 +464,14 @@ export function FormBuilderClient({ language }: { language: Language }) {
               </Button>
             )}
             {form.status === "PUBLISHED" && (
-              <Button size="sm" variant="outline" onClick={handleEditorPublish}>
-                {t.close}
-              </Button>
+              <>
+                <Button size="sm" variant="ghost" onClick={handleUnpublish}>
+                  {t.unpublish}
+                </Button>
+                <Button size="sm" variant="outline" onClick={handleEditorPublish}>
+                  {t.close}
+                </Button>
+              </>
             )}
           </div>
         </div>
