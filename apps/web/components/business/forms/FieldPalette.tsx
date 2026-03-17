@@ -51,7 +51,7 @@ const fieldTypeLabels: Record<string, string> = {
   RATING: "スター",
   EMPLOYEE_PICKER: "社員",
   DEPARTMENT_PICKER: "部署",
-  SECTION_HEADER: "セクション",
+  SECTION_HEADER: "見出し",
   YES_NO: "はい/いいえ",
 };
 
@@ -64,7 +64,7 @@ const fieldGroups: FieldGroup[] = [
   { label: "基本", types: ["TEXT", "NUMBER", "DATE"] },
   { label: "選択", types: ["SELECT", "RADIO", "CHECKBOX_GROUP", "YES_NO", "RATING"] },
   { label: "特殊", types: ["EMPLOYEE_PICKER"] },
-  { label: "レイアウト", types: ["SECTION_HEADER"] },
+  { label: "その他", types: ["SECTION_HEADER"] },
 ];
 
 export function FieldPalette({ language }: { language: Language }) {
