@@ -63,7 +63,7 @@ interface FieldGroup {
 const fieldGroups: FieldGroup[] = [
   { label: "基本", types: ["TEXT", "NUMBER", "DATE"] },
   { label: "選択", types: ["SELECT", "RADIO", "CHECKBOX_GROUP", "YES_NO", "RATING"] },
-  { label: "特殊", types: ["EMPLOYEE_PICKER", "DEPARTMENT_PICKER"] },
+  { label: "特殊", types: ["EMPLOYEE_PICKER"] },
   { label: "レイアウト", types: ["SECTION_HEADER"] },
 ];
 

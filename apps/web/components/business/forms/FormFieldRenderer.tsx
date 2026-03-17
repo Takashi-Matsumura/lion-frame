@@ -18,7 +18,6 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Switch } from "@/components/ui/switch";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { EmployeePickerField } from "./EmployeePickerField";
-import { DepartmentPickerField } from "./DepartmentPickerField";
 import { NumberInputField } from "./NumberInputField";
 import { RatingField } from "./RatingField";
 import { DatePicker } from "@/components/ui/date-picker";
@@ -309,15 +308,6 @@ export function FormFieldRenderer({ field, value, onChange, language }: Props) {
       case "EMPLOYEE_PICKER":
         return (
           <EmployeePickerField
-            value={String(value ?? "")}
-            onChange={(v) => onChange(v)}
-            language={language}
-          />
-        );
-
-      case "DEPARTMENT_PICKER":
-        return (
-          <DepartmentPickerField
             value={String(value ?? "")}
             onChange={(v) => onChange(v)}
             language={language}

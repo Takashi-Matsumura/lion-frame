@@ -78,6 +78,12 @@ export function FormResponsesPanel({
   const formatValue = (value: unknown, fieldType?: string): string => {
     if (value === null || value === undefined) return "-";
     if (fieldType === "YES_NO") return value === true || value === "true" ? "はい" : "いいえ";
+    if (fieldType === "EMPLOYEE_PICKER" && typeof value === "string") {
+      try {
+        const emp = JSON.parse(value);
+        if (emp?.name) return `${emp.name} (${emp.employeeId})`;
+      } catch { /* not JSON */ }
+    }
     if (Array.isArray(value)) return value.filter((v) => v !== "__other__").join(", ");
     if (value === "__other__") return "その他";
     return String(value);

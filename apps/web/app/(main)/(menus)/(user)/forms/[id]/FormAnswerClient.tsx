@@ -52,6 +52,12 @@ interface FormData {
 function formatAnswerDisplay(val: unknown, fieldType?: string): string {
   if (val == null || val === "") return "";
   if (fieldType === "YES_NO") return val === true || val === "true" ? "はい" : "いいえ";
+  if (fieldType === "EMPLOYEE_PICKER" && typeof val === "string") {
+    try {
+      const emp = JSON.parse(val);
+      if (emp?.name) return `${emp.name} (${emp.employeeId})`;
+    } catch { /* not JSON */ }
+  }
   if (Array.isArray(val)) return val.filter((v) => v !== "__other__").join(", ");
   if (val === "__other__") return "その他";
   if (typeof val === "number") return String(val);
