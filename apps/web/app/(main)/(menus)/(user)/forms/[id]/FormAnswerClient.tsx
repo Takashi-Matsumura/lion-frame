@@ -52,7 +52,8 @@ interface FormData {
 function formatAnswerDisplay(val: unknown, fieldType?: string): string {
   if (val == null || val === "") return "";
   if (fieldType === "YES_NO") return val === true || val === "true" ? "はい" : "いいえ";
-  if (Array.isArray(val)) return val.length > 0 ? val.join(", ") : "";
+  if (Array.isArray(val)) return val.filter((v) => v !== "__other__").join(", ");
+  if (val === "__other__") return "その他";
   if (typeof val === "number") return String(val);
   return String(val);
 }

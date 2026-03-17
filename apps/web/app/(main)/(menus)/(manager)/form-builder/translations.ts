@@ -148,6 +148,10 @@ export const formBuilderTranslations = jaOnly({
   // 日付フィールド
   dateMin: "開始日",
   dateMax: "終了日",
+  // その他（自由入力）
+  allowOther: "「その他」を許可",
+  otherLabel: "その他",
+  otherPlaceholder: "入力してください",
   // 選択フィールドレイアウト
   optionsLayout: "レイアウト",
   layoutVertical: "縦並び",

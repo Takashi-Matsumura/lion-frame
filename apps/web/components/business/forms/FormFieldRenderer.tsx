@@ -23,6 +23,8 @@ import { NumberInputField } from "./NumberInputField";
 import { RatingField } from "./RatingField";
 import { DatePicker } from "@/components/ui/date-picker";
 
+const OTHER_VALUE = "__other__";
+
 interface FieldConfig {
   options?: string[];
   max?: number;
@@ -123,32 +125,55 @@ export function FormFieldRenderer({ field, value, onChange, language }: Props) {
 
       case "SELECT": {
         const selectValue = String(value ?? "");
+        const selectOptions = field.config?.options ?? [];
+        const selectAllowOther = field.config?.allowOther === true;
+        const isOtherSelected = selectAllowOther && selectValue && !selectOptions.includes(selectValue) && selectValue !== OTHER_VALUE;
+        const currentSelectVal = isOtherSelected ? OTHER_VALUE : selectValue;
         return (
-          <div className="flex items-center gap-1">
-            <Select
-              value={selectValue}
-              onValueChange={(v) => onChange(v)}
-            >
-              <SelectTrigger className="flex-1">
-                <SelectValue placeholder={placeholder} />
-              </SelectTrigger>
-              <SelectContent>
-                {(field.config?.options ?? []).map((opt) => (
-                  <SelectItem key={opt} value={opt}>
-                    {opt}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {selectValue && (
-              <button
-                type="button"
-                onClick={() => onChange("")}
-                className="text-muted-foreground hover:text-foreground transition-colors shrink-0 px-1 cursor-pointer"
-                aria-label="Clear"
+          <div className="space-y-2">
+            <div className="flex items-center gap-1">
+              <Select
+                value={currentSelectVal}
+                onValueChange={(v) => {
+                  if (v === OTHER_VALUE) {
+                    onChange(OTHER_VALUE);
+                  } else {
+                    onChange(v);
+                  }
+                }}
               >
-                <X className="size-4" />
-              </button>
+                <SelectTrigger className="flex-1">
+                  <SelectValue placeholder={placeholder} />
+                </SelectTrigger>
+                <SelectContent>
+                  {selectOptions.map((opt) => (
+                    <SelectItem key={opt} value={opt}>
+                      {opt}
+                    </SelectItem>
+                  ))}
+                  {selectAllowOther && (
+                    <SelectItem value={OTHER_VALUE}>その他</SelectItem>
+                  )}
+                </SelectContent>
+              </Select>
+              {selectValue && (
+                <button
+                  type="button"
+                  onClick={() => onChange("")}
+                  className="text-muted-foreground hover:text-foreground transition-colors shrink-0 px-1 cursor-pointer"
+                  aria-label="Clear"
+                >
+                  <X className="size-4" />
+                </button>
+              )}
+            </div>
+            {selectAllowOther && (currentSelectVal === OTHER_VALUE || isOtherSelected) && (
+              <Input
+                value={isOtherSelected ? selectValue : ""}
+                onChange={(e) => onChange(e.target.value || OTHER_VALUE)}
+                placeholder="入力してください"
+                autoFocus
+              />
             )}
           </div>
         );
@@ -158,42 +183,96 @@ export function FormFieldRenderer({ field, value, onChange, language }: Props) {
       case "CHECKBOX_GROUP": {
         const selected = Array.isArray(value) ? (value as string[]) : [];
         const horizontal = field.config?.layout === "horizontal";
+        const cbAllowOther = field.config?.allowOther === true;
+        const cbOptions = field.config?.options ?? [];
+        const otherValues = cbAllowOther ? selected.filter((s) => !cbOptions.includes(s) && s !== OTHER_VALUE) : [];
+        const hasOtherChecked = cbAllowOther && (selected.includes(OTHER_VALUE) || otherValues.length > 0);
         return (
-          <div className={horizontal ? "flex flex-wrap gap-x-4 gap-y-2" : "space-y-2"}>
-            {(field.config?.options ?? []).map((opt) => (
-              <label key={opt} className="flex items-center gap-2 cursor-pointer">
-                <Checkbox
-                  checked={selected.includes(opt)}
-                  onCheckedChange={(checked) => {
-                    if (checked === true) {
-                      onChange([...selected, opt]);
-                    } else {
-                      onChange(selected.filter((s) => s !== opt));
-                    }
-                  }}
-                />
-                <span className="text-sm">{opt}</span>
-              </label>
-            ))}
+          <div className="space-y-2">
+            <div className={horizontal ? "flex flex-wrap gap-x-4 gap-y-2" : "space-y-2"}>
+              {cbOptions.map((opt) => (
+                <label key={opt} className="flex items-center gap-2 cursor-pointer">
+                  <Checkbox
+                    checked={selected.includes(opt)}
+                    onCheckedChange={(checked) => {
+                      if (checked === true) {
+                        onChange([...selected, opt]);
+                      } else {
+                        onChange(selected.filter((s) => s !== opt));
+                      }
+                    }}
+                  />
+                  <span className="text-sm">{opt}</span>
+                </label>
+              ))}
+              {cbAllowOther && (
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <Checkbox
+                    checked={hasOtherChecked}
+                    onCheckedChange={(checked) => {
+                      if (checked === true) {
+                        onChange([...selected.filter((s) => cbOptions.includes(s)), OTHER_VALUE]);
+                      } else {
+                        onChange(selected.filter((s) => cbOptions.includes(s)));
+                      }
+                    }}
+                  />
+                  <span className="text-sm">その他</span>
+                </label>
+              )}
+            </div>
+            {hasOtherChecked && (
+              <Input
+                value={otherValues[0] ?? ""}
+                onChange={(e) => {
+                  const base = selected.filter((s) => cbOptions.includes(s));
+                  onChange(e.target.value ? [...base, e.target.value] : [...base, OTHER_VALUE]);
+                }}
+                placeholder="入力してください"
+                className="ml-6"
+              />
+            )}
           </div>
         );
       }
 
       case "RADIO": {
         const radioHorizontal = field.config?.layout === "horizontal";
+        const radioAllowOther = field.config?.allowOther === true;
+        const radioOptions = field.config?.options ?? [];
+        const radioValue = String(value ?? "");
+        const isRadioOther = radioAllowOther && radioValue && !radioOptions.includes(radioValue) && radioValue !== OTHER_VALUE;
+        const radioGroupVal = isRadioOther ? OTHER_VALUE : radioValue;
         return (
-          <RadioGroup
-            value={String(value ?? "")}
-            onValueChange={(v) => onChange(v)}
-            className={radioHorizontal ? "flex flex-wrap gap-x-4 gap-y-2" : undefined}
-          >
-            {(field.config?.options ?? []).map((opt) => (
-              <label key={opt} className="flex items-center gap-2 cursor-pointer">
-                <RadioGroupItem value={opt} />
-                <span className="text-sm">{opt}</span>
-              </label>
-            ))}
-          </RadioGroup>
+          <div className="space-y-2">
+            <RadioGroup
+              value={radioGroupVal}
+              onValueChange={(v) => onChange(v)}
+              className={radioHorizontal ? "flex flex-wrap gap-x-4 gap-y-2" : undefined}
+            >
+              {radioOptions.map((opt) => (
+                <label key={opt} className="flex items-center gap-2 cursor-pointer">
+                  <RadioGroupItem value={opt} />
+                  <span className="text-sm">{opt}</span>
+                </label>
+              ))}
+              {radioAllowOther && (
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <RadioGroupItem value={OTHER_VALUE} />
+                  <span className="text-sm">その他</span>
+                </label>
+              )}
+            </RadioGroup>
+            {radioAllowOther && (radioGroupVal === OTHER_VALUE || isRadioOther) && (
+              <Input
+                value={isRadioOther ? radioValue : ""}
+                onChange={(e) => onChange(e.target.value || OTHER_VALUE)}
+                placeholder="入力してください"
+                className="ml-6"
+                autoFocus
+              />
+            )}
+          </div>
         );
       }
 

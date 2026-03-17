@@ -282,6 +282,21 @@ export function FieldPropertyPanel({ language }: { language: Language }) {
           </div>
         )}
 
+        {/* Allow "other" free input */}
+        {hasOptions(field.type) && (
+          <div className="flex items-center gap-2">
+            <Switch
+              checked={field.config?.allowOther === true}
+              onCheckedChange={(v) =>
+                updateField(field!.id, {
+                  config: { ...field!.config, allowOther: v },
+                })
+              }
+            />
+            <Label className="text-xs">{t.allowOther}</Label>
+          </div>
+        )}
+
         {/* Options layout for radio/checkbox */}
         {(field.type === "RADIO" || field.type === "CHECKBOX_GROUP" || field.type === "MULTI_SELECT") && (
           <div>

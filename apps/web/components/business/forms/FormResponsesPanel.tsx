@@ -78,7 +78,8 @@ export function FormResponsesPanel({
   const formatValue = (value: unknown, fieldType?: string): string => {
     if (value === null || value === undefined) return "-";
     if (fieldType === "YES_NO") return value === true || value === "true" ? "はい" : "いいえ";
-    if (Array.isArray(value)) return value.join(", ");
+    if (Array.isArray(value)) return value.filter((v) => v !== "__other__").join(", ");
+    if (value === "__other__") return "その他";
     return String(value);
   };
 
