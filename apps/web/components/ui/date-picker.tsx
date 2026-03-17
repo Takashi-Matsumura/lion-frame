@@ -13,6 +13,11 @@ interface DatePickerProps {
   max?: string; // YYYY-MM-DD
 }
 
+interface HolidayInfo {
+  date: string;
+  name: string;
+}
+
 const WEEKDAYS_JA = ["日", "月", "火", "水", "木", "金", "土"];
 
 /**
@@ -36,6 +41,9 @@ export function DatePicker({ value, onChange, className, min, max }: DatePickerP
     return new Date().getMonth();
   });
 
+  const [holidays, setHolidays] = useState<Map<string, string>>(new Map());
+  const fetchedMonths = useRef<Set<string>>(new Set());
+
   const triggerRef = useRef<HTMLButtonElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
   const [popoverPos, setPopoverPos] = useState<{ top: number; left: number }>({
@@ -51,6 +59,31 @@ export function DatePicker({ value, onChange, className, min, max }: DatePickerP
       setViewMonth(parseInt(m, 10) - 1);
     }
   }, [value]);
+
+  // 祝日データの取得
+  useEffect(() => {
+    const key = `${viewYear}-${viewMonth}`;
+    if (fetchedMonths.current.has(key)) return;
+    fetchedMonths.current.add(key);
+
+    const startDate = `${viewYear}-${String(viewMonth + 1).padStart(2, "0")}-01`;
+    const lastDay = new Date(viewYear, viewMonth + 1, 0).getDate();
+    const endDate = `${viewYear}-${String(viewMonth + 1).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+
+    fetch(`/api/calendar/holidays?startDate=${startDate}&endDate=${endDate}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!data?.holidays) return;
+        setHolidays((prev) => {
+          const next = new Map(prev);
+          for (const h of data.holidays as HolidayInfo[]) {
+            next.set(h.date, h.name);
+          }
+          return next;
+        });
+      })
+      .catch(() => {});
+  }, [viewYear, viewMonth]);
 
   // ポップオーバーの位置を計算（画面内に収まるように調整）
   const updatePosition = useCallback(() => {
@@ -211,7 +244,10 @@ export function DatePicker({ value, onChange, className, min, max }: DatePickerP
               {WEEKDAYS_JA.map((d) => (
                 <div
                   key={d}
-                  className="h-8 flex items-center justify-center text-xs text-muted-foreground"
+                  className={cn(
+                    "h-8 flex items-center justify-center text-xs",
+                    d === "日" ? "text-red-500" : d === "土" ? "text-blue-500" : "text-muted-foreground",
+                  )}
                 >
                   {d}
                 </div>
@@ -228,6 +264,10 @@ export function DatePicker({ value, onChange, className, min, max }: DatePickerP
                   new Intl.DateTimeFormat("sv-SE", {
                     timeZone: "Asia/Tokyo",
                   }).format(new Date());
+                const holidayName = holidays.get(dateStr);
+                const dayOfWeek = new Date(viewYear, viewMonth, day).getDay();
+                const isSunday = dayOfWeek === 0;
+                const isSaturday = dayOfWeek === 6;
 
                 return (
                   <button
@@ -235,18 +275,26 @@ export function DatePicker({ value, onChange, className, min, max }: DatePickerP
                     type="button"
                     disabled={disabled}
                     onClick={() => selectDay(day)}
+                    title={holidayName || undefined}
                     className={cn(
-                      "h-8 rounded text-sm transition-colors",
+                      "h-8 rounded text-sm transition-colors relative",
                       disabled
                         ? "text-muted-foreground/40 cursor-not-allowed"
                         : isSelected
                           ? "bg-primary text-primary-foreground"
                           : isToday
                             ? "bg-accent text-accent-foreground font-medium"
-                            : "text-foreground hover:bg-muted",
+                            : holidayName || isSunday
+                              ? "text-red-500 hover:bg-muted"
+                              : isSaturday
+                                ? "text-blue-500 hover:bg-muted"
+                                : "text-foreground hover:bg-muted",
                     )}
                   >
                     {day}
+                    {holidayName && !isSelected && (
+                      <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 size-1 rounded-full bg-red-500" />
+                    )}
                   </button>
                 );
               })}
