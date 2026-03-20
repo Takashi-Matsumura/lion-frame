@@ -81,12 +81,30 @@ export function FormAnswerClient({
   const [confirmOpen, setConfirmOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  const [isEdit, setIsEdit] = useState(false);
+
   const loadForm = useCallback(async () => {
     try {
-      const res = await fetch(`/api/forms/${formId}`);
-      if (!res.ok) throw new Error();
-      const data = await res.json();
-      setForm(data.form);
+      const [formRes, subRes] = await Promise.all([
+        fetch(`/api/forms/${formId}`),
+        fetch(`/api/forms/${formId}/my-submission`),
+      ]);
+      if (!formRes.ok) throw new Error();
+      const formData = await formRes.json();
+      setForm(formData.form);
+
+      // 既存回答がある場合はプリフィル
+      if (subRes.ok) {
+        const subData = await subRes.json();
+        if (subData.submission?.answers) {
+          const existing: Record<string, unknown> = {};
+          for (const a of subData.submission.answers) {
+            existing[a.field.id] = a.value;
+          }
+          setAnswers(existing);
+          setIsEdit(true);
+        }
+      }
     } catch {
       toast.error(t.loadError);
     } finally {
@@ -124,7 +142,7 @@ export function FormAnswerClient({
         throw new Error(data.error || "Submit failed");
       }
 
-      toast.success(t.submitted);
+      toast.success(isEdit ? t.editSubmitted : t.submitted);
       router.push("/forms");
     } catch (e) {
       toast.error((e as Error).message || t.submitError);
@@ -304,7 +322,7 @@ export function FormAnswerClient({
               </Button>
             ) : (
               <Button onClick={() => setConfirmOpen(true)} disabled={submitting}>
-                {submitting ? t.submitting : t.submit}
+                {submitting ? t.submitting : (isEdit ? t.editSubmit : t.submit)}
               </Button>
             )}
           </div>
@@ -315,8 +333,8 @@ export function FormAnswerClient({
       <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <DialogContent className="sm:max-w-[560px] max-h-[80vh] flex flex-col">
           <DialogHeader>
-            <DialogTitle>{t.confirmTitle}</DialogTitle>
-            <DialogDescription>{t.confirmDescription}</DialogDescription>
+            <DialogTitle>{isEdit ? t.editConfirmTitle : t.confirmTitle}</DialogTitle>
+            <DialogDescription>{isEdit ? t.editConfirmDescription : t.confirmDescription}</DialogDescription>
           </DialogHeader>
           <div className="flex-1 min-h-0 overflow-y-auto space-y-3 py-2">
             {form.sections.map((sec) => (

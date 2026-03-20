@@ -101,6 +101,11 @@ export const formBuilderTranslations = jaOnly({
   unpublish: "公開解除",
   unpublished: "公開を解除しました。",
   unpublishError: "公開解除に失敗しました。",
+  unpublishTitle: "フォームの公開解除",
+  unpublishDescription:
+    "公開を解除すると下書き状態に戻り、フォームの編集が可能になります。既に回答がある場合、全ての回答データは削除され、回答済みの社員には再回答をお願いする通知が送信されます。",
+  unpublishConfirm: "公開解除する",
+  unpublishNotified: "名の回答者に再回答依頼を通知しました",
   // 締切確認
   closeTitle: "フォームの締切",
   closeDescription:

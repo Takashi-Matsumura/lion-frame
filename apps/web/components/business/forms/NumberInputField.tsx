@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Minus, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -27,6 +27,8 @@ export function NumberInputField({
 }: Props) {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [composing, setComposing] = useState(false);
+  const [composingValue, setComposingValue] = useState("");
 
   const clearTimers = useCallback(() => {
     if (intervalRef.current) {
@@ -98,8 +100,15 @@ export function NumberInputField({
     <input
       type="text"
       inputMode="numeric"
-      value={value === "" ? "" : String(value)}
+      style={{ imeMode: "disabled" }}
+      autoComplete="off"
+      value={composing ? composingValue : (value === "" ? "" : String(value))}
+      onCompositionStart={() => {
+        setComposing(true);
+        setComposingValue(value === "" ? "" : String(value));
+      }}
       onCompositionEnd={(e) => {
+        setComposing(false);
         const result = sanitize(e.currentTarget.value);
         onChange(result);
       }}
@@ -132,8 +141,12 @@ export function NumberInputField({
         e.preventDefault();
       }}
       onChange={(e) => {
-        if (e.nativeEvent instanceof InputEvent && e.nativeEvent.isComposing) return;
         const raw = e.target.value;
+        // IME composing中は生のテキストをそのまま表示（compositionEndで変換）
+        if (composing) {
+          setComposingValue(raw);
+          return;
+        }
         if (raw === "" || (raw === "-" && allowNegative)) {
           onChange("");
           return;

@@ -76,6 +76,7 @@ export function FormBuilderClient({ language }: { language: Language }) {
   const [loading, setLoading] = useState(true);
   const [deleteTarget, setDeleteTarget] = useState<FormItem | null>(null);
   const [closeTarget, setCloseTarget] = useState<FormItem | null>(null);
+  const [unpublishConfirmOpen, setUnpublishConfirmOpen] = useState(false);
 
   // ─── Editor state ───
   const [detailLoading, setDetailLoading] = useState(false);
@@ -388,8 +389,13 @@ export function FormBuilderClient({ language }: { language: Language }) {
     }
   };
 
-  const handleUnpublish = async () => {
+  const handleUnpublish = () => {
+    setUnpublishConfirmOpen(true);
+  };
+
+  const executeUnpublish = async () => {
     if (!selectedFormId) return;
+    setUnpublishConfirmOpen(false);
     try {
       const res = await fetch(`/api/forms/${selectedFormId}/unpublish`, {
         method: "POST",
@@ -398,7 +404,12 @@ export function FormBuilderClient({ language }: { language: Language }) {
         const data = await res.json();
         throw new Error(data.error || data.messageJa || "Unpublish failed");
       }
-      toast.success(t.unpublished);
+      const data = await res.json();
+      if (data.notifiedUsers > 0) {
+        toast.success(`${t.unpublished} ${data.notifiedUsers}${t.unpublishNotified}`);
+      } else {
+        toast.success(t.unpublished);
+      }
       openEditor(selectedFormId);
     } catch (e) {
       toast.error((e as Error).message || t.unpublishError);
@@ -599,6 +610,26 @@ export function FormBuilderClient({ language }: { language: Language }) {
         />
 
         {closeConfirmDialog}
+
+        <AlertDialog
+          open={unpublishConfirmOpen}
+          onOpenChange={setUnpublishConfirmOpen}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{t.unpublishTitle}</AlertDialogTitle>
+              <AlertDialogDescription>
+                {t.unpublishDescription}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>{t.cancel}</AlertDialogCancel>
+              <AlertDialogAction onClick={executeUnpublish}>
+                {t.unpublishConfirm}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     );
   }

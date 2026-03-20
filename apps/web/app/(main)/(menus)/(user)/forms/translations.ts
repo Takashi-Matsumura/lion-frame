@@ -15,7 +15,12 @@ export const formsTranslations = jaOnly({
   submitting: "送信中...",
   submitted: "回答を送信しました。",
   confirmTitle: "回答を送信",
-  confirmDescription: "回答を送信しますか？この操作は取り消せません。",
+  confirmDescription: "回答を送信しますか？",
+  // 編集モード
+  editSubmit: "回答を更新",
+  editConfirmTitle: "回答を更新",
+  editConfirmDescription: "回答を更新しますか？以前の回答は上書きされます。",
+  editSubmitted: "回答を更新しました。",
   confirm: "確認",
   cancel: "キャンセル",
   back: "フォーム一覧に戻る",

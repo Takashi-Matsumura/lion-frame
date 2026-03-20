@@ -303,7 +303,7 @@ export const FormsService = {
 
   /**
    * 公開解除（PUBLISHED → DRAFT）
-   * 回答が0件の場合のみ許可
+   * 回答がある場合は全回答を削除し、回答済みユーザIDリストを返す
    */
   async unpublishForm(formId: string) {
     const form = await prisma.form.findUnique({ where: { id: formId } });
@@ -313,18 +313,30 @@ export const FormsService = {
       throw new Error("公開中のフォームのみ解除できます");
     }
 
-    const responseCount = await prisma.formSubmission.count({
+    // 回答済みユーザを取得
+    const submissions = await prisma.formSubmission.findMany({
       where: { formId, status: "SUBMITTED" },
+      select: { id: true, submittedBy: true },
     });
+    const respondedUserIds = [...new Set(submissions.map((s) => s.submittedBy))];
 
-    if (responseCount > 0) {
-      throw new Error("回答があるフォームは公開解除できません");
+    // 回答がある場合は全回答（Answer → Submission）を削除
+    if (submissions.length > 0) {
+      const submissionIds = submissions.map((s) => s.id);
+      await prisma.formAnswer.deleteMany({
+        where: { submissionId: { in: submissionIds } },
+      });
+      await prisma.formSubmission.deleteMany({
+        where: { id: { in: submissionIds } },
+      });
     }
 
-    return prisma.form.update({
+    const updated = await prisma.form.update({
       where: { id: formId },
       data: { status: "DRAFT" },
     });
+
+    return { form: updated, respondedUserIds };
   },
 
   /**
@@ -340,12 +352,16 @@ export const FormsService = {
     if (!form) throw new Error("Form not found");
     if (form.status !== "PUBLISHED") throw new Error("Form is not accepting responses");
 
-    // 重複回答チェック
+    // 既存回答がある場合は上書き（回答を削除してから再作成）
     if (!form.allowMultiple) {
       const existing = await prisma.formSubmission.findFirst({
         where: { formId, submittedBy: userId, status: "SUBMITTED" },
+        select: { id: true },
       });
-      if (existing) throw new Error("You have already submitted this form");
+      if (existing) {
+        await prisma.formAnswer.deleteMany({ where: { submissionId: existing.id } });
+        await prisma.formSubmission.delete({ where: { id: existing.id } });
+      }
     }
 
     // フィールドマップ構築
@@ -422,6 +438,20 @@ export const FormsService = {
   /**
    * 個別回答取得
    */
+  /**
+   * ユーザーの回答を取得（回答済みの場合）
+   */
+  async getMySubmission(formId: string, userId: string) {
+    return prisma.formSubmission.findFirst({
+      where: { formId, submittedBy: userId, status: "SUBMITTED" },
+      include: {
+        answers: {
+          include: { field: { select: { id: true, label: true, labelJa: true, type: true } } },
+        },
+      },
+    });
+  },
+
   async getResponseById(submissionId: string) {
     return prisma.formSubmission.findUnique({
       where: { id: submissionId },

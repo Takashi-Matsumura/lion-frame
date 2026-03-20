@@ -122,6 +122,9 @@ cd apps/web && npx prisma db push && pnpm db:seed
 | ページガイド | PageGuide, PageGuideRevision |
 | 依存関係チェック | DependencyReport, DependencyItem |
 | フォーム | Form, FormSection, FormField, FormSubmission, FormAnswer |
+
+> **フォームのフィールドタイプ注意:** `TEXTAREA` は使用しない。長文入力は `TEXT` + `config.multiline: true` を使用する。
+> **フォーム回答:** `allowMultiple: false` の場合、再送信で既存回答を上書き（delete + create）。回答済みフォームを開くと既存回答がプリフィルされる。
 | NFCカード | NfcCard |
 | システム | SystemSetting |
 
