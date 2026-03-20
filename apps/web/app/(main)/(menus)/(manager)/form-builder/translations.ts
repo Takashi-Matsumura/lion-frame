@@ -146,6 +146,10 @@ export const formBuilderTranslations = jaOnly({
   remindSent: "リマインド通知を送信しました",
   remindSentCount: "件のリマインドを送信しました",
   noEmployees: "アクティブな社員が登録されていません",
+  // AI分析
+  aiAnalysis: "AI分析",
+  aiPlaceholder: "回答データについて質問...",
+  aiReset: "リセット",
   // フィールド/セクション削除確認
   deleteFieldTitle: "フィールド削除",
   deleteFieldDescription: "このフィールドを削除しますか？",

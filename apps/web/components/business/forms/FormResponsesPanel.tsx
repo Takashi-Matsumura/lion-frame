@@ -21,6 +21,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formBuilderTranslations, type Language } from "@/app/(main)/(menus)/(manager)/form-builder/translations";
+import { FormAIAnalysis } from "./FormAIAnalysis";
 
 // ─── Types ───
 
@@ -133,7 +134,9 @@ export function FormResponsesPanel({
   const { totalEmployees, totalResponded, totalNotResponded, responseRate, departments } = status;
 
   return (
-    <div className="space-y-4">
+    <div className="grid grid-cols-[1fr_400px] gap-4 h-[calc(100vh-200px)]">
+      {/* ─── Left: Status dashboard ─── */}
+      <div className="space-y-4 overflow-y-auto pr-1">
       {/* ─── Summary ─── */}
       <Card>
         <CardContent className="pt-6">
@@ -334,6 +337,13 @@ export function FormResponsesPanel({
           })}
         </div>
       )}
+
+      </div>
+
+      {/* ─── Right: AI Analysis ─── */}
+      <div className="min-h-0">
+        <FormAIAnalysis formId={formId} language={language} />
+      </div>
     </div>
   );
 }
