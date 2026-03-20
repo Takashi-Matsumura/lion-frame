@@ -130,7 +130,11 @@ export function ClientLayout({
   mustChangePassword = false,
   children,
 }: ClientLayoutProps) {
-  if (!session) {
+  const pathname = usePathname();
+
+  // ログインページではセッションが残っていてもサイドバーを表示しない
+  // （ミドルウェアのCookie削除が同一リクエスト内で反映されないケースへの対策）
+  if (!session || pathname === "/login") {
     return <>{children}</>;
   }
 

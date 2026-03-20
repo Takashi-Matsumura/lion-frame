@@ -44,7 +44,7 @@ export default async function LoginPage({
   const hasOAuthEnabled = isGoogleOAuthEnabled || isGitHubOAuthEnabled;
 
   return (
-    <div className="min-h-[calc(100vh-7rem)] flex items-center justify-center bg-background">
+    <div className="-my-8 min-h-[calc(100vh-5rem)] flex flex-col items-center justify-center bg-background">
       <div className="w-full max-w-md px-6">
         {/* サインインカード */}
         <Card className="shadow-xl">

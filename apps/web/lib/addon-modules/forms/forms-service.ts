@@ -285,6 +285,23 @@ export const FormsService = {
   },
 
   /**
+   * 再公開（CLOSED → PUBLISHED）
+   */
+  async reopenForm(formId: string) {
+    const form = await prisma.form.findUnique({ where: { id: formId } });
+    if (!form) return null;
+
+    if (form.status !== "CLOSED") {
+      throw new Error("締切済みのフォームのみ再公開できます");
+    }
+
+    return prisma.form.update({
+      where: { id: formId },
+      data: { status: "PUBLISHED", closedAt: null },
+    });
+  },
+
+  /**
    * 公開解除（PUBLISHED → DRAFT）
    * 回答が0件の場合のみ許可
    */

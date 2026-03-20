@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { RiLoginBoxLine } from "react-icons/ri";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -47,6 +47,17 @@ export function CredentialsLoginForm({
   const [error, setError] = useState("");
   const t = translations[language];
 
+  // 全角→半角変換（IME確定時に自動適用）
+  const toHalfWidth = useCallback((str: string) => {
+    return str
+      .replace(/[Ａ-Ｚａ-ｚ０-９]/g, (ch) =>
+        String.fromCharCode(ch.charCodeAt(0) - 0xfee0),
+      )
+      .replace(/[＠．＿＋－]/g, (ch) =>
+        String.fromCharCode(ch.charCodeAt(0) - 0xfee0),
+      );
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -86,8 +97,15 @@ export function CredentialsLoginForm({
         <Input
           id="credentials-email"
           type="email"
+          inputMode="email"
+          autoComplete="email"
+          style={{ imeMode: "disabled" }}
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          onChange={(e) => setEmail(toHalfWidth(e.target.value))}
+          onCompositionEnd={(e) => {
+            const target = e.target as HTMLInputElement;
+            setEmail(toHalfWidth(target.value));
+          }}
           required
           placeholder={t.emailPlaceholder}
           disabled={isLoading}

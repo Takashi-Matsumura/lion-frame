@@ -17,6 +17,16 @@ export const PUT = apiHandler(async (request, session) => {
   const id = new URL(request.url).pathname.split("/api/forms/")[1]?.split("/")[0];
   if (!id) throw ApiError.badRequest("Form ID is required");
 
+  // 公開中・締切済みフォームの編集をブロック
+  const existing = await FormsService.getFormById(id);
+  if (!existing) throw ApiError.notFound("Form not found", "フォームが見つかりません");
+  if (existing.status !== "DRAFT") {
+    throw ApiError.badRequest(
+      "Cannot edit a published or closed form",
+      "公開中または締切済みのフォームは編集できません。編集するには公開解除してください。",
+    );
+  }
+
   const body = await request.json();
   const form = await FormsService.upsertForm(id, userId, body);
   if (!form) throw ApiError.notFound("Form not found", "フォームが見つかりません");

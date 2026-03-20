@@ -1,8 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { Download } from "lucide-react";
 import { toast } from "sonner";
 import {
+  Button,
   Card,
   CardContent,
   CardHeader,
@@ -89,12 +91,44 @@ export function FormResponsesPanel({
     return String(value);
   };
 
+  const handleExportXlsx = async () => {
+    try {
+      const res = await fetch(`/api/forms/${formId}/responses/export`);
+      if (!res.ok) throw new Error();
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      // Content-Dispositionからファイル名を取得
+      const disposition = res.headers.get("Content-Disposition");
+      const match = disposition?.match(/filename="?(.+?)"?$/);
+      a.download = match?.[1] ? decodeURIComponent(match[1]) : "回答一覧.xlsx";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast.error(t.loadError);
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">
-          {t.responsesTitle} ({responses.length})
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-base">
+            {t.responsesTitle} ({responses.length})
+          </CardTitle>
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2"
+            onClick={handleExportXlsx}
+          >
+            <Download className="h-4 w-4" />
+            {t.exportXlsx}
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
         <div className="overflow-x-auto">

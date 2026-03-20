@@ -296,7 +296,7 @@ function SortableSectionBlock({
   );
 }
 
-export function FormCanvas({ language }: { language: Language }) {
+export function FormCanvas({ language, readOnly = false }: { language: Language; readOnly?: boolean }) {
   const t = formBuilderTranslations[language];
   const { form, updateFormMeta, addSection, removeField, removeSection, reorderSection, duplicateField, selectField } =
     useFormBuilderStore();
@@ -336,6 +336,50 @@ export function FormCanvas({ language }: { language: Language }) {
 
   if (!form) return null;
 
+  // ─── Read-only view (PUBLISHED / CLOSED) ───
+  if (readOnly) {
+    return (
+      <div className="space-y-4">
+        <Card>
+          <CardContent className="pt-4 space-y-2">
+            <h3 className="font-semibold">{form.titleJa || form.title}</h3>
+            {form.description && (
+              <p className="text-sm text-muted-foreground">{form.descriptionJa || form.description}</p>
+            )}
+          </CardContent>
+        </Card>
+        {form.sections.map((section) => (
+          <Card key={section.id}>
+            {(section.titleJa || section.title) && (
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm">{section.titleJa || section.title}</CardTitle>
+                {section.description && (
+                  <p className="text-xs text-muted-foreground">{section.description}</p>
+                )}
+              </CardHeader>
+            )}
+            <CardContent className="space-y-2">
+              {section.fields.map((field, idx) => {
+                const Icon = fieldTypeIcon[field.type] ?? List;
+                return (
+                  <div key={field.id} className="flex items-center gap-2 p-3 rounded-md border border-border">
+                    <span className="text-xs text-muted-foreground w-5 text-center shrink-0">{idx + 1}</span>
+                    <span className="w-5 h-5 flex items-center justify-center bg-muted rounded shrink-0">
+                      <Icon className="size-3" />
+                    </span>
+                    <span className="text-sm">{field.labelJa || field.label || "(未設定)"}</span>
+                    {field.required && <span className="text-destructive text-xs">*</span>}
+                  </div>
+                );
+              })}
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  }
+
+  // ─── Editable view (DRAFT) ───
   return (
     <div className="space-y-4">
       {/* Form meta */}

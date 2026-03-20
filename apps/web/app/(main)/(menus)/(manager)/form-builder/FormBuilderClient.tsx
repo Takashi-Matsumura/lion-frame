@@ -12,10 +12,19 @@ import {
   DeleteConfirmDialog,
   BackButton,
 } from "@/components/ui";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FormPreviewDialog } from "@/components/business/forms/FormPreviewDialog";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   useFormBuilderStore,
   type FormSectionDraft,
@@ -42,6 +51,8 @@ interface FormItem {
   updatedAt: string;
 }
 
+type ViewMode = "list" | "editor" | "responses";
+
 // ─── Status helpers ───
 
 const statusColors: Record<string, string> = {
@@ -56,20 +67,27 @@ const statusColors: Record<string, string> = {
 export function FormBuilderClient({ language }: { language: Language }) {
   const t = formBuilderTranslations[language];
 
+  // ─── Navigation state ───
+  const [viewMode, setViewMode] = useState<ViewMode>("list");
+  const [selectedFormId, setSelectedFormId] = useState<string | null>(null);
+
   // ─── List state ───
   const [forms, setForms] = useState<FormItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleteTarget, setDeleteTarget] = useState<FormItem | null>(null);
+  const [closeTarget, setCloseTarget] = useState<FormItem | null>(null);
 
-  // ─── Detail state (null = list view) ───
-  const [selectedFormId, setSelectedFormId] = useState<string | null>(null);
+  // ─── Editor state ───
   const [detailLoading, setDetailLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState("editor");
   const [previewOpen, setPreviewOpen] = useState(false);
   const { form, isDirty, setForm, markSaved } = useFormBuilderStore();
 
-
+  // ─── Responses state ───
+  const [responsesFormInfo, setResponsesFormInfo] = useState<{
+    title: string;
+    status: string;
+  } | null>(null);
 
   // ─── List operations ───
 
@@ -109,15 +127,53 @@ export function FormBuilderClient({ language }: { language: Language }) {
   };
 
   const handlePublish = async (formItem: FormItem) => {
+    if (formItem.status === "PUBLISHED") {
+      setCloseTarget(formItem);
+      return;
+    }
     try {
       const res = await fetch(`/api/forms/${formItem.id}/publish`, {
         method: "POST",
       });
       if (!res.ok) throw new Error();
-      toast.success(formItem.status === "DRAFT" ? t.published : t.closed);
+      toast.success(t.published);
       loadForms();
     } catch {
       toast.error(t.publishError);
+    }
+  };
+
+  const handleClose = async () => {
+    if (!closeTarget) return;
+    const closingId = closeTarget.id;
+    try {
+      const res = await fetch(`/api/forms/${closingId}/publish`, {
+        method: "POST",
+      });
+      if (!res.ok) throw new Error();
+      toast.success(t.closed);
+      setCloseTarget(null);
+      if (selectedFormId === closingId && viewMode === "editor") {
+        openEditor(closingId);
+      } else {
+        loadForms();
+      }
+    } catch {
+      toast.error(t.publishError);
+      setCloseTarget(null);
+    }
+  };
+
+  const handleReopen = async (formItem: FormItem) => {
+    try {
+      const res = await fetch(`/api/forms/${formItem.id}/reopen`, {
+        method: "POST",
+      });
+      if (!res.ok) throw new Error();
+      toast.success(t.reopened);
+      loadForms();
+    } catch {
+      toast.error(t.reopenError);
     }
   };
 
@@ -146,13 +202,13 @@ export function FormBuilderClient({ language }: { language: Language }) {
     return map[status] ?? status;
   };
 
-  // ─── Detail operations ───
+  // ─── Navigation ───
 
   const openEditor = useCallback(
-    async (formId: string, tab?: string) => {
+    async (formId: string) => {
       setSelectedFormId(formId);
+      setViewMode("editor");
       setDetailLoading(true);
-      setActiveTab(tab ?? "editor");
       try {
         const res = await fetch(`/api/forms/${formId}`);
         if (!res.ok) throw new Error();
@@ -180,6 +236,7 @@ export function FormBuilderClient({ language }: { language: Language }) {
         });
       } catch {
         toast.error(t.loadError);
+        setViewMode("list");
         setSelectedFormId(null);
       } finally {
         setDetailLoading(false);
@@ -188,11 +245,24 @@ export function FormBuilderClient({ language }: { language: Language }) {
     [setForm, t.loadError],
   );
 
-  const handleBack = useCallback(() => {
+  const openResponses = useCallback(
+    async (formId: string, title: string, status: string) => {
+      setSelectedFormId(formId);
+      setResponsesFormInfo({ title, status });
+      setViewMode("responses");
+    },
+    [],
+  );
+
+  const handleBackToList = useCallback(() => {
     setSelectedFormId(null);
+    setViewMode("list");
     setForm(null as never);
+    setResponsesFormInfo(null);
     loadForms();
   }, [setForm, loadForms]);
+
+  // ─── Editor operations ───
 
   const hasOptions = (type: string) =>
     ["SELECT", "MULTI_SELECT", "RADIO", "CHECKBOX_GROUP"].includes(type);
@@ -200,7 +270,6 @@ export function FormBuilderClient({ language }: { language: Language }) {
   const handleSave = useCallback(async () => {
     if (!form || !selectedFormId) return;
 
-    // Pre-save validation warnings
     const allFields = form.sections.flatMap((s) => s.fields);
     if (allFields.length === 0) {
       toast.warning(t.noFieldsWarning);
@@ -254,9 +323,9 @@ export function FormBuilderClient({ language }: { language: Language }) {
     }
   }, [form, selectedFormId, markSaved, setForm, t.saved, t.saveError, t.noFieldsWarning, t.emptyOptionsWarning]);
 
-  // Cmd+S / Ctrl+S save shortcut
+  // Cmd+S / Ctrl+S save shortcut (DRAFT only)
   useEffect(() => {
-    if (!selectedFormId) return;
+    if (viewMode !== "editor" || !selectedFormId || form?.status !== "DRAFT") return;
     const handler = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "s") {
         e.preventDefault();
@@ -265,15 +334,31 @@ export function FormBuilderClient({ language }: { language: Language }) {
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [selectedFormId, handleSave]);
+  }, [viewMode, selectedFormId, form?.status, handleSave]);
 
   const handleEditorPublish = async () => {
     if (!selectedFormId || !form) return;
 
-    // Block publish if no fields
     const allFields = form.sections.flatMap((s) => s.fields);
     if (allFields.length === 0) {
       toast.error(t.noFieldsPublishError);
+      return;
+    }
+
+    if (form.status === "PUBLISHED") {
+      setCloseTarget({
+        id: selectedFormId,
+        title: form.title,
+        titleJa: form.titleJa ?? null,
+        description: form.description ?? null,
+        descriptionJa: form.descriptionJa ?? null,
+        status: form.status,
+        allowMultiple: form.allowMultiple,
+        settings: form.settings,
+        responseCount: 0,
+        createdAt: "",
+        updatedAt: "",
+      });
       return;
     }
 
@@ -282,10 +367,24 @@ export function FormBuilderClient({ language }: { language: Language }) {
         method: "POST",
       });
       if (!res.ok) throw new Error();
-      toast.success(form?.status === "DRAFT" ? t.published : t.closed);
-      openEditor(selectedFormId, activeTab);
+      toast.success(t.published);
+      openEditor(selectedFormId);
     } catch {
       toast.error(t.publishError);
+    }
+  };
+
+  const handleEditorReopen = async () => {
+    if (!selectedFormId) return;
+    try {
+      const res = await fetch(`/api/forms/${selectedFormId}/reopen`, {
+        method: "POST",
+      });
+      if (!res.ok) throw new Error();
+      toast.success(t.reopened);
+      openEditor(selectedFormId);
+    } catch {
+      toast.error(t.reopenError);
     }
   };
 
@@ -300,14 +399,37 @@ export function FormBuilderClient({ language }: { language: Language }) {
         throw new Error(data.error || data.messageJa || "Unpublish failed");
       }
       toast.success(t.unpublished);
-      openEditor(selectedFormId, activeTab);
+      openEditor(selectedFormId);
     } catch (e) {
       toast.error((e as Error).message || t.unpublishError);
     }
   };
 
+  // ─── Close confirmation dialog (shared across views) ───
+  const closeConfirmDialog = (
+    <AlertDialog
+      open={!!closeTarget}
+      onOpenChange={(open) => !open && setCloseTarget(null)}
+    >
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{t.closeTitle}</AlertDialogTitle>
+          <AlertDialogDescription>
+            {t.closeDescription}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>{t.cancel}</AlertDialogCancel>
+          <AlertDialogAction onClick={handleClose}>
+            {t.closeConfirm}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+
   // ─── Render: Loading (list) ───
-  if (loading)
+  if (loading && viewMode === "list")
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
@@ -339,12 +461,13 @@ export function FormBuilderClient({ language }: { language: Language }) {
       </div>
     );
 
-  // ─── Render: Detail view ───
-  if (selectedFormId) {
+  // ═══════════════════════════════════════
+  // ─── View 2: Editor ───
+  // ═══════════════════════════════════════
+  if (viewMode === "editor" && selectedFormId) {
     if (detailLoading || !form)
       return (
         <div className="flex flex-col h-[calc(100vh-128px)] overflow-hidden">
-          {/* Header: BackButton + title + buttons */}
           <div className="flex items-center justify-between shrink-0">
             <div className="flex items-center gap-4">
               <Skeleton className="h-8 w-8 rounded-full" />
@@ -359,60 +482,24 @@ export function FormBuilderClient({ language }: { language: Language }) {
               <Skeleton className="h-8 w-16 rounded-md" />
             </div>
           </div>
-          {/* Tabs */}
-          <div className="flex gap-2 mt-4 shrink-0">
-            <Skeleton className="h-9 w-16 rounded-md" />
-            <Skeleton className="h-9 w-20 rounded-md" />
-          </div>
-          {/* 3-column editor */}
           <div className="grid grid-cols-[200px_1fr_260px] gap-3 mt-4 flex-1 min-h-0">
-            {/* Left: Field palette */}
             <div className="space-y-4 overflow-hidden">
               <Skeleton className="h-5 w-20" />
-              <div className="space-y-1">
-                <Skeleton className="h-3 w-12" />
-                {Array.from({ length: 4 }).map((_, i) => (
-                  <Skeleton key={`basic-${i}`} className="h-8 w-full rounded-md" />
-                ))}
-              </div>
-              <div className="space-y-1">
-                <Skeleton className="h-3 w-12" />
-                {Array.from({ length: 4 }).map((_, i) => (
-                  <Skeleton key={`sel-${i}`} className="h-8 w-full rounded-md" />
-                ))}
-              </div>
+              {Array.from({ length: 4 }).map((_, i) => (
+                <Skeleton key={i} className="h-8 w-full rounded-md" />
+              ))}
             </div>
-            {/* Center: Canvas */}
             <div className="space-y-4 overflow-hidden">
-              <Card>
-                <CardContent className="p-4 space-y-4">
-                  <div className="space-y-2">
-                    <Skeleton className="h-4 w-12" />
-                    <Skeleton className="h-9 w-full rounded-md" />
-                  </div>
-                  <div className="space-y-2">
-                    <Skeleton className="h-4 w-8" />
-                    <Skeleton className="h-9 w-full rounded-md" />
-                  </div>
-                  <Skeleton className="h-5 w-32" />
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-4 space-y-3">
-                  <Skeleton className="h-4 w-36" />
-                  <Skeleton className="h-4 w-16" />
-                  <Skeleton className="h-20 w-full rounded-md" />
-                </CardContent>
-              </Card>
+              <Card><CardContent className="p-4 space-y-4">
+                <Skeleton className="h-9 w-full rounded-md" />
+                <Skeleton className="h-9 w-full rounded-md" />
+              </CardContent></Card>
             </div>
-            {/* Right: Property panel */}
             <div className="space-y-3 overflow-hidden">
-              <Card>
-                <CardContent className="p-4">
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-3/4 mt-2" />
-                </CardContent>
-              </Card>
+              <Card><CardContent className="p-4">
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-3/4 mt-2" />
+              </CardContent></Card>
             </div>
           </div>
         </div>
@@ -420,10 +507,10 @@ export function FormBuilderClient({ language }: { language: Language }) {
 
     return (
       <div className="flex flex-col h-[calc(100vh-128px)] overflow-hidden">
-        {/* Header with BackButton */}
+        {/* Header */}
         <div className="flex items-center justify-between shrink-0">
           <div className="flex items-center gap-4">
-            <BackButton onClick={handleBack} />
+            <BackButton onClick={handleBackToList} />
             <div>
               <h2 className="text-lg font-semibold">
                 {form.titleJa || form.title}
@@ -448,16 +535,18 @@ export function FormBuilderClient({ language }: { language: Language }) {
             >
               {t.preview}
             </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleSave}
-              disabled={saving || !isDirty}
-              loading={saving}
-              shortcut="Mod+S"
-            >
-              {saving ? t.saving : t.save}
-            </Button>
+            {form.status === "DRAFT" && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleSave}
+                disabled={saving || !isDirty}
+                loading={saving}
+                shortcut="Mod+S"
+              >
+                {saving ? t.saving : t.save}
+              </Button>
+            )}
             {form.status === "DRAFT" && (
               <Button size="sm" onClick={handleEditorPublish}>
                 {t.publish}
@@ -473,16 +562,17 @@ export function FormBuilderClient({ language }: { language: Language }) {
                 </Button>
               </>
             )}
+            {form.status === "CLOSED" && (
+              <Button size="sm" onClick={handleEditorReopen}>
+                {t.reopen}
+              </Button>
+            )}
           </div>
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col flex-1 min-h-0 mt-4">
-          <TabsList className="shrink-0">
-            <TabsTrigger value="editor">{t.edit}</TabsTrigger>
-            <TabsTrigger value="responses">{t.responsesTitle}</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="editor" className="flex-1 min-h-0 mt-4">
+        {/* Editor content */}
+        <div className="flex-1 min-h-0 mt-4">
+          {form.status === "DRAFT" ? (
             <div className="grid grid-cols-[200px_1fr_260px] gap-3 h-full overflow-hidden">
               <div className="min-w-0 overflow-y-auto">
                 <FieldPalette language={language} />
@@ -494,12 +584,12 @@ export function FormBuilderClient({ language }: { language: Language }) {
                 <FieldPropertyPanel language={language} />
               </div>
             </div>
-          </TabsContent>
-
-          <TabsContent value="responses" className="flex-1 min-h-0 mt-4 overflow-y-auto">
-            <FormResponsesPanel formId={selectedFormId} language={language} />
-          </TabsContent>
-        </Tabs>
+          ) : (
+            <div className="h-full overflow-y-auto">
+              <FormCanvas language={language} readOnly />
+            </div>
+          )}
+        </div>
 
         <FormPreviewDialog
           open={previewOpen}
@@ -507,11 +597,42 @@ export function FormBuilderClient({ language }: { language: Language }) {
           form={form}
           language={language}
         />
+
+        {closeConfirmDialog}
       </div>
     );
   }
 
-  // ─── Render: List view ───
+  // ═══════════════════════════════════════
+  // ─── View 3: Responses ───
+  // ═══════════════════════════════════════
+  if (viewMode === "responses" && selectedFormId) {
+    return (
+      <div className="space-y-4">
+        {/* Header */}
+        <div className="flex items-center gap-4">
+          <BackButton onClick={handleBackToList} />
+          <div>
+            <h2 className="text-lg font-semibold">
+              {responsesFormInfo?.title ?? ""}
+            </h2>
+            {responsesFormInfo?.status && (
+              <Badge className={statusColors[responsesFormInfo.status] ?? ""}>
+                {getStatusLabel(responsesFormInfo.status)}
+              </Badge>
+            )}
+          </div>
+        </div>
+
+        {/* Responses panel */}
+        <FormResponsesPanel formId={selectedFormId} language={language} />
+      </div>
+    );
+  }
+
+  // ═══════════════════════════════════════
+  // ─── View 1: List ───
+  // ═══════════════════════════════════════
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -548,9 +669,7 @@ export function FormBuilderClient({ language }: { language: Language }) {
                     {t.responses}: {formItem.responseCount}
                   </span>
                   <span>
-                    {new Date(formItem.updatedAt).toLocaleDateString(
-                      "ja-JP",
-                    )}
+                    {new Date(formItem.updatedAt).toLocaleDateString("ja-JP")}
                   </span>
                 </div>
                 <div
@@ -571,7 +690,13 @@ export function FormBuilderClient({ language }: { language: Language }) {
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => openEditor(formItem.id, "responses")}
+                        onClick={() =>
+                          openResponses(
+                            formItem.id,
+                            formItem.titleJa || formItem.title,
+                            formItem.status,
+                          )
+                        }
                       >
                         {t.viewResponses}
                       </Button>
@@ -581,6 +706,30 @@ export function FormBuilderClient({ language }: { language: Language }) {
                         onClick={() => handlePublish(formItem)}
                       >
                         {t.close}
+                      </Button>
+                    </>
+                  )}
+                  {formItem.status === "CLOSED" && (
+                    <>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() =>
+                          openResponses(
+                            formItem.id,
+                            formItem.titleJa || formItem.title,
+                            formItem.status,
+                          )
+                        }
+                      >
+                        {t.viewResponses}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleReopen(formItem)}
+                      >
+                        {t.reopen}
                       </Button>
                     </>
                   )}
@@ -609,6 +758,8 @@ export function FormBuilderClient({ language }: { language: Language }) {
         title={t.deleteTitle}
         description={t.deleteDescription}
       />
+
+      {closeConfirmDialog}
     </div>
   );
 }

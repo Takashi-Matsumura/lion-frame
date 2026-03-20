@@ -101,6 +101,16 @@ export const formBuilderTranslations = jaOnly({
   unpublish: "公開解除",
   unpublished: "公開を解除しました。",
   unpublishError: "公開解除に失敗しました。",
+  // 締切確認
+  closeTitle: "フォームの締切",
+  closeDescription:
+    "このフォームを締め切ると、新しい回答を受け付けなくなります。締め切り後も、回答データの閲覧・エクスポートは可能です。",
+  closeConfirm: "締め切る",
+  cancel: "キャンセル",
+  // 再公開（CLOSED → PUBLISHED）
+  reopen: "再公開",
+  reopened: "フォームを再公開しました。",
+  reopenError: "再公開に失敗しました。",
   // エラー
   loadError: "フォームの読み込みに失敗しました。",
   saveError: "フォームの保存に失敗しました。",
@@ -117,6 +127,7 @@ export const formBuilderTranslations = jaOnly({
   noResponses: "回答がありません",
   noResponsesDescription: "ユーザーがフォームに回答するとここに表示されます。",
   exportCsv: "CSVエクスポート",
+  exportXlsx: "XLSXダウンロード",
   // フィールド/セクション削除確認
   deleteFieldTitle: "フィールド削除",
   deleteFieldDescription: "このフィールドを削除しますか？",

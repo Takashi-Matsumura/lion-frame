@@ -121,6 +121,7 @@ cd apps/web && npx prisma db push && pnpm db:seed
 | 利用状況 | UsageLog, UsageStat |
 | ページガイド | PageGuide, PageGuideRevision |
 | 依存関係チェック | DependencyReport, DependencyItem |
+| フォーム | Form, FormSection, FormField, FormSubmission, FormAnswer |
 | NFCカード | NfcCard |
 | システム | SystemSetting |
 
