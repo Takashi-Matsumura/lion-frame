@@ -28,6 +28,9 @@ export const formBuilderTranslations = jaOnly({
   // 削除
   deleteTitle: "フォーム削除",
   deleteDescription: "このフォームを削除しますか？この操作は取り消せません。",
+  deleteDescriptionWithResponses:
+    "このフォームには {count} 件の回答があります。削除すると回答データも完全に失われます。",
+  downloadResponses: "回答結果をダウンロード",
   // エディタ
   save: "保存",
   saving: "保存中...",

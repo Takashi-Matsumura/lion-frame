@@ -9,7 +9,6 @@ import {
   CardHeader,
   CardTitle,
   EmptyState,
-  DeleteConfirmDialog,
   BackButton,
 } from "@/components/ui";
 import {
@@ -33,6 +32,7 @@ import { FieldPalette } from "@/components/business/forms/FieldPalette";
 import { FormCanvas } from "@/components/business/forms/FormCanvas";
 import { FieldPropertyPanel } from "@/components/business/forms/FieldPropertyPanel";
 import { FormResponsesPanel } from "@/components/business/forms/FormResponsesPanel";
+import { Download } from "lucide-react";
 import { formBuilderTranslations, type Language } from "./translations";
 
 // ─── Types ───
@@ -782,13 +782,72 @@ export function FormBuilderClient({ language }: { language: Language }) {
         </div>
       )}
 
-      <DeleteConfirmDialog
+      <AlertDialog
         open={!!deleteTarget}
         onOpenChange={(open) => !open && setDeleteTarget(null)}
-        onDelete={handleDelete}
-        title={t.deleteTitle}
-        description={t.deleteDescription}
-      />
+      >
+        <AlertDialogContent className="sm:max-w-sm">
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t.deleteTitle}</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                <p>
+                  {deleteTarget && deleteTarget.responseCount > 0
+                    ? t.deleteDescriptionWithResponses.replace(
+                        "{count}",
+                        String(deleteTarget.responseCount),
+                      )
+                    : t.deleteDescription}
+                </p>
+                {deleteTarget && deleteTarget.responseCount > 0 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-2 w-full"
+                    onClick={async () => {
+                      try {
+                        const res = await fetch(
+                          `/api/forms/${deleteTarget.id}/responses/export`,
+                        );
+                        if (!res.ok) throw new Error();
+                        const blob = await res.blob();
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement("a");
+                        a.href = url;
+                        const disposition =
+                          res.headers.get("Content-Disposition");
+                        const match =
+                          disposition?.match(/filename\*=UTF-8''(.+)/);
+                        a.download = match?.[1]
+                          ? decodeURIComponent(match[1])
+                          : "responses.xlsx";
+                        document.body.appendChild(a);
+                        a.click();
+                        a.remove();
+                        URL.revokeObjectURL(url);
+                      } catch {
+                        toast.error(t.deleteError);
+                      }
+                    }}
+                  >
+                    <Download className="h-4 w-4" />
+                    {t.downloadResponses}
+                  </Button>
+                )}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t.cancel}</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-white hover:bg-destructive/90"
+              onClick={handleDelete}
+            >
+              {t.delete}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {closeConfirmDialog}
     </div>
