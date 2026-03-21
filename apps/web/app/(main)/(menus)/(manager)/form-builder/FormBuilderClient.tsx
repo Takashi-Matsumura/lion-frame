@@ -231,6 +231,7 @@ export function FormBuilderClient({ language }: { language: Language }) {
               titleJa: s.titleJa,
               description: s.description,
               order: s.order,
+              conditionalLogic: s.conditionalLogic ?? null,
               fields: s.fields ?? [],
             }),
           ),

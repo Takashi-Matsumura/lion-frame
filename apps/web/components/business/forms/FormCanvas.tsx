@@ -43,6 +43,7 @@ import {
   type FormFieldDraft,
   type FormSectionDraft,
 } from "@/lib/addon-modules/forms/form-builder-store";
+import { SectionConditionalLogicEditor } from "@/components/business/forms/ConditionalLogicEditor";
 import { formBuilderTranslations, type Language } from "@/app/(main)/(menus)/(manager)/form-builder/translations";
 
 const fieldTypeIcon: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -289,6 +290,11 @@ function SortableSectionBlock({
             <p className="text-center text-sm text-muted-foreground py-8">
               {t.addField}
             </p>
+          )}
+
+          {/* セクション条件ロジック（2番目以降のセクションのみ） */}
+          {(form?.sections.findIndex((s) => s.id === section.id) ?? 0) > 0 && (
+            <SectionConditionalLogicEditor section={section} language={language} />
           )}
         </CardContent>
       </Card>

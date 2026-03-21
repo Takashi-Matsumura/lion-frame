@@ -51,7 +51,12 @@ export function FormPreviewDialog({ open, onOpenChange, form, language }: Props)
           </div>
 
           {/* Sections */}
-          {form.sections.map((section) => {
+          {form.sections.filter((section) =>
+            evaluateConditions(
+              section.conditionalLogic as ConditionalLogic | null,
+              answers,
+            ),
+          ).map((section) => {
             const sectionTitle = section.titleJa || section.title;
             return (
               <Card key={section.id}>

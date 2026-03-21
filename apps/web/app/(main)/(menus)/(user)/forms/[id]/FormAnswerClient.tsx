@@ -35,6 +35,7 @@ interface FormSection {
   titleJa: string | null;
   description: string | null;
   order: number;
+  conditionalLogic: ConditionalLogic | null;
   fields: FormField[];
 }
 
@@ -211,13 +212,19 @@ export function FormAnswerClient({
     );
   }
 
-  const sections = form.sections;
+  const allSections = form.sections;
+  // セクション条件ロジック評価: 表示対象のセクションのみ
+  const sections = allSections.filter((sec) =>
+    evaluateConditions(sec.conditionalLogic, answers),
+  );
   const multiSection = sections.length > 1;
-  const section = sections[currentSection];
+  // currentSection が範囲外にならないよう制御
+  const clampedSection = Math.min(currentSection, sections.length - 1);
+  const section = sections[clampedSection];
   const visibleSections = multiSection ? [section] : sections;
 
   const progress = multiSection
-    ? ((currentSection + 1) / sections.length) * 100
+    ? ((clampedSection + 1) / sections.length) * 100
     : 100;
 
   return (
@@ -242,7 +249,7 @@ export function FormAnswerClient({
             <div className="space-y-0.5 pt-1.5">
               <p className="text-xs text-muted-foreground">
                 {t.sectionOf
-                  .replace("{current}", String(currentSection + 1))
+                  .replace("{current}", String(clampedSection + 1))
                   .replace("{total}", String(sections.length))}
               </p>
               <div className="w-full bg-muted rounded-full h-1.5">
@@ -299,7 +306,7 @@ export function FormAnswerClient({
 
           {/* Navigation */}
           <div className="flex justify-between">
-            {multiSection && currentSection > 0 ? (
+            {multiSection && clampedSection > 0 ? (
               <Button
                 variant="outline"
                 onClick={() => {
@@ -313,7 +320,7 @@ export function FormAnswerClient({
               <div />
             )}
 
-            {multiSection && currentSection < sections.length - 1 ? (
+            {multiSection && clampedSection < sections.length - 1 ? (
               <Button onClick={() => {
                 setCurrentSection((s) => s + 1);
                 scrollRef.current?.scrollTo({ top: 0 });
@@ -337,7 +344,9 @@ export function FormAnswerClient({
             <DialogDescription>{isEdit ? t.editConfirmDescription : t.confirmDescription}</DialogDescription>
           </DialogHeader>
           <div className="flex-1 min-h-0 overflow-y-auto space-y-3 py-2">
-            {form.sections.map((sec) => (
+            {form.sections
+              .filter((sec) => evaluateConditions(sec.conditionalLogic, answers))
+              .map((sec) => (
               <div key={sec.id}>
                 {sec.title && (
                   <p className="text-xs font-semibold text-muted-foreground mb-1.5">

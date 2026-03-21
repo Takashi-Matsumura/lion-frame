@@ -27,6 +27,15 @@ export interface FormSectionDraft {
   titleJa?: string;
   description?: string;
   order: number;
+  conditionalLogic?: {
+    action: "show" | "hide";
+    logic: "and" | "or";
+    conditions: {
+      fieldId: string;
+      operator: string;
+      value?: unknown;
+    }[];
+  } | null;
   fields: FormFieldDraft[];
 }
 
@@ -74,7 +83,7 @@ interface FormBuilderStore {
   reorderField: (sectionId: string, fromIndex: number, toIndex: number) => void;
 
   addSection: () => void;
-  updateSection: (sectionId: string, updates: Partial<Pick<FormSectionDraft, "title" | "titleJa" | "description">>) => void;
+  updateSection: (sectionId: string, updates: Partial<Pick<FormSectionDraft, "title" | "titleJa" | "description" | "conditionalLogic">>) => void;
   removeSection: (sectionId: string) => void;
   reorderSection: (fromIndex: number, toIndex: number) => void;
 

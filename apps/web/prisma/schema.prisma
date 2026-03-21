@@ -956,14 +956,15 @@ model Form {
 }
 
 model FormSection {
-  id          String      @id @default(cuid())
-  formId      String
-  form        Form        @relation(fields: [formId], references: [id], onDelete: Cascade)
-  title       String?
-  titleJa     String?
-  description String?
-  order       Int
-  fields      FormField[]
+  id               String      @id @default(cuid())
+  formId           String
+  form             Form        @relation(fields: [formId], references: [id], onDelete: Cascade)
+  title            String?
+  titleJa          String?
+  description      String?
+  order            Int
+  conditionalLogic Json?
+  fields           FormField[]
 
   @@index([formId, order])
 }

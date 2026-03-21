@@ -13,6 +13,7 @@ import {
 import {
   useFormBuilderStore,
   type FormFieldDraft,
+  type FormSectionDraft,
 } from "@/lib/addon-modules/forms/form-builder-store";
 import { formBuilderTranslations, type Language } from "@/app/(main)/(menus)/(manager)/form-builder/translations";
 
@@ -26,32 +27,22 @@ const operators = [
   "is_empty",
 ] as const;
 
-export function ConditionalLogicEditor({
-  field,
+type LogicData = NonNullable<FormFieldDraft["conditionalLogic"]>;
+
+function ConditionalLogicEditorCore({
+  logic,
+  referenceFields,
+  onUpdate,
+  onClear,
   language,
 }: {
-  field: FormFieldDraft;
+  logic: LogicData;
+  referenceFields: FormFieldDraft[];
+  onUpdate: (partial: Partial<LogicData>) => void;
+  onClear: () => void;
   language: Language;
 }) {
   const t = formBuilderTranslations[language];
-  const { form, updateField } = useFormBuilderStore();
-
-  const allFields = form?.sections.flatMap((s) => s.fields) ?? [];
-  const otherFields = allFields.filter(
-    (f) => f.id !== field.id && f.type !== "SECTION_HEADER",
-  );
-
-  const logic = field.conditionalLogic ?? {
-    action: "show" as const,
-    logic: "and" as const,
-    conditions: [],
-  };
-
-  const update = (partial: Partial<typeof logic>) => {
-    updateField(field.id, {
-      conditionalLogic: { ...logic, ...partial },
-    });
-  };
 
   const hasConditions = logic.conditions.length > 0;
 
@@ -75,7 +66,7 @@ export function ConditionalLogicEditor({
             <Select
               value={logic.action}
               onValueChange={(v) =>
-                update({ action: v as "show" | "hide" })
+                onUpdate({ action: v as "show" | "hide" })
               }
             >
               <SelectTrigger className="text-xs h-8">
@@ -89,7 +80,7 @@ export function ConditionalLogicEditor({
             <Select
               value={logic.logic}
               onValueChange={(v) =>
-                update({ logic: v as "and" | "or" })
+                onUpdate({ logic: v as "and" | "or" })
               }
             >
               <SelectTrigger className="text-xs h-8">
@@ -109,14 +100,14 @@ export function ConditionalLogicEditor({
                 onValueChange={(v) => {
                   const conditions = [...logic.conditions];
                   conditions[i] = { ...cond, fieldId: v };
-                  update({ conditions });
+                  onUpdate({ conditions });
                 }}
               >
                 <SelectTrigger className="text-xs h-8">
                   <SelectValue placeholder={t.conditionField} />
                 </SelectTrigger>
                 <SelectContent>
-                  {otherFields.map((f) => (
+                  {referenceFields.map((f) => (
                     <SelectItem key={f.id} value={f.id}>
                       {f.labelJa || f.label || f.id}
                     </SelectItem>
@@ -129,7 +120,7 @@ export function ConditionalLogicEditor({
                   onValueChange={(v) => {
                     const conditions = [...logic.conditions];
                     conditions[i] = { ...cond, operator: v };
-                    update({ conditions });
+                    onUpdate({ conditions });
                   }}
                 >
                   <SelectTrigger className="text-xs h-8">
@@ -149,7 +140,7 @@ export function ConditionalLogicEditor({
                     onChange={(e) => {
                       const conditions = [...logic.conditions];
                       conditions[i] = { ...cond, value: e.target.value };
-                      update({ conditions });
+                      onUpdate({ conditions });
                     }}
                     placeholder={t.conditionValue}
                     className="text-xs h-8"
@@ -163,9 +154,10 @@ export function ConditionalLogicEditor({
                     const conditions = logic.conditions.filter(
                       (_, j) => j !== i,
                     );
-                    update({ conditions });
                     if (conditions.length === 0) {
-                      updateField(field.id, { conditionalLogic: null });
+                      onClear();
+                    } else {
+                      onUpdate({ conditions });
                     }
                   }}
                 >
@@ -182,17 +174,89 @@ export function ConditionalLogicEditor({
         size="sm"
         className="w-full text-xs"
         onClick={() => {
-          update({
+          onUpdate({
             conditions: [
               ...logic.conditions,
               { fieldId: "", operator: "eq", value: "" },
             ],
           });
         }}
-        disabled={otherFields.length === 0}
+        disabled={referenceFields.length === 0}
       >
         {t.addCondition}
       </Button>
     </div>
+  );
+}
+
+export function ConditionalLogicEditor({
+  field,
+  language,
+}: {
+  field: FormFieldDraft;
+  language: Language;
+}) {
+  const { form, updateField } = useFormBuilderStore();
+
+  const allFields = form?.sections.flatMap((s) => s.fields) ?? [];
+  const otherFields = allFields.filter(
+    (f) => f.id !== field.id && f.type !== "SECTION_HEADER",
+  );
+
+  const logic = field.conditionalLogic ?? {
+    action: "show" as const,
+    logic: "and" as const,
+    conditions: [],
+  };
+
+  return (
+    <ConditionalLogicEditorCore
+      logic={logic}
+      referenceFields={otherFields}
+      onUpdate={(partial) =>
+        updateField(field.id, {
+          conditionalLogic: { ...logic, ...partial },
+        })
+      }
+      onClear={() => updateField(field.id, { conditionalLogic: null })}
+      language={language}
+    />
+  );
+}
+
+export function SectionConditionalLogicEditor({
+  section,
+  language,
+}: {
+  section: FormSectionDraft;
+  language: Language;
+}) {
+  const { form, updateSection } = useFormBuilderStore();
+
+  // セクションの条件には、このセクションより前のフィールドのみ参照可能
+  const sectionIndex = form?.sections.findIndex((s) => s.id === section.id) ?? -1;
+  const precedingFields = (form?.sections ?? [])
+    .slice(0, sectionIndex)
+    .flatMap((s) => s.fields)
+    .filter((f) => f.type !== "SECTION_HEADER");
+
+  const logic = section.conditionalLogic ?? {
+    action: "show" as const,
+    logic: "and" as const,
+    conditions: [],
+  };
+
+  return (
+    <ConditionalLogicEditorCore
+      logic={logic}
+      referenceFields={precedingFields}
+      onUpdate={(partial) =>
+        updateSection(section.id, {
+          conditionalLogic: { ...logic, ...partial },
+        })
+      }
+      onClear={() => updateSection(section.id, { conditionalLogic: null })}
+      language={language}
+    />
   );
 }

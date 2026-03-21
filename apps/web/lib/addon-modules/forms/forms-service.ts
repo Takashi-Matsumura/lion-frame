@@ -27,6 +27,7 @@ interface SectionInput {
   titleJa?: string;
   description?: string;
   order: number;
+  conditionalLogic?: ConditionalLogic | null;
   fields: FieldInput[];
 }
 
@@ -160,6 +161,7 @@ export const FormsService = {
             titleJa: section.titleJa,
             description: section.description,
             order: section.order,
+            conditionalLogic: (section.conditionalLogic as unknown as Prisma.InputJsonValue) ?? undefined,
           };
 
           const upsertedSection = isPersistedId(section.id)
@@ -227,6 +229,7 @@ export const FormsService = {
             titleJa: section.titleJa,
             description: section.description,
             order: section.order,
+            conditionalLogic: (section.conditionalLogic as unknown as Prisma.InputJsonValue) ?? undefined,
             fields: {
               create: section.fields.map((field) => ({
                 type: field.type,
@@ -374,8 +377,25 @@ export const FormsService = {
       answerMap[a.fieldId] = a.value;
     }
 
+    // セクション条件ロジック評価: 非表示セクションのフィールドIDを収集
+    const hiddenSectionFieldIds = new Set<string>();
+    for (const section of form.sections) {
+      const sectionVisible = evaluateConditions(
+        section.conditionalLogic as ConditionalLogic | null,
+        answerMap,
+      );
+      if (!sectionVisible) {
+        for (const f of section.fields) {
+          hiddenSectionFieldIds.add(f.id);
+        }
+      }
+    }
+
     // 条件ロジック評価 + バリデーション
     for (const field of allFields) {
+      // セクションが非表示ならスキップ
+      if (hiddenSectionFieldIds.has(field.id)) continue;
+
       const visible = evaluateConditions(
         field.conditionalLogic as ConditionalLogic | null,
         answerMap,
@@ -394,6 +414,7 @@ export const FormsService = {
     const visibleAnswers = answers.filter((a) => {
       const field = fieldMap.get(a.fieldId);
       if (!field) return false;
+      if (hiddenSectionFieldIds.has(a.fieldId)) return false;
       return evaluateConditions(
         field.conditionalLogic as ConditionalLogic | null,
         answerMap,
