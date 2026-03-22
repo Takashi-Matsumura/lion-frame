@@ -12,6 +12,7 @@ import {
   CardTitle,
 } from "@/components/ui";
 import { Input } from "@/components/ui/input";
+import { formatFormValue } from "@/lib/addon-modules/forms/format-utils";
 import { formBuilderTranslations, type Language } from "@/app/(main)/(menus)/(manager)/form-builder/translations";
 
 // ─── Types ───
@@ -92,7 +93,7 @@ export function FormAIAnalysis({
             const answerMap = new Map(sub.answers.map((a) => [a.field.id, a.value]));
             for (const f of fieldOrder) {
               const val = answerMap.get(f.id);
-              fields[f.labelJa || f.label] = formatValue(val);
+              fields[f.labelJa || f.label] = formatFormValue(val, undefined, { emptyValue: "-" });
             }
             return {
               respondent: sub.submitter.name ?? sub.submitter.email ?? "-",
@@ -347,10 +348,3 @@ ${departments.map((d) => `- ${d.name}: 回答${d.respondedCount}名 / 未回答$
   );
 }
 
-function formatValue(value: unknown): string {
-  if (value === null || value === undefined) return "-";
-  if (value === true) return "はい";
-  if (value === false) return "いいえ";
-  if (Array.isArray(value)) return value.filter((v) => v !== "__other__").join(", ");
-  return String(value);
-}

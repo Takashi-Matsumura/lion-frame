@@ -2,6 +2,7 @@ import ExcelJS from "exceljs";
 import { NextResponse } from "next/server";
 import { requireOneOfRoles } from "@/lib/api/auth-guard";
 import { FormsService } from "@/lib/addon-modules/forms/forms-service";
+import { formatFormValue } from "@/lib/addon-modules/forms/format-utils";
 
 export async function GET(request: Request) {
   try {
@@ -75,7 +76,7 @@ export async function GET(request: Request) {
         sub.submittedAt
           ? new Date(sub.submittedAt).toLocaleDateString("ja-JP")
           : "-",
-        ...fields.map((f) => formatValue(answerMap.get(f.id), f.type)),
+        ...fields.map((f) => formatFormValue(answerMap.get(f.id), f.type)),
       ]);
 
       row.eachCell((cell) => {
@@ -119,26 +120,3 @@ export async function GET(request: Request) {
   }
 }
 
-function formatValue(value: unknown, fieldType: string): string {
-  if (value === null || value === undefined) return "";
-  if (fieldType === "YES_NO")
-    return value === true || value === "true" ? "はい" : "いいえ";
-  if (fieldType === "EMPLOYEE_PICKER" && typeof value === "string") {
-    try {
-      const emp = JSON.parse(value);
-      if (emp?.employeeId && emp?.name) return `${emp.employeeId} ${emp.name}`;
-      if (emp?.name) return emp.name;
-    } catch { /* not JSON, return as-is */ }
-    return value;
-  }
-  if (fieldType === "DATE_SLOTS" && Array.isArray(value)) {
-    return value
-      .map((v, i) => (v ? `第${i + 1}希望: ${v}` : ""))
-      .filter(Boolean)
-      .join(", ");
-  }
-  if (Array.isArray(value))
-    return value.filter((v) => v !== "__other__").join(", ");
-  if (value === "__other__") return "その他";
-  return String(value);
-}

@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { FormFieldRenderer } from "@/components/business/forms/FormFieldRenderer";
 import { evaluateConditions, type ConditionalLogic } from "@/lib/addon-modules/forms/condition-evaluator";
+import { formatFormValue } from "@/lib/addon-modules/forms/format-utils";
 import { formsTranslations, type Language } from "../translations";
 
 interface FormField {
@@ -51,24 +52,7 @@ interface FormData {
 }
 
 function formatAnswerDisplay(val: unknown, fieldType?: string): string {
-  if (val == null || val === "") return "";
-  if (fieldType === "YES_NO") return val === true || val === "true" ? "はい" : "いいえ";
-  if (fieldType === "EMPLOYEE_PICKER" && typeof val === "string") {
-    try {
-      const emp = JSON.parse(val);
-      if (emp?.name) return `${emp.name} (${emp.employeeId})`;
-    } catch { /* not JSON */ }
-  }
-  if (fieldType === "DATE_SLOTS" && Array.isArray(val)) {
-    return val
-      .map((v, i) => (v ? `第${i + 1}希望: ${v}` : ""))
-      .filter(Boolean)
-      .join(", ");
-  }
-  if (Array.isArray(val)) return val.filter((v) => v !== "__other__").join(", ");
-  if (val === "__other__") return "その他";
-  if (typeof val === "number") return String(val);
-  return String(val);
+  return formatFormValue(val, fieldType);
 }
 
 export function FormAnswerClient({

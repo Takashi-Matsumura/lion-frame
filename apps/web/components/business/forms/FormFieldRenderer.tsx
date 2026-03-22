@@ -23,6 +23,9 @@ import { RatingField } from "./RatingField";
 import { DatePicker } from "@/components/ui/date-picker";
 
 const OTHER_VALUE = "__other__";
+const OTHER_LABEL = "その他";
+const OTHER_PLACEHOLDER = "入力してください";
+const SLOT_LABEL = (i: number) => `第${i + 1}希望日`;
 
 interface FieldConfig {
   options?: string[];
@@ -151,7 +154,7 @@ export function FormFieldRenderer({ field, value, onChange, language }: Props) {
                     </SelectItem>
                   ))}
                   {selectAllowOther && (
-                    <SelectItem value={OTHER_VALUE}>その他</SelectItem>
+                    <SelectItem value={OTHER_VALUE}>{OTHER_LABEL}</SelectItem>
                   )}
                 </SelectContent>
               </Select>
@@ -170,7 +173,7 @@ export function FormFieldRenderer({ field, value, onChange, language }: Props) {
               <Input
                 value={isOtherSelected ? selectValue : ""}
                 onChange={(e) => onChange(e.target.value || OTHER_VALUE)}
-                placeholder="入力してください"
+                placeholder={OTHER_PLACEHOLDER}
                 autoFocus
               />
             )}
@@ -216,7 +219,7 @@ export function FormFieldRenderer({ field, value, onChange, language }: Props) {
                       }
                     }}
                   />
-                  <span className="text-sm">その他</span>
+                  <span className="text-sm">{OTHER_LABEL}</span>
                 </label>
               )}
             </div>
@@ -227,7 +230,7 @@ export function FormFieldRenderer({ field, value, onChange, language }: Props) {
                   const base = selected.filter((s) => cbOptions.includes(s));
                   onChange(e.target.value ? [...base, e.target.value] : [...base, OTHER_VALUE]);
                 }}
-                placeholder="入力してください"
+                placeholder={OTHER_PLACEHOLDER}
                 className="ml-6"
               />
             )}
@@ -258,7 +261,7 @@ export function FormFieldRenderer({ field, value, onChange, language }: Props) {
               {radioAllowOther && (
                 <label className="flex items-center gap-2 cursor-pointer">
                   <RadioGroupItem value={OTHER_VALUE} />
-                  <span className="text-sm">その他</span>
+                  <span className="text-sm">{OTHER_LABEL}</span>
                 </label>
               )}
             </RadioGroup>
@@ -266,7 +269,7 @@ export function FormFieldRenderer({ field, value, onChange, language }: Props) {
               <Input
                 value={isRadioOther ? radioValue : ""}
                 onChange={(e) => onChange(e.target.value || OTHER_VALUE)}
-                placeholder="入力してください"
+                placeholder={OTHER_PLACEHOLDER}
                 className="ml-6"
                 autoFocus
               />
@@ -315,7 +318,7 @@ export function FormFieldRenderer({ field, value, onChange, language }: Props) {
             {Array.from({ length: slotCount }).map((_, i) => (
               <div key={i} className={slotsHorizontal ? "flex-1 min-w-[140px]" : ""}>
                 <Label className="text-xs text-muted-foreground mb-1">
-                  {slotLabels?.[i] || `第${i + 1}希望日`}
+                  {slotLabels?.[i] || SLOT_LABEL(i)}
                 </Label>
                 <DatePicker
                   value={slots[i] ?? ""}
