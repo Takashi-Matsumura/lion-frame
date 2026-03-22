@@ -59,6 +59,12 @@ function formatAnswerDisplay(val: unknown, fieldType?: string): string {
       if (emp?.name) return `${emp.name} (${emp.employeeId})`;
     } catch { /* not JSON */ }
   }
+  if (fieldType === "DATE_SLOTS" && Array.isArray(val)) {
+    return val
+      .map((v, i) => (v ? `第${i + 1}希望: ${v}` : ""))
+      .filter(Boolean)
+      .join(", ");
+  }
   if (Array.isArray(val)) return val.filter((v) => v !== "__other__").join(", ");
   if (val === "__other__") return "その他";
   if (typeof val === "number") return String(val);
@@ -104,7 +110,23 @@ export function FormAnswerClient({
           }
           setAnswers(existing);
           setIsEdit(true);
+          return;
         }
+      }
+
+      // 既存回答がない場合はデフォルト値を適用
+      const defaults: Record<string, unknown> = {};
+      for (const section of (formData.form as FormData).sections) {
+        for (const field of section.fields) {
+          if (field.type === "RADIO" && field.config?.defaultValue) {
+            defaults[field.id] = field.config.defaultValue;
+          } else if (field.type === "YES_NO" && field.config?.defaultValue === true) {
+            defaults[field.id] = true;
+          }
+        }
+      }
+      if (Object.keys(defaults).length > 0) {
+        setAnswers(defaults);
       }
     } catch {
       toast.error(t.loadError);

@@ -1,25 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui";
+import { Badge } from "@/components/ui/badge";
 import { FormFieldRenderer } from "./FormFieldRenderer";
 import { evaluateConditions, type ConditionalLogic } from "@/lib/addon-modules/forms/condition-evaluator";
 import { formBuilderTranslations, type Language } from "@/app/(main)/(menus)/(manager)/form-builder/translations";
 import type { FormDraft } from "@/lib/addon-modules/forms/form-builder-store";
-
-interface Props {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  form: FormDraft;
-  language: Language;
-}
 
 function getDefaultAnswers(form: FormDraft): Record<string, unknown> {
   const defaults: Record<string, unknown> = {};
@@ -35,57 +22,90 @@ function getDefaultAnswers(form: FormDraft): Record<string, unknown> {
   return defaults;
 }
 
-export function FormPreviewDialog({ open, onOpenChange, form, language }: Props) {
+export function FormReviewPanel({
+  form,
+  language,
+}: {
+  form: FormDraft;
+  language: Language;
+}) {
   const t = formBuilderTranslations[language];
-  const [answers, setAnswers] = useState<Record<string, unknown>>({});
+  const [answers, setAnswers] = useState<Record<string, unknown>>(() =>
+    getDefaultAnswers(form),
+  );
 
-  // プレビューを開くたびにデフォルト値をリセット
   useEffect(() => {
-    if (open) {
-      setAnswers(getDefaultAnswers(form));
-    }
-  }, [open, form]);
+    setAnswers(getDefaultAnswers(form));
+  }, [form]);
 
   const handleChange = (fieldId: string, value: unknown) => {
     setAnswers((prev) => ({ ...prev, [fieldId]: value }));
   };
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{t.previewTitle}</DialogTitle>
-          <DialogDescription>{t.previewDescription}</DialogDescription>
-        </DialogHeader>
+  const allFields = form.sections.flatMap((s) => s.fields);
+  const fieldCount = allFields.filter((f) => f.type !== "SECTION_HEADER").length;
+  const requiredCount = allFields.filter((f) => f.required).length;
+  const sectionCount = form.sections.length;
 
-        <div className="space-y-6 mt-4">
-          {/* Form header */}
-          <div>
-            <h2 className="text-lg font-semibold">
-              {form.titleJa || form.title}
-            </h2>
+  return (
+    <div className="space-y-4">
+      {/* Summary badges */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm">{t.reviewTitle}</CardTitle>
+          <p className="text-xs text-muted-foreground">{t.reviewDescription}</p>
+        </CardHeader>
+        <CardContent>
+          <div className="flex gap-3">
+            <div className="text-center">
+              <div className="text-lg font-semibold">{fieldCount}</div>
+              <div className="text-xs text-muted-foreground">{t.reviewFieldCount}</div>
+            </div>
+            <div className="text-center">
+              <div className="text-lg font-semibold">{sectionCount}</div>
+              <div className="text-xs text-muted-foreground">{t.reviewSectionCount}</div>
+            </div>
+            <div className="text-center">
+              <div className="text-lg font-semibold text-destructive">{requiredCount}</div>
+              <div className="text-xs text-muted-foreground">{t.reviewRequiredCount}</div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Live preview */}
+      <div className="space-y-4">
+        {/* Form header */}
+        <Card>
+          <CardContent className="pt-4">
+            <h3 className="text-base font-semibold">{form.titleJa || form.title}</h3>
             {(form.descriptionJa || form.description) && (
               <p className="text-sm text-muted-foreground mt-1">
                 {form.descriptionJa || form.description}
               </p>
             )}
-          </div>
+          </CardContent>
+        </Card>
 
-          {/* Sections */}
-          {form.sections.filter((section) =>
+        {/* Sections */}
+        {form.sections
+          .filter((section) =>
             evaluateConditions(
               section.conditionalLogic as ConditionalLogic | null,
               answers,
             ),
-          ).map((section) => {
+          )
+          .map((section) => {
             const sectionTitle = section.titleJa || section.title;
             return (
               <Card key={section.id}>
                 {sectionTitle && (
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-base">{sectionTitle}</CardTitle>
+                    <CardTitle className="text-sm">{sectionTitle}</CardTitle>
                     {section.description && (
-                      <p className="text-sm text-muted-foreground">{section.description}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {section.description}
+                      </p>
                     )}
                   </CardHeader>
                 )}
@@ -119,8 +139,7 @@ export function FormPreviewDialog({ open, onOpenChange, form, language }: Props)
               </Card>
             );
           })}
-        </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </div>
   );
 }

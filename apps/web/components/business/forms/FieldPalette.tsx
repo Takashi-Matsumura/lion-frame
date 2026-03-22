@@ -7,6 +7,7 @@ import {
   AlignLeft,
   Hash,
   Calendar,
+  CalendarRange,
   ChevronDown,
   ListFilter,
   List,
@@ -28,6 +29,7 @@ const fieldTypeIcon: Record<string, React.ComponentType<{ className?: string }>>
   TEXTAREA: AlignLeft,
   NUMBER: Hash,
   DATE: Calendar,
+  DATE_SLOTS: CalendarRange,
   SELECT: ChevronDown,
   MULTI_SELECT: ListFilter,
   RADIO: CircleDot,
@@ -44,6 +46,7 @@ const fieldTypeLabels: Record<string, string> = {
   TEXTAREA: "長文テキスト",
   NUMBER: "数値",
   DATE: "日付",
+  DATE_SLOTS: "候補日",
   SELECT: "ドロップ",
   MULTI_SELECT: "複数選択",
   RADIO: "ラジオ",
@@ -61,7 +64,7 @@ interface FieldGroup {
 }
 
 const fieldGroups: FieldGroup[] = [
-  { label: "基本", types: ["TEXT", "NUMBER", "DATE"] },
+  { label: "基本", types: ["TEXT", "NUMBER", "DATE", "DATE_SLOTS"] },
   { label: "選択", types: ["SELECT", "RADIO", "CHECKBOX_GROUP", "YES_NO", "RATING"] },
   { label: "特殊", types: ["EMPLOYEE_PICKER"] },
   { label: "その他", types: ["SECTION_HEADER"] },

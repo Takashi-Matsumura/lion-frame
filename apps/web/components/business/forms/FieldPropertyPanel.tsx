@@ -297,6 +297,33 @@ export function FieldPropertyPanel({ language }: { language: Language }) {
           </div>
         )}
 
+        {/* Default value for radio */}
+        {field.type === "RADIO" && options.length > 0 && (
+          <div>
+            <Label className="text-xs">{t.radioDefaultValue}</Label>
+            <Select
+              value={(field.config?.defaultValue as string) ?? "__none__"}
+              onValueChange={(v) =>
+                updateField(field!.id, {
+                  config: { ...field!.config, defaultValue: v === "__none__" ? undefined : v },
+                })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder={t.radioDefaultNone} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">{t.radioDefaultNone}</SelectItem>
+                {options.filter(o => o.trim()).map((opt, i) => (
+                  <SelectItem key={`${i}-${opt}`} value={opt}>
+                    {opt}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
         {/* Options layout for radio/checkbox */}
         {(field.type === "RADIO" || field.type === "CHECKBOX_GROUP" || field.type === "MULTI_SELECT") && (
           <div>
@@ -375,6 +402,75 @@ export function FieldPropertyPanel({ language }: { language: Language }) {
                 <SelectContent>
                   <SelectItem value="sides">{t.numberButtonSides}</SelectItem>
                   <SelectItem value="right">{t.numberButtonRight}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        )}
+
+        {/* Date slots config */}
+        {field.type === "DATE_SLOTS" && (
+          <div className="space-y-3">
+            <div>
+              <Label className="text-xs">{t.dateSlotsCount}</Label>
+              <Select
+                value={String((field.config?.slotCount as number) ?? 3)}
+                onValueChange={(v) =>
+                  updateField(field!.id, {
+                    config: { ...field!.config, slotCount: Number(v) },
+                  })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {[1, 2, 3, 4, 5].map((n) => (
+                    <SelectItem key={n} value={String(n)}>
+                      {n}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs">{t.dateMin}</Label>
+              <DatePicker
+                value={(field.config?.dateMin as string) ?? ""}
+                onChange={(v) =>
+                  updateField(field!.id, {
+                    config: { ...field!.config, dateMin: v || undefined },
+                  })
+                }
+              />
+            </div>
+            <div>
+              <Label className="text-xs">{t.dateMax}</Label>
+              <DatePicker
+                value={(field.config?.dateMax as string) ?? ""}
+                onChange={(v) =>
+                  updateField(field!.id, {
+                    config: { ...field!.config, dateMax: v || undefined },
+                  })
+                }
+              />
+            </div>
+            <div>
+              <Label className="text-xs">{t.optionsLayout}</Label>
+              <Select
+                value={String(field.config?.layout ?? "vertical")}
+                onValueChange={(v) =>
+                  updateField(field!.id, {
+                    config: { ...field!.config, layout: v },
+                  })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="vertical">{t.layoutVertical}</SelectItem>
+                  <SelectItem value="horizontal">{t.layoutHorizontal}</SelectItem>
                 </SelectContent>
               </Select>
             </div>

@@ -123,6 +123,12 @@ function formatValue(value: unknown, fieldType: string): string {
   if (value === null || value === undefined) return "";
   if (fieldType === "YES_NO")
     return value === true || value === "true" ? "はい" : "いいえ";
+  if (fieldType === "DATE_SLOTS" && Array.isArray(value)) {
+    return value
+      .map((v, i) => (v ? `第${i + 1}希望: ${v}` : ""))
+      .filter(Boolean)
+      .join(", ");
+  }
   if (Array.isArray(value))
     return value.filter((v) => v !== "__other__").join(", ");
   if (value === "__other__") return "その他";

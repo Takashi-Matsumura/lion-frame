@@ -407,6 +407,13 @@ export const FormsService = {
         if (val === undefined || val === null || val === "") {
           throw new Error(`Field "${field.label}" is required`);
         }
+        // DATE_SLOTS: 少なくとも1つの日付が入力されていること
+        if (field.type === "DATE_SLOTS" && Array.isArray(val)) {
+          const hasAny = (val as unknown[]).some((v) => typeof v === "string" && v !== "");
+          if (!hasAny) {
+            throw new Error(`Field "${field.label}" is required`);
+          }
+        }
       }
     }
 

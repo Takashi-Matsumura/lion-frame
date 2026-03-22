@@ -32,6 +32,7 @@ import { FieldPalette } from "@/components/business/forms/FieldPalette";
 import { FormCanvas } from "@/components/business/forms/FormCanvas";
 import { FieldPropertyPanel } from "@/components/business/forms/FieldPropertyPanel";
 import { FormResponsesPanel } from "@/components/business/forms/FormResponsesPanel";
+import { FormReviewPanel } from "@/components/business/forms/FormReviewPanel";
 import { Download } from "lucide-react";
 import { formBuilderTranslations, type Language } from "./translations";
 
@@ -312,6 +313,7 @@ export function FormBuilderClient({ language }: { language: Language }) {
             titleJa: s.titleJa,
             description: s.description,
             order: s.order,
+            conditionalLogic: s.conditionalLogic ?? null,
             fields: s.fields ?? [],
           }),
         ),
@@ -597,8 +599,13 @@ export function FormBuilderClient({ language }: { language: Language }) {
               </div>
             </div>
           ) : (
-            <div className="h-full overflow-y-auto">
-              <FormCanvas language={language} readOnly />
+            <div className="grid grid-cols-2 gap-4 h-full overflow-hidden">
+              <div className="overflow-y-auto pr-1">
+                <FormCanvas language={language} readOnly />
+              </div>
+              <div className="overflow-y-auto pl-1">
+                <FormReviewPanel form={form} language={language} />
+              </div>
             </div>
           )}
         </div>

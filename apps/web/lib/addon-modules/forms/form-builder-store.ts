@@ -63,7 +63,7 @@ function defaultField(type: FieldType, order: number): FormFieldDraft {
     label: type === "SECTION_HEADER" ? "Header" : "",
     required: false,
     order,
-    config: {},
+    config: type === "DATE_SLOTS" ? { slotCount: 3 } : {},
     conditionalLogic: null,
   };
 }

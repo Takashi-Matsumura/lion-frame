@@ -305,6 +305,35 @@ export function FormFieldRenderer({ field, value, onChange, language }: Props) {
           />
         );
 
+      case "DATE_SLOTS": {
+        const slotCount = (field.config?.slotCount as number) ?? 3;
+        const slots = Array.isArray(value) ? (value as string[]) : Array(slotCount).fill("");
+        const slotLabels = field.config?.slotLabels as string[] | undefined;
+        const slotsHorizontal = field.config?.layout === "horizontal";
+        return (
+          <div className={slotsHorizontal ? "flex flex-wrap gap-4" : "space-y-3"}>
+            {Array.from({ length: slotCount }).map((_, i) => (
+              <div key={i} className={slotsHorizontal ? "flex-1 min-w-[140px]" : ""}>
+                <Label className="text-xs text-muted-foreground mb-1">
+                  {slotLabels?.[i] || `第${i + 1}希望日`}
+                </Label>
+                <DatePicker
+                  value={slots[i] ?? ""}
+                  onChange={(v) => {
+                    const newSlots = [...slots];
+                    while (newSlots.length < slotCount) newSlots.push("");
+                    newSlots[i] = v;
+                    onChange(newSlots);
+                  }}
+                  min={field.config?.dateMin as string | undefined}
+                  max={field.config?.dateMax as string | undefined}
+                />
+              </div>
+            ))}
+          </div>
+        );
+      }
+
       case "EMPLOYEE_PICKER":
         return (
           <EmployeePickerField

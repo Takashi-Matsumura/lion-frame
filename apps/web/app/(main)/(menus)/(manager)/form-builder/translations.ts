@@ -206,6 +206,18 @@ export const formBuilderTranslations = jaOnly({
   yesNoYesLabel: "ONラベル",
   yesNoNoLabel: "OFFラベル",
   yesNoDefaultValue: "デフォルトON",
+  // ラジオ・セレクトのデフォルト値
+  radioDefaultValue: "デフォルト値",
+  radioDefaultNone: "なし",
+  // 候補日フィールド
+  dateSlotsCount: "候補数",
+  // フォームレビュー
+  reviewTitle: "フォームレビュー",
+  reviewDescription: "回答者に表示されるフォームのプレビューです。",
+  reviewFieldCount: "フィールド数",
+  reviewSectionCount: "セクション数",
+  reviewRequiredCount: "必須項目",
+  reviewFormInfo: "フォーム情報",
 });
 
 export type Language = keyof typeof formBuilderTranslations;

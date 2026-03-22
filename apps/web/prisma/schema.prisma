@@ -928,6 +928,7 @@ enum FieldType {
   SECTION_HEADER
   CALCULATED
   YES_NO
+  DATE_SLOTS
 }
 
 enum SubmissionStatus {

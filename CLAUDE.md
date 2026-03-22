@@ -124,7 +124,10 @@ cd apps/web && npx prisma db push && pnpm db:seed
 | フォーム | Form, FormSection, FormField, FormSubmission, FormAnswer |
 
 > **フォームのフィールドタイプ注意:** `TEXTAREA` は使用しない。長文入力は `TEXT` + `config.multiline: true` を使用する。
+> **候補日フィールド (`DATE_SLOTS`):** 複数の希望日を1フィールドで入力。`config.slotCount`（1〜5、デフォルト3）で候補数を制御。`config.layout`（`vertical`/`horizontal`）でレイアウト切替。保存値は `string[]`（例: `["2026-04-01", "2026-04-03"]`）。`dateMin`/`dateMax` で日付範囲制約可能。
+> **ラジオフィールドのデフォルト値:** `config.defaultValue` に選択肢の文字列を設定。プレビュー・回答画面で初期選択される。
 > **フォーム回答:** `allowMultiple: false` の場合、再送信で既存回答を上書き（delete + create）。回答済みフォームを開くと既存回答がプリフィルされる。
+> **公開中フォームのレビュー:** フォーム公開後、エディタ画面は左右分割（左: フィールド構成一覧、右: 回答者視点のライブプレビュー）。
 | NFCカード | NfcCard |
 | システム | SystemSetting |
 
