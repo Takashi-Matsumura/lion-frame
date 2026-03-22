@@ -369,6 +369,7 @@ export function FormBuilderClient({ language }: { language: Language }) {
         descriptionJa: form.descriptionJa ?? null,
         status: form.status,
         allowMultiple: form.allowMultiple,
+        shareScope: form.shareScope ?? "PRIVATE",
         settings: form.settings,
         responseCount: 0,
         createdAt: "",

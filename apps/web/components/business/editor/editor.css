@@ -1,0 +1,241 @@
+/* Editor Theme Variables - mapped to LionFrame's theme */
+.editor-wrapper {
+  --bg-primary: hsl(var(--background));
+  --bg-secondary: hsl(var(--muted));
+  --bg-tertiary: hsl(var(--accent));
+  --text-normal: hsl(var(--foreground));
+  --text-muted: hsl(var(--muted-foreground));
+  --text-faint: hsl(var(--muted-foreground));
+  --text-bold: hsl(var(--foreground));
+  --text-italic: hsl(var(--primary));
+  --accent: hsl(var(--primary));
+  --accent-hover: hsl(var(--primary));
+  --link-color: hsl(var(--primary));
+  --code-color: #e06c75;
+  --code-bg: hsl(var(--muted));
+  --h1-color: hsl(var(--foreground));
+  --h2-color: hsl(var(--foreground));
+  --h3-color: hsl(var(--foreground));
+  --h4-color: hsl(var(--muted-foreground));
+  --h5-color: hsl(var(--muted-foreground));
+  --h6-color: hsl(var(--muted-foreground));
+  --border-color: hsl(var(--border));
+  --selection-bg: rgba(72, 120, 190, 0.3);
+  --selection-bg-focus: rgba(72, 120, 190, 0.4);
+  --active-line-bg: hsl(var(--accent) / 0.5);
+  --scrollbar-thumb: hsl(var(--muted-foreground) / 0.3);
+  --scrollbar-thumb-hover: hsl(var(--muted-foreground) / 0.5);
+  --link-hover-color: hsl(var(--primary));
+  --font-editor: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+/* Editor Container */
+.editor-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--bg-primary);
+}
+
+/* Toolbar */
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 42px;
+  padding: 0 12px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
+
+.toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.toolbar-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.toolbar-doc-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-normal);
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.toolbar-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: none;
+  border: none;
+  border-radius: 4px;
+  color: var(--text-muted);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.toolbar-btn:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-normal);
+}
+
+.toolbar-btn.active {
+  background: var(--accent);
+  color: #fff;
+}
+
+.toolbar-divider {
+  width: 1px;
+  height: 20px;
+  background: var(--border-color);
+  margin: 0 4px;
+}
+
+.toolbar-btn-label {
+  display: inline;
+}
+
+/* Editor Content Area */
+.editor-content {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+.editor-pane {
+  flex: 1;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.preview-container {
+  flex: 1;
+  overflow-y: auto;
+  border-left: 1px solid var(--border-color);
+  min-width: 0;
+}
+
+.editor-content.split .editor-pane .cm-scroller {
+  scrollbar-width: none;
+}
+.editor-content.split .editor-pane .cm-scroller::-webkit-scrollbar {
+  display: none;
+}
+
+/* CodeMirror Container */
+.cm-container {
+  height: 100%;
+}
+
+.cm-container .cm-editor {
+  height: 100%;
+}
+
+/* Live Preview */
+.cm-hide-syntax {
+  font-size: 0 !important;
+  color: transparent !important;
+  display: inline-block;
+  width: 0;
+  overflow: hidden;
+}
+
+.cm-rendered-hr-line {
+  display: inline-block;
+  width: 100%;
+  font-size: 0;
+  color: transparent;
+  border-bottom: 1px solid var(--border-color);
+  line-height: 0;
+  vertical-align: middle;
+}
+
+.cm-rendered-bold {
+  font-weight: 700;
+  color: var(--text-bold);
+}
+
+.cm-rendered-italic {
+  font-style: italic;
+  color: var(--text-italic);
+}
+
+.cm-rendered-code {
+  color: var(--code-color);
+  background: var(--code-bg);
+  border-radius: 3px;
+  padding: 1px 4px;
+  font-family: "SF Mono", "Fira Code", monospace;
+  font-size: 0.9em;
+}
+
+.cm-rendered-link {
+  color: var(--link-color);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.cm-heading-1 { font-weight: 700; font-size: 1.8em; color: var(--h1-color); }
+.cm-heading-2 { font-weight: 700; font-size: 1.5em; color: var(--h2-color); }
+.cm-heading-3 { font-weight: 600; font-size: 1.3em; color: var(--h3-color); }
+.cm-heading-4 { font-weight: 600; font-size: 1.1em; color: var(--h4-color); }
+.cm-heading-5 { font-weight: 600; font-size: 1.05em; color: var(--h5-color); }
+.cm-heading-6 { font-weight: 600; font-size: 1em; color: var(--h6-color); }
+
+/* Preview Pane */
+.preview-pane {
+  padding: 24px 32px;
+  color: var(--text-normal);
+  font-family: var(--font-editor);
+  font-size: 16px;
+  line-height: 1.6;
+  max-width: 800px;
+}
+
+.preview-pane h1 { font-size: 1.8em; font-weight: 700; margin: 1em 0 0.5em; color: var(--h1-color); border-bottom: 1px solid var(--border-color); padding-bottom: 0.3em; }
+.preview-pane h2 { font-size: 1.5em; font-weight: 700; margin: 0.8em 0 0.4em; color: var(--h2-color); border-bottom: 1px solid var(--border-color); padding-bottom: 0.2em; }
+.preview-pane h3 { font-size: 1.3em; font-weight: 600; margin: 0.6em 0 0.3em; color: var(--h3-color); }
+.preview-pane h4, .preview-pane h5, .preview-pane h6 { font-weight: 600; margin: 0.5em 0 0.3em; color: var(--h4-color); }
+.preview-pane p { margin: 0.5em 0; }
+.preview-pane a { color: var(--link-color); text-decoration: underline; text-underline-offset: 2px; }
+.preview-pane strong { font-weight: 700; color: var(--text-bold); }
+.preview-pane em { font-style: italic; color: var(--text-italic); }
+.preview-pane code { color: var(--code-color); background: var(--code-bg); border-radius: 3px; padding: 2px 6px; font-family: "SF Mono", "Fira Code", monospace; font-size: 0.9em; }
+.preview-pane pre { background: var(--bg-tertiary); border-radius: 6px; padding: 16px; overflow-x: auto; margin: 0.8em 0; }
+.preview-pane pre code { background: none; padding: 0; color: var(--text-normal); }
+.preview-pane blockquote { border-left: 3px solid var(--accent); padding-left: 16px; margin: 0.8em 0; color: var(--text-muted); font-style: italic; }
+.preview-pane ul, .preview-pane ol { padding-left: 24px; margin: 0.5em 0; }
+.preview-pane li { margin: 0.2em 0; }
+.preview-pane hr { border: none; border-top: 1px solid var(--border-color); margin: 1.5em 0; }
+.preview-pane table { border-collapse: collapse; width: 100%; margin: 0.8em 0; }
+.preview-pane th, .preview-pane td { border: 1px solid var(--border-color); padding: 8px 12px; text-align: left; }
+.preview-pane th { background: var(--bg-tertiary); font-weight: 600; }
+
+/* Shortcut Footer */
+.shortcut-footer {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  height: 28px;
+  padding: 0 12px;
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border-color);
+  flex-shrink: 0;
+  overflow-x: auto;
+}
+
+.shortcut-item { display: flex; align-items: center; gap: 4px; white-space: nowrap; }
+.shortcut-kbd { font-family: "SF Mono", "Fira Code", monospace; font-size: 11px; color: var(--text-normal); background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 3px; padding: 0 4px; line-height: 18px; }
+.shortcut-label { font-size: 11px; color: var(--text-faint); }

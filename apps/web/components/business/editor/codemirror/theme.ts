@@ -1,0 +1,74 @@
+import { EditorView } from "@codemirror/view";
+import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
+import { tags } from "@lezer/highlight";
+
+export const obsidianTheme = EditorView.theme(
+  {
+    "&": {
+      backgroundColor: "var(--bg-primary)",
+      color: "var(--text-normal)",
+      height: "100%",
+    },
+    "&.cm-focused": {
+      outline: "none",
+    },
+    ".cm-content": {
+      fontFamily: "var(--font-editor)",
+      fontSize: "16px",
+      lineHeight: "1.6",
+      padding: "20px 0",
+      caretColor: "var(--accent)",
+    },
+    ".cm-cursor, .cm-dropCursor": {
+      borderLeftColor: "var(--accent)",
+      borderLeftWidth: "2px",
+    },
+    ".cm-selectionBackground": {
+      backgroundColor: "var(--selection-bg) !important",
+    },
+    "&.cm-focused .cm-selectionBackground": {
+      backgroundColor: "var(--selection-bg-focus) !important",
+    },
+    ".cm-activeLine": {
+      backgroundColor: "var(--active-line-bg)",
+    },
+    ".cm-gutters": {
+      backgroundColor: "var(--bg-primary)",
+      color: "var(--text-faint)",
+      border: "none",
+      paddingRight: "8px",
+    },
+    ".cm-activeLineGutter": {
+      backgroundColor: "var(--active-line-bg)",
+      color: "var(--text-muted)",
+    },
+    ".cm-line": {
+      padding: "0 16px",
+    },
+    ".cm-scroller": {
+      overflow: "auto",
+    },
+  },
+  { dark: false }
+);
+
+const obsidianHighlightStyle = HighlightStyle.define([
+  { tag: tags.heading1, fontWeight: "700", fontSize: "1.8em", color: "var(--h1-color)" },
+  { tag: tags.heading2, fontWeight: "700", fontSize: "1.5em", color: "var(--h2-color)" },
+  { tag: tags.heading3, fontWeight: "600", fontSize: "1.3em", color: "var(--h3-color)" },
+  { tag: tags.heading4, fontWeight: "600", fontSize: "1.1em", color: "var(--h4-color)" },
+  { tag: tags.heading5, fontWeight: "600", fontSize: "1.05em", color: "var(--h5-color)" },
+  { tag: tags.heading6, fontWeight: "600", fontSize: "1em", color: "var(--h6-color)" },
+  { tag: tags.strong, fontWeight: "700", color: "var(--text-bold)" },
+  { tag: tags.emphasis, fontStyle: "italic", color: "var(--text-italic)" },
+  { tag: tags.link, color: "var(--link-color)", textDecoration: "underline" },
+  { tag: tags.url, color: "var(--link-color)" },
+  { tag: tags.monospace, color: "var(--code-color)", backgroundColor: "var(--code-bg)", borderRadius: "3px", padding: "1px 4px" },
+  { tag: tags.strikethrough, textDecoration: "line-through", color: "var(--text-faint)" },
+  { tag: tags.quote, color: "var(--text-muted)", fontStyle: "italic" },
+  { tag: tags.list, color: "var(--accent)" },
+  { tag: tags.meta, color: "var(--text-faint)" },
+  { tag: tags.processingInstruction, color: "var(--text-faint)" },
+]);
+
+export const obsidianHighlighting = syntaxHighlighting(obsidianHighlightStyle);

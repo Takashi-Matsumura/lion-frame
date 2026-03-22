@@ -78,6 +78,7 @@ model User {
   kioskSessions   KioskSession[]
   kioskEvents     KioskEvent[]   @relation("KioskEventCreator")
   healthCampaigns HealthCheckupCampaign[] @relation("HealthCampaignCreator")
+  editorDocuments EditorDocument[] @relation("EditorDocumentCreator")
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 }
@@ -1165,4 +1166,21 @@ model HealthCheckupRecord {
   @@unique([campaignId, employeeId])
   @@index([campaignId, status])
   @@index([employeeId])
+}
+
+// ========================================
+// エディタ
+// ========================================
+
+model EditorDocument {
+  id        String   @id @default(cuid())
+  title     String
+  content   String   @default("")
+  type      String   @default("markdown")
+  createdBy String
+  creator   User     @relation("EditorDocumentCreator", fields: [createdBy], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([createdBy, type])
 }
