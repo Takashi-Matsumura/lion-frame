@@ -117,11 +117,22 @@ function parseEmployeeValue(val: string): {
 export async function previewImport(
   rows: ImportCheckupRow[],
   mapping: ColumnMapping,
+  campaignId?: string,
 ): Promise<ImportPreview> {
   const matched: MatchedRecord[] = [];
   const unmatched: { row: number; submitter: string; reason: string }[] = [];
   const duplicates: { row: number; employeeId: string; name: string }[] = [];
   const seenEmployeeIds = new Set<string>();
+
+  // 既存レコードの社員IDセットを取得
+  const existingEmployeeIds = new Set<string>();
+  if (campaignId) {
+    const existingRecords = await prisma.healthCheckupRecord.findMany({
+      where: { campaignId },
+      select: { employeeId: true },
+    });
+    for (const r of existingRecords) existingEmployeeIds.add(r.employeeId);
+  }
 
   // 全社員を事前にロード
   const employees = await prisma.employee.findMany({
@@ -184,6 +195,7 @@ export async function previewImport(
       employeeName: employee.name,
       bookingMethod,
       status: isPersonal ? "BOOKED" : "PENDING",
+      isExisting: existingEmployeeIds.has(employee.id),
       rawData: { ...row },
     };
 

@@ -12,6 +12,7 @@ export interface MatchedRecord {
   preferredDates?: string[];
   confirmedDate?: string;
   status: "PENDING" | "BOOKED";
+  isExisting: boolean;
   rawData: Record<string, unknown>;
 }
 

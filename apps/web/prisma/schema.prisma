@@ -940,24 +940,33 @@ enum SubmissionStatus {
   SUBMITTED
 }
 
+enum FormShareScope {
+  PRIVATE
+  SECTION
+  DEPARTMENT
+  ORGANIZATION
+}
+
 model Form {
-  id             String      @id @default(cuid())
+  id             String         @id @default(cuid())
   title          String
   titleJa        String?
   description    String?
   descriptionJa  String?
-  status         FormStatus  @default(DRAFT)
+  status         FormStatus     @default(DRAFT)
   createdBy      String
-  allowMultiple  Boolean     @default(false)
+  allowMultiple  Boolean        @default(false)
+  shareScope     FormShareScope @default(PRIVATE)
   closedAt       DateTime?
-  settings       Json        @default("{}")
-  createdAt      DateTime    @default(now())
-  updatedAt      DateTime    @updatedAt
+  settings       Json           @default("{}")
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
   sections       FormSection[]
   submissions    FormSubmission[]
-  creator        User        @relation("FormCreator", fields: [createdBy], references: [id])
+  creator        User           @relation("FormCreator", fields: [createdBy], references: [id])
 
   @@index([status, createdBy])
+  @@index([shareScope])
 }
 
 model FormSection {

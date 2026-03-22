@@ -34,6 +34,13 @@ import { FieldPropertyPanel } from "@/components/business/forms/FieldPropertyPan
 import { FormResponsesPanel } from "@/components/business/forms/FormResponsesPanel";
 import { FormReviewPanel } from "@/components/business/forms/FormReviewPanel";
 import { Download } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { formBuilderTranslations, type Language } from "./translations";
 
 // ─── Types ───
@@ -46,8 +53,10 @@ interface FormItem {
   descriptionJa: string | null;
   status: string;
   allowMultiple: boolean;
+  shareScope: string;
   settings: Record<string, unknown>;
   responseCount: number;
+  creator?: { id: string; name: string | null };
   createdAt: string;
   updatedAt: string;
 }
@@ -95,7 +104,7 @@ export function FormBuilderClient({ language }: { language: Language }) {
 
   const loadForms = useCallback(async () => {
     try {
-      const res = await fetch("/api/forms");
+      const res = await fetch("/api/forms?context=manager");
       if (!res.ok) throw new Error();
       const data = await res.json();
       setForms(data.forms ?? []);
@@ -224,6 +233,7 @@ export function FormBuilderClient({ language }: { language: Language }) {
           descriptionJa: f.descriptionJa,
           status: f.status,
           allowMultiple: f.allowMultiple,
+          shareScope: f.shareScope ?? "PRIVATE",
           settings: f.settings ?? {},
           sections: f.sections.map(
             (s: FormSectionDraft & { id: string }) => ({
@@ -305,6 +315,7 @@ export function FormBuilderClient({ language }: { language: Language }) {
         descriptionJa: f.descriptionJa,
         status: f.status,
         allowMultiple: f.allowMultiple,
+        shareScope: f.shareScope ?? "PRIVATE",
         settings: f.settings ?? {},
         sections: f.sections.map(
           (s: FormSectionDraft & { id: string }) => ({
@@ -533,6 +544,34 @@ export function FormBuilderClient({ language }: { language: Language }) {
                 <Badge className={statusColors[form.status] ?? ""}>
                   {getStatusLabel(form.status)}
                 </Badge>
+                <Select
+                  value={form.shareScope ?? "PRIVATE"}
+                  onValueChange={async (v) => {
+                    if (!selectedFormId) return;
+                    try {
+                      const res = await fetch(`/api/forms/${selectedFormId}`, {
+                        method: "PATCH",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ shareScope: v }),
+                      });
+                      if (!res.ok) throw new Error();
+                      setForm({ ...form, shareScope: v });
+                      toast.success(t.saved);
+                    } catch {
+                      toast.error(t.saveError);
+                    }
+                  }}
+                >
+                  <SelectTrigger className="h-6 text-xs w-auto gap-1 border-dashed">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="PRIVATE">{t.shareScopePrivate}</SelectItem>
+                    <SelectItem value="SECTION">{t.shareScopeSection}</SelectItem>
+                    <SelectItem value="DEPARTMENT">{t.shareScopeDepartment}</SelectItem>
+                    <SelectItem value="ORGANIZATION">{t.shareScopeOrganization}</SelectItem>
+                  </SelectContent>
+                </Select>
                 {isDirty && (
                   <span className="text-xs text-muted-foreground">
                     ({t.unsavedChanges})
@@ -703,13 +742,26 @@ export function FormBuilderClient({ language }: { language: Language }) {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="flex items-center justify-between text-sm text-muted-foreground">
+                <div className="flex items-center justify-between text-sm text-muted-foreground mb-1">
                   <span>
                     {t.responses}: {formItem.responseCount}
                   </span>
                   <span>
                     {new Date(formItem.updatedAt).toLocaleDateString("ja-JP")}
                   </span>
+                </div>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  {formItem.creator?.name && (
+                    <span>{formItem.creator.name}</span>
+                  )}
+                  {formItem.shareScope && formItem.shareScope !== "PRIVATE" && (
+                    <Badge className="bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300 text-[10px] px-1.5 py-0">
+                      {formItem.shareScope === "SECTION" ? t.shareScopeSection
+                        : formItem.shareScope === "DEPARTMENT" ? t.shareScopeDepartment
+                        : formItem.shareScope === "ORGANIZATION" ? t.shareScopeOrganization
+                        : ""}
+                    </Badge>
+                  )}
                 </div>
                 <div
                   className="flex gap-2 mt-3"

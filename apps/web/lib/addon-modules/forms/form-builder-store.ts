@@ -47,6 +47,7 @@ export interface FormDraft {
   descriptionJa?: string;
   status: string;
   allowMultiple: boolean;
+  shareScope: string;
   settings: Record<string, unknown>;
   sections: FormSectionDraft[];
 }
@@ -75,7 +76,7 @@ interface FormBuilderStore {
 
   setForm: (form: FormDraft) => void;
   selectField: (id: string | null) => void;
-  updateFormMeta: (updates: Partial<Pick<FormDraft, "title" | "titleJa" | "description" | "descriptionJa" | "allowMultiple" | "settings">>) => void;
+  updateFormMeta: (updates: Partial<Pick<FormDraft, "title" | "titleJa" | "description" | "descriptionJa" | "allowMultiple" | "shareScope" | "settings">>) => void;
 
   addField: (sectionId: string, type: FieldType) => void;
   updateField: (fieldId: string, updates: Partial<FormFieldDraft>) => void;

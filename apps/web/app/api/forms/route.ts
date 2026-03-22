@@ -3,12 +3,14 @@ import { ApiError } from "@/lib/api/api-error";
 import { FormsService } from "@/lib/addon-modules/forms/forms-service";
 import type { Role } from "@prisma/client";
 
-export const GET = apiHandler(async (_request, session) => {
+export const GET = apiHandler(async (request, session) => {
   const userId = session.user?.id;
   if (!userId) throw ApiError.unauthorized();
 
   const role = (session.user as { role?: Role }).role ?? "USER";
-  const forms = await FormsService.listForms(userId, role);
+  const url = new URL(request.url);
+  const context = url.searchParams.get("context") === "manager" ? "manager" : "user";
+  const forms = await FormsService.listForms(userId, role, context as "user" | "manager");
   return { forms };
 }, {});
 

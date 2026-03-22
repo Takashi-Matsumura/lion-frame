@@ -1,7 +1,8 @@
 import { apiHandler } from "@/lib/api/api-handler";
 import { ApiError } from "@/lib/api/api-error";
 import { FormsService } from "@/lib/addon-modules/forms/forms-service";
-import type { Role } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
+import type { FormShareScope, Role } from "@prisma/client";
 
 export const GET = apiHandler(async (request, _session) => {
   const id = new URL(request.url).pathname.split("/").pop()!;
@@ -31,6 +32,27 @@ export const PUT = apiHandler(async (request, session) => {
   const form = await FormsService.upsertForm(id, userId, body);
   if (!form) throw ApiError.notFound("Form not found", "フォームが見つかりません");
   return { form };
+}, { requiredRoles: ["MANAGER", "EXECUTIVE", "ADMIN"] as Role[] });
+
+const validShareScopes: FormShareScope[] = ["PRIVATE", "SECTION", "DEPARTMENT", "ORGANIZATION"];
+
+export const PATCH = apiHandler(async (request, session) => {
+  const userId = session.user?.id;
+  if (!userId) throw ApiError.unauthorized();
+
+  const id = new URL(request.url).pathname.split("/api/forms/")[1]?.split("/")[0];
+  if (!id) throw ApiError.badRequest("Form ID is required");
+
+  const body = await request.json();
+
+  if (body.shareScope && validShareScopes.includes(body.shareScope)) {
+    await prisma.form.update({
+      where: { id },
+      data: { shareScope: body.shareScope },
+    });
+  }
+
+  return { success: true };
 }, { requiredRoles: ["MANAGER", "EXECUTIVE", "ADMIN"] as Role[] });
 
 export const DELETE = apiHandler(async (request, session) => {

@@ -113,7 +113,7 @@ interface RecordItem {
 }
 
 interface ImportPreview {
-  matched: { employeeId: string; employeeName: string; bookingMethod?: string; checkupType?: string }[];
+  matched: { employeeId: string; employeeName: string; bookingMethod?: string; checkupType?: string; isExisting?: boolean }[];
   unmatched: { row: number; submitter: string; reason: string }[];
   duplicates: { row: number; employeeId: string; name: string }[];
   total: number;
@@ -171,6 +171,7 @@ export function HealthCheckupClient({ language }: { language: Language }) {
   const [importHeaders, setImportHeaders] = useState<string[]>([]);
   const [importPreview, setImportPreview] = useState<ImportPreview | null>(null);
   const [importing, setImporting] = useState(false);
+  const [importMode, setImportMode] = useState<"new_only" | "overwrite">("new_only");
   const [columnMapping, setColumnMapping] = useState({
     employee: "",
     bookingMethod: "",
@@ -411,13 +412,17 @@ export function HealthCheckupClient({ language }: { language: Language }) {
       formData.append("file", importFile);
       formData.append("columnMapping", JSON.stringify(columnMapping));
       formData.append("action", "confirm");
+      formData.append("mode", importMode);
       const res = await fetch(`/api/health-checkup/${selectedCampaignId}/import`, {
         method: "POST",
         body: formData,
       });
       if (!res.ok) throw new Error();
       const data = await res.json();
-      toast.success(`${t.importSuccess}（新規: ${data.created}, 更新: ${data.updated}）`);
+      const parts = [`新規: ${data.created}`];
+      if (data.updated > 0) parts.push(`更新: ${data.updated}`);
+      if (data.skipped > 0) parts.push(`スキップ: ${data.skipped}`);
+      toast.success(`${t.importSuccess}（${parts.join(", ")}）`);
       setImportFile(null);
       setImportPreview(null);
       setImportHeaders([]);
@@ -636,16 +641,24 @@ export function HealthCheckupClient({ language }: { language: Language }) {
               />
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="w-40">
-                  <SelectValue />
+                  <SelectValue>
+                    {statusFilter === "all" ? (
+                      <span className="text-sm">{t.allStatuses}</span>
+                    ) : (
+                      <Badge className={`${statusColors[statusFilter]} text-xs`}>
+                        {getStatusLabel(statusFilter)}
+                      </Badge>
+                    )}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">{t.allStatuses}</SelectItem>
-                  <SelectItem value="NOT_BOOKED">{t.statusNotBooked}</SelectItem>
-                  <SelectItem value="PENDING">{t.statusPending}</SelectItem>
-                  <SelectItem value="BOOKED">{t.statusBooked}</SelectItem>
-                  <SelectItem value="VISITED">{t.statusVisited}</SelectItem>
-                  <SelectItem value="COMPLETED">{t.statusCompleted}</SelectItem>
-                  <SelectItem value="EXEMPT">{t.statusExempt}</SelectItem>
+                  <SelectItem value="NOT_BOOKED"><Badge className={`${statusColors.NOT_BOOKED} text-xs`}>{t.statusNotBooked}</Badge></SelectItem>
+                  <SelectItem value="PENDING"><Badge className={`${statusColors.PENDING} text-xs`}>{t.statusPending}</Badge></SelectItem>
+                  <SelectItem value="BOOKED"><Badge className={`${statusColors.BOOKED} text-xs`}>{t.statusBooked}</Badge></SelectItem>
+                  <SelectItem value="VISITED"><Badge className={`${statusColors.VISITED} text-xs`}>{t.statusVisited}</Badge></SelectItem>
+                  <SelectItem value="COMPLETED"><Badge className={`${statusColors.COMPLETED} text-xs`}>{t.statusCompleted}</Badge></SelectItem>
+                  <SelectItem value="EXEMPT"><Badge className={`${statusColors.EXEMPT} text-xs`}>{t.statusExempt}</Badge></SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -811,6 +824,19 @@ export function HealthCheckupClient({ language }: { language: Language }) {
                       ))}
                     </div>
 
+                    <div>
+                      <Label className="text-xs">{t.importMode}</Label>
+                      <Select value={importMode} onValueChange={(v) => setImportMode(v as "new_only" | "overwrite")}>
+                        <SelectTrigger className="text-sm w-56">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="new_only">{t.importModeNewOnly}</SelectItem>
+                          <SelectItem value="overwrite">{t.importModeOverwrite}</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
                     <Button
                       onClick={handlePreview}
                       disabled={importing}
@@ -822,14 +848,32 @@ export function HealthCheckupClient({ language }: { language: Language }) {
                 )}
 
                 {/* Preview results */}
-                {importPreview && (
+                {importPreview && (() => {
+                  const newRecs = importPreview.matched.filter((m: { isExisting?: boolean }) => !m.isExisting);
+                  const existRecs = importPreview.matched.filter((m: { isExisting?: boolean }) => m.isExisting);
+                  const dispRecs = importMode === "new_only" ? newRecs : importPreview.matched;
+                  const impCount = importMode === "new_only" ? newRecs.length : importPreview.matched.length;
+
+                  return (
                   <div className="space-y-4 border-t pt-4">
                     <h4 className="text-sm font-medium">{t.previewResult}</h4>
-                    <div className="flex gap-4 text-sm">
+                    <div className="flex flex-wrap gap-4 text-sm">
                       <div className="flex items-center gap-1.5">
                         <Check className="h-4 w-4 text-green-600" />
-                        <span>{t.matchedRecords}: {importPreview.matched.length}</span>
+                        <span>{t.matchedRecords}: {newRecs.length}</span>
                       </div>
+                      {importMode === "new_only" && existRecs.length > 0 && (
+                        <div className="flex items-center gap-1.5">
+                          <Minus className="h-4 w-4 text-muted-foreground" />
+                          <span>{t.skippedRecords}: {existRecs.length}</span>
+                        </div>
+                      )}
+                      {importMode === "overwrite" && existRecs.length > 0 && (
+                        <div className="flex items-center gap-1.5">
+                          <AlertTriangle className="h-4 w-4 text-yellow-500" />
+                          <span>上書き: {existRecs.length}</span>
+                        </div>
+                      )}
                       {importPreview.unmatched.length > 0 && (
                         <div className="flex items-center gap-1.5">
                           <AlertTriangle className="h-4 w-4 text-orange-500" />
@@ -844,8 +888,8 @@ export function HealthCheckupClient({ language }: { language: Language }) {
                       )}
                     </div>
 
-                    {/* Matched preview table */}
-                    {importPreview.matched.length > 0 && (
+                    {/* Preview table */}
+                    {dispRecs.length > 0 ? (
                       <Table>
                         <TableHeader>
                           <TableRow>
@@ -856,7 +900,7 @@ export function HealthCheckupClient({ language }: { language: Language }) {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {importPreview.matched.slice(0, 10).map((m, i) => (
+                          {dispRecs.slice(0, 10).map((m, i) => (
                             <TableRow key={i}>
                               <TableCell className="text-sm">{m.employeeId}</TableCell>
                               <TableCell className="text-sm">{m.employeeName}</TableCell>
@@ -864,16 +908,18 @@ export function HealthCheckupClient({ language }: { language: Language }) {
                               <TableCell className="text-sm">{m.checkupType ?? "-"}</TableCell>
                             </TableRow>
                           ))}
-                          {importPreview.matched.length > 10 && (
+                          {dispRecs.length > 10 && (
                             <TableRow>
                               <TableCell colSpan={4} className="text-center text-xs text-muted-foreground">
-                                ...他 {importPreview.matched.length - 10} 件
+                                ...他 {dispRecs.length - 10} 件
                               </TableCell>
                             </TableRow>
                           )}
                         </TableBody>
                       </Table>
-                    )}
+                    ) : importMode === "new_only" && existRecs.length > 0 ? (
+                      <p className="text-sm text-muted-foreground">新規レコードはありません。{existRecs.length}件はすべて既存データのためスキップされます。</p>
+                    ) : null}
 
                     {/* Unmatched */}
                     {importPreview.unmatched.length > 0 && (
@@ -901,17 +947,18 @@ export function HealthCheckupClient({ language }: { language: Language }) {
                     )}
 
                     {/* Confirm button */}
-                    {importPreview.matched.length > 0 && (
+                    {impCount > 0 && (
                       <Button
                         onClick={handleConfirmImport}
                         disabled={importing}
                         loading={importing}
                       >
-                        {importing ? t.importing : `${t.confirmImport}（${importPreview.matched.length}件）`}
+                        {importing ? t.importing : `${t.confirmImport}（${impCount}件）`}
                       </Button>
                     )}
                   </div>
-                )}
+                  );
+                })()}
               </CardContent>
             </Card>
           </div>

@@ -21,6 +21,13 @@ import { Button, Card, CardContent, CardHeader, CardTitle, DeleteConfirmDialog }
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import {
   Type,
@@ -413,6 +420,23 @@ export function FormCanvas({ language, readOnly = false }: { language: Language;
               onCheckedChange={(v) => updateFormMeta({ allowMultiple: v })}
             />
             <Label className="text-xs">{t.allowMultiple}</Label>
+          </div>
+          <div>
+            <Label className="text-xs">{t.shareScope}</Label>
+            <Select
+              value={form.shareScope ?? "PRIVATE"}
+              onValueChange={(v) => updateFormMeta({ shareScope: v })}
+            >
+              <SelectTrigger className="text-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="PRIVATE">{t.shareScopePrivate}</SelectItem>
+                <SelectItem value="SECTION">{t.shareScopeSection}</SelectItem>
+                <SelectItem value="DEPARTMENT">{t.shareScopeDepartment}</SelectItem>
+                <SelectItem value="ORGANIZATION">{t.shareScopeOrganization}</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </CardContent>
       </Card>

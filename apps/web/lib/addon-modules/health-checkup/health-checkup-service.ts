@@ -318,9 +318,11 @@ export class HealthCheckupService {
   static async upsertRecords(
     campaignId: string,
     records: ProcessedImportRecord[],
+    mode: "new_only" | "overwrite" = "new_only",
   ) {
     let created = 0;
     let updated = 0;
+    let skipped = 0;
 
     await prisma.$transaction(
       async (tx) => {
@@ -348,6 +350,10 @@ export class HealthCheckupService {
           };
 
           if (existing) {
+            if (mode === "new_only") {
+              skipped++;
+              continue;
+            }
             await tx.healthCheckupRecord.update({
               where: { id: existing.id },
               data: recordData,
@@ -368,6 +374,6 @@ export class HealthCheckupService {
       { timeout: 60000 },
     );
 
-    return { created, updated, total: records.length };
+    return { created, updated, skipped, total: records.length };
   }
 }

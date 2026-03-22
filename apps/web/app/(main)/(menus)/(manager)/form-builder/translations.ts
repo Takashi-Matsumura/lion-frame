@@ -211,6 +211,12 @@ export const formBuilderTranslations = jaOnly({
   radioDefaultNone: "なし",
   // 候補日フィールド
   dateSlotsCount: "候補数",
+  // 共有範囲
+  shareScope: "管理共有",
+  shareScopePrivate: "自分のみ",
+  shareScopeSection: "部内で共有",
+  shareScopeDepartment: "部門内で共有",
+  shareScopeOrganization: "全社で共有",
   // フォームレビュー
   reviewTitle: "フォームレビュー",
   reviewDescription: "回答者に表示されるフォームのプレビューです。",

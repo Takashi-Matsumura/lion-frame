@@ -37,6 +37,7 @@ interface FormInput {
   description?: string;
   descriptionJa?: string;
   allowMultiple?: boolean;
+  shareScope?: string;
   settings?: Record<string, unknown>;
   sections: SectionInput[];
 }
@@ -64,15 +65,54 @@ const formInclude = {
 export const FormsService = {
   /**
    * フォーム一覧取得
-   * USER: PUBLISHED のみ
-   * MANAGER+: 自分が作成した全ステータス + PUBLISHED
+   * context: "user" = 回答者向け（公開中フォームのみ）
+   * context: "manager" = 管理者向け（自分がオーナー + 共有範囲内のフォーム）
    */
-  async listForms(userId: string, role: Role) {
-    const isManager = ["MANAGER", "EXECUTIVE", "ADMIN"].includes(role);
+  async listForms(userId: string, role: Role, context: "user" | "manager" = "user") {
+    const isAdmin = role === "ADMIN";
 
-    const where: Prisma.FormWhereInput = isManager
-      ? { OR: [{ createdBy: userId }, { status: "PUBLISHED" }] }
-      : { status: "PUBLISHED" };
+    let where: Prisma.FormWhereInput;
+
+    if (context === "manager") {
+      // フォーム作成メニュー: 管理権限のあるフォームのみ
+      if (isAdmin) {
+        where = {};
+      } else {
+        const user = await prisma.user.findUnique({
+          where: { id: userId },
+          select: { email: true },
+        });
+        const employee = user?.email
+          ? await prisma.employee.findFirst({
+              where: { email: user.email, isActive: true },
+              select: { departmentId: true, sectionId: true },
+            })
+          : null;
+
+        const orConditions: Prisma.FormWhereInput[] = [
+          { createdBy: userId },
+          { shareScope: "ORGANIZATION" },
+        ];
+
+        if (employee?.departmentId) {
+          orConditions.push({
+            shareScope: "DEPARTMENT",
+            creator: { email: { in: await this._getEmailsByDepartment(employee.departmentId) } },
+          });
+        }
+        if (employee?.sectionId) {
+          orConditions.push({
+            shareScope: "SECTION",
+            creator: { email: { in: await this._getEmailsBySection(employee.sectionId) } },
+          });
+        }
+
+        where = { OR: orConditions };
+      }
+    } else {
+      // フォームメニュー: 公開中フォームのみ（回答者向け）
+      where = { status: "PUBLISHED" };
+    }
 
     const forms = await prisma.form.findMany({
       where,
@@ -206,6 +246,7 @@ export const FormsService = {
             description: data.description,
             descriptionJa: data.descriptionJa,
             allowMultiple: data.allowMultiple,
+            shareScope: data.shareScope as any,
             settings: (data.settings ?? {}) as Prisma.InputJsonValue,
           },
           include: formInclude,
@@ -221,6 +262,7 @@ export const FormsService = {
         description: data.description,
         descriptionJa: data.descriptionJa,
         allowMultiple: data.allowMultiple ?? false,
+        shareScope: (data.shareScope as any) ?? "PRIVATE",
         settings: (data.settings ?? {}) as Prisma.InputJsonValue,
         createdBy: userId,
         sections: {
@@ -490,5 +532,23 @@ export const FormsService = {
         },
       },
     });
+  },
+
+  /** 部門内の社員メールアドレス一覧を取得 */
+  async _getEmailsByDepartment(departmentId: string): Promise<string[]> {
+    const employees = await prisma.employee.findMany({
+      where: { departmentId, isActive: true, email: { not: null } },
+      select: { email: true },
+    });
+    return employees.map((e) => e.email!).filter(Boolean);
+  },
+
+  /** 部内の社員メールアドレス一覧を取得 */
+  async _getEmailsBySection(sectionId: string): Promise<string[]> {
+    const employees = await prisma.employee.findMany({
+      where: { sectionId, isActive: true, email: { not: null } },
+      select: { email: true },
+    });
+    return employees.map((e) => e.email!).filter(Boolean);
   },
 };

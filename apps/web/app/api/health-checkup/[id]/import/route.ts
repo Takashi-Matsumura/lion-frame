@@ -43,7 +43,7 @@ export const POST = apiHandler(async (request) => {
 
   if (action === "confirm") {
     // プレビュー → 確定
-    const preview = await previewImport(rows, mapping);
+    const preview = await previewImport(rows, mapping, id);
     const records = preview.matched.map((m) => ({
       employeeId: m.employeeDbId,
       bookingMethod: m.bookingMethod,
@@ -54,7 +54,8 @@ export const POST = apiHandler(async (request) => {
       status: m.status,
       rawData: m.rawData,
     }));
-    const result = await HealthCheckupService.upsertRecords(id, records);
+    const mode = (formData.get("mode") as string) === "overwrite" ? "overwrite" : "new_only";
+    const result = await HealthCheckupService.upsertRecords(id, records, mode);
 
     // カラムマッピングをキャンペーンに保存
     if (Object.keys(mapping).length > 0) {
@@ -70,6 +71,6 @@ export const POST = apiHandler(async (request) => {
   }
 
   // デフォルト: プレビュー
-  const preview = await previewImport(rows, mapping);
+  const preview = await previewImport(rows, mapping, id);
   return { headers, preview };
 }, { requiredRoles: ["MANAGER", "EXECUTIVE", "ADMIN"] as Role[] });
