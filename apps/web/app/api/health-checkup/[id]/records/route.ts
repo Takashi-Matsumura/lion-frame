@@ -9,11 +9,13 @@ export const GET = apiHandler(async (request) => {
   if (!id) throw ApiError.badRequest("Campaign ID is required");
 
   const status = url.searchParams.get("status") as HealthCheckupStatus | null;
+  const bookingMethod = url.searchParams.get("bookingMethod") ?? undefined;
   const departmentId = url.searchParams.get("departmentId") ?? undefined;
   const search = url.searchParams.get("search") ?? undefined;
 
   const records = await HealthCheckupService.getRecords(id, {
     status: status ?? undefined,
+    bookingMethod,
     departmentId,
     search,
   });

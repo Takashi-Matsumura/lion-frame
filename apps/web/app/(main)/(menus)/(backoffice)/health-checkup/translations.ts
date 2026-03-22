@@ -44,6 +44,8 @@ export const healthCheckupTranslations = jaOnly({
   preferredDates: "希望日・確定日",
   confirmedDate: "確定日",
   allStatuses: "全ステータス",
+  allBookingMethods: "全予約方法",
+  recordCount: "件",
   allDepartments: "全部署",
   searchPlaceholder: "社員番号・氏名・医療機関で検索",
   statusNotBooked: "未予約",

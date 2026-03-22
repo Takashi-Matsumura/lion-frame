@@ -160,6 +160,7 @@ export function HealthCheckupClient({ language }: { language: Language }) {
   const [records, setRecords] = useState<RecordItem[]>([]);
   const [recordsLoading, setRecordsLoading] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [methodFilter, setMethodFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
 
   // Confirm date dialog state
@@ -286,6 +287,7 @@ export function HealthCheckupClient({ language }: { language: Language }) {
     try {
       const params = new URLSearchParams();
       if (statusFilter !== "all") params.set("status", statusFilter);
+      if (methodFilter !== "all") params.set("bookingMethod", methodFilter);
       if (searchQuery) params.set("search", searchQuery);
       const res = await fetch(`/api/health-checkup/${selectedCampaignId}/records?${params}`);
       if (!res.ok) throw new Error();
@@ -296,7 +298,7 @@ export function HealthCheckupClient({ language }: { language: Language }) {
     } finally {
       setRecordsLoading(false);
     }
-  }, [selectedCampaignId, statusFilter, searchQuery, t.loadError]);
+  }, [selectedCampaignId, statusFilter, methodFilter, searchQuery, t.loadError]);
 
   useEffect(() => {
     if (viewMode === "records") loadRecords();
@@ -661,6 +663,23 @@ export function HealthCheckupClient({ language }: { language: Language }) {
                   <SelectItem value="EXEMPT"><Badge className={`${statusColors.EXEMPT} text-xs`}>{t.statusExempt}</Badge></SelectItem>
                 </SelectContent>
               </Select>
+              <Select value={methodFilter} onValueChange={setMethodFilter}>
+                <SelectTrigger className="w-36">
+                  <SelectValue>
+                    {methodFilter === "all" ? t.allBookingMethods : methodFilter}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t.allBookingMethods}</SelectItem>
+                  <SelectItem value="会社予約">会社予約</SelectItem>
+                  <SelectItem value="個人予約">個人予約</SelectItem>
+                </SelectContent>
+              </Select>
+              {!recordsLoading && (
+                <span className="text-sm text-muted-foreground self-center">
+                  {records.length}{t.recordCount}
+                </span>
+              )}
             </div>
 
             {recordsLoading ? (

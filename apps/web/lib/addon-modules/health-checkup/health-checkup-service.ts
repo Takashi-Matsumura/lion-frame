@@ -15,6 +15,7 @@ export interface CampaignInput {
 
 export interface RecordFilters {
   status?: HealthCheckupStatus;
+  bookingMethod?: string;
   departmentId?: string;
   search?: string;
 }
@@ -145,6 +146,7 @@ export class HealthCheckupService {
   static async getRecords(campaignId: string, filters?: RecordFilters) {
     const where: Prisma.HealthCheckupRecordWhereInput = { campaignId };
     if (filters?.status) where.status = filters.status;
+    if (filters?.bookingMethod) where.bookingMethod = filters.bookingMethod;
     if (filters?.departmentId) {
       where.employee = { departmentId: filters.departmentId };
     }
