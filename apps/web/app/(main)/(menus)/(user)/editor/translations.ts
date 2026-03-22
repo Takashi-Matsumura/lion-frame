@@ -15,6 +15,12 @@ export const editorTranslations = jaOnly({
   noDocuments: "ドキュメントがありません",
   noDocumentsDescription: "新規作成ボタンでドキュメントを作成してください",
   loadError: "読み込みに失敗しました",
+  open: "開く",
+  rename: "名前を変更",
+  documentCount: "件のドキュメント",
+  lastUpdated: "最終更新",
+  created: "作成日",
+  editorWindow: "エディタ",
 });
 
 export type Language = keyof typeof editorTranslations;

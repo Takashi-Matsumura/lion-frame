@@ -132,63 +132,109 @@
 
 .dark {
   /*
-   * Elevated Cards Theme (VS Code-inspired)
-   * Cards stand out from the background with clear elevation
+   * Navy Dark Theme
+   * Deep navy blue base with clear elevation hierarchy
    */
 
-  /* Background & Foreground - Dark base */
-  --background: oklch(0.18 0.005 260);
+  /* Background & Foreground - Navy base */
+  --background: oklch(0.18 0.03 255);
   --foreground: oklch(0.97 0 0);
 
   /* Card - Elevated, clearly visible */
-  --card: oklch(0.22 0.005 260);
+  --card: oklch(0.22 0.035 255);
   --card-foreground: oklch(0.97 0 0);
 
   /* Popover - Slightly elevated above cards */
-  --popover: oklch(0.24 0.005 260);
+  --popover: oklch(0.24 0.035 255);
   --popover-foreground: oklch(0.97 0 0);
 
   /* Primary - Main accent color */
-  --primary: oklch(0.7 0.08 260);
-  --primary-foreground: oklch(0.12 0 0);
+  --primary: oklch(0.55 0.15 255);
+  --primary-foreground: oklch(0.98 0 0);
 
   /* Secondary - Subtle elevation */
-  --secondary: oklch(0.26 0.005 260);
+  --secondary: oklch(0.26 0.03 255);
   --secondary-foreground: oklch(0.97 0 0);
 
   /* Muted - For subtle backgrounds */
-  --muted: oklch(0.20 0.005 260);
+  --muted: oklch(0.20 0.025 255);
   --muted-foreground: oklch(0.70 0 0);
 
   /* Accent - Interactive elements */
-  --accent: oklch(0.28 0.01 260);
+  --accent: oklch(0.28 0.04 255);
   --accent-foreground: oklch(0.97 0 0);
 
   /* Destructive */
   --destructive: oklch(0.6 0.2 25);
 
   /* Border & Input - Visible but subtle */
-  --border: oklch(0.36 0.01 260);
-  --input: oklch(0.18 0.005 260);
-  --input-background: oklch(0.16 0.005 260);
-  --ring: oklch(0.7 0.08 260);
+  --border: oklch(0.34 0.04 255);
+  --input: oklch(0.18 0.03 255);
+  --input-background: oklch(0.16 0.025 255);
+  --ring: oklch(0.55 0.15 255);
 
-  /* Chart colors (with slight blue tint) */
-  --chart-1: oklch(0.7 0.08 260);
-  --chart-2: oklch(0.6 0.08 260);
-  --chart-3: oklch(0.8 0.06 260);
-  --chart-4: oklch(0.5 0.08 260);
-  --chart-5: oklch(0.75 0.06 260);
+  /* Chart colors (with blue tint) */
+  --chart-1: oklch(0.6 0.12 255);
+  --chart-2: oklch(0.5 0.12 255);
+  --chart-3: oklch(0.7 0.10 255);
+  --chart-4: oklch(0.45 0.12 255);
+  --chart-5: oklch(0.65 0.10 255);
 
-  /* Sidebar - Slightly different from main background */
-  --sidebar: oklch(0.16 0.005 260);
+  /* Sidebar - Slightly deeper than main background */
+  --sidebar: oklch(0.16 0.025 255);
   --sidebar-foreground: oklch(0.97 0 0);
-  --sidebar-primary: oklch(0.7 0.08 260);
-  --sidebar-primary-foreground: oklch(0.12 0 0);
-  --sidebar-accent: oklch(0.24 0.01 260);
+  --sidebar-primary: oklch(0.55 0.15 255);
+  --sidebar-primary-foreground: oklch(0.98 0 0);
+  --sidebar-accent: oklch(0.24 0.04 255);
   --sidebar-accent-foreground: oklch(0.97 0 0);
-  --sidebar-border: oklch(0.28 0.01 260);
-  --sidebar-ring: oklch(0.7 0.08 260);
+  --sidebar-border: oklch(0.28 0.035 255);
+  --sidebar-ring: oklch(0.55 0.15 255);
+}
+
+/*
+ * Floating Window - Inverted Theme
+ * アプリがダーク→ウィンドウはライト、アプリがライト→ウィンドウはダーク
+ */
+.floating-window-inverted {
+  --background: oklch(0.18 0.03 255);
+  --foreground: oklch(0.97 0 0);
+  --card: oklch(0.22 0.035 255);
+  --card-foreground: oklch(0.97 0 0);
+  --popover: oklch(0.24 0.035 255);
+  --popover-foreground: oklch(0.97 0 0);
+  --primary: oklch(0.55 0.15 255);
+  --primary-foreground: oklch(0.98 0 0);
+  --secondary: oklch(0.26 0.03 255);
+  --secondary-foreground: oklch(0.97 0 0);
+  --muted: oklch(0.20 0.025 255);
+  --muted-foreground: oklch(0.70 0 0);
+  --accent: oklch(0.28 0.04 255);
+  --accent-foreground: oklch(0.97 0 0);
+  --destructive: oklch(0.6 0.2 25);
+  --border: oklch(0.34 0.04 255);
+  --input: oklch(0.18 0.03 255);
+  --ring: oklch(0.55 0.15 255);
+}
+
+.dark .floating-window-inverted {
+  --background: oklch(0.99 0 0);
+  --foreground: oklch(0.15 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.15 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.15 0 0);
+  --primary: oklch(0.45 0.03 260);
+  --primary-foreground: oklch(0.99 0 0);
+  --secondary: oklch(0.96 0 0);
+  --secondary-foreground: oklch(0.15 0 0);
+  --muted: oklch(0.96 0 0);
+  --muted-foreground: oklch(0.5 0 0);
+  --accent: oklch(0.96 0 0);
+  --accent-foreground: oklch(0.15 0 0);
+  --destructive: oklch(0.55 0.2 25);
+  --border: oklch(0.9 0 0);
+  --input: oklch(0.9 0 0);
+  --ring: oklch(0.45 0.03 260);
 }
 
 @layer base {

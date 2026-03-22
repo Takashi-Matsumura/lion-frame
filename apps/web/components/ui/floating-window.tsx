@@ -23,6 +23,7 @@ export function FloatingWindow({ language = "en" }: FloatingWindowProps) {
     titleJa,
     content,
     modal,
+    noPadding,
     close,
     minimize,
     maximize,
@@ -147,8 +148,9 @@ export function FloatingWindow({ language = "en" }: FloatingWindowProps) {
     };
   }, [setPosition, setSize, position, size]);
 
-  // ESCキーで閉じる
+  // ESCキーで閉じる（noPadding時=エディタ等は無効）
   useEffect(() => {
+    if (noPadding) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape" && windowStatus !== "closed" && windowStatus !== "minimized") {
         close();
@@ -156,7 +158,7 @@ export function FloatingWindow({ language = "en" }: FloatingWindowProps) {
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [windowStatus, close]);
+  }, [windowStatus, close, noPadding]);
 
   // SSR対策
   if (typeof window === "undefined") return null;
@@ -169,7 +171,7 @@ export function FloatingWindow({ language = "en" }: FloatingWindowProps) {
     return createPortal(
       <button
         type="button"
-        className="fixed bottom-4 left-4 z-[100] bg-card border border-border rounded-lg shadow-lg cursor-pointer hover:bg-accent transition-colors"
+        className="floating-window-inverted fixed bottom-4 left-4 z-[100] bg-card border border-border rounded-lg shadow-lg cursor-pointer hover:bg-accent transition-colors"
         onClick={restore}
       >
         <div className="px-4 py-2 flex items-center gap-2">
@@ -190,7 +192,7 @@ export function FloatingWindow({ language = "en" }: FloatingWindowProps) {
   const windowContent = (
     <div
       ref={windowRef}
-      className="fixed z-[100] bg-card border border-border rounded-lg shadow-xl flex flex-col overflow-hidden"
+      className="floating-window-inverted fixed z-[100] bg-card border border-border rounded-lg shadow-xl flex flex-col overflow-hidden"
       style={{
         left: isMaximized ? 0 : position.x,
         top: isMaximized ? 0 : position.y,
@@ -288,7 +290,7 @@ export function FloatingWindow({ language = "en" }: FloatingWindowProps) {
       </div>
 
       {/* コンテンツエリア */}
-      <div className="flex-1 overflow-auto p-4">{content}</div>
+      <div className={`flex-1 ${noPadding ? "overflow-hidden" : "overflow-auto p-4"}`}>{content}</div>
 
       {/* リサイズハンドル（最大化時は非表示） */}
       {!isMaximized && (

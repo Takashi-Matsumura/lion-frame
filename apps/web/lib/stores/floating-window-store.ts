@@ -23,6 +23,7 @@ interface OpenOptions {
   initialPosition?: FloatingWindowPosition;
   initialSize?: FloatingWindowSize;
   modal?: boolean;
+  noPadding?: boolean;
 }
 
 // architecture-avoid-boolean-props: 3つのbooleanを単一のstatus型に統合
@@ -48,6 +49,9 @@ interface FloatingWindowStore {
   // モーダル（背面操作ブロック）
   modal: boolean;
 
+  // パディングなし（エディタ等の全面表示用）
+  noPadding: boolean;
+
   // アクション
   open: (options?: OpenOptions) => void;
   close: () => void;
@@ -71,6 +75,7 @@ export const useFloatingWindowStore = create<FloatingWindowStore>(
     titleJa: "サブウィンドウ",
     content: null,
     modal: false,
+    noPadding: false,
 
     open: (options) => {
       set({
@@ -81,6 +86,7 @@ export const useFloatingWindowStore = create<FloatingWindowStore>(
         position: options?.initialPosition ?? DEFAULT_POSITION,
         size: options?.initialSize ?? DEFAULT_SIZE,
         modal: options?.modal ?? false,
+        noPadding: options?.noPadding ?? false,
       });
     },
 
@@ -91,6 +97,7 @@ export const useFloatingWindowStore = create<FloatingWindowStore>(
         prevPosition: null,
         prevSize: null,
         modal: false,
+        noPadding: false,
       });
     },
 

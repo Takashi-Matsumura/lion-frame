@@ -2,56 +2,35 @@
 
 import { useState, useCallback, useEffect, useRef } from "react";
 import { toast } from "sonner";
-import { Plus, Trash2, FileText, Menu } from "lucide-react";
+import { Plus, Trash2, FileText, ExternalLink, Pencil, Check, X } from "lucide-react";
 import { Button } from "@/components/ui";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
+import { useFloatingWindowStore } from "@/lib/stores/floating-window-store";
 import dynamic from "next/dynamic";
-import "@/components/business/editor/editor.css";
 import { editorTranslations, type Language } from "./translations";
 
-// CodeMirrorはSSRで動かないのでdynamic import
-const CodeMirrorEditor = dynamic(
-  () => import("@/components/business/editor/CodeMirrorEditor"),
+const FloatingEditorContent = dynamic(
+  () => import("@/components/business/editor/FloatingEditorContent"),
   { ssr: false },
 );
-const MarkdownPreview = dynamic(
-  () => import("@/components/business/editor/MarkdownPreview"),
-  { ssr: false },
-);
-const EditorToolbar = dynamic(
-  () => import("@/components/business/editor/EditorToolbar"),
-  { ssr: false },
-);
-const ShortcutFooter = dynamic(
-  () => import("@/components/business/editor/ShortcutFooter"),
-  { ssr: false },
-);
-
-type ViewMode = "live" | "source" | "split";
 
 interface DocItem {
   id: string;
   title: string;
   updatedAt: string;
+  createdAt: string;
 }
 
 export function EditorClient({ language }: { language: Language }) {
   const t = editorTranslations[language];
+  const floatingWindow = useFloatingWindowStore();
 
   const [documents, setDocuments] = useState<DocItem[]>([]);
-  const [activeId, setActiveId] = useState<string | null>(null);
-  const [content, setContent] = useState("");
-  const [viewMode, setViewMode] = useState<ViewMode>("live");
-  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mounted, setMounted] = useState(false);
-  const [saving, setSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
-  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // スクロール同期用
-  const editorScrollRef = useRef<HTMLElement | null>(null);
-  const previewScrollRef = useRef<HTMLDivElement | null>(null);
-  const scrollSourceRef = useRef<"editor" | "preview" | null>(null);
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+  const renameInputRef = useRef<HTMLInputElement>(null);
 
   // ドキュメント一覧を取得
   const loadDocuments = useCallback(async () => {
@@ -70,61 +49,68 @@ export function EditorClient({ language }: { language: Language }) {
   // 初期化
   useEffect(() => {
     (async () => {
-      const docs = await loadDocuments();
-      if (docs.length > 0) {
-        await selectDocument(docs[0].id);
-      }
+      await loadDocuments();
       setMounted(true);
     })();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ドキュメント選択
-  const selectDocument = useCallback(async (id: string) => {
+  // リネーム開始
+  const startRename = useCallback((doc: DocItem) => {
+    setRenamingId(doc.id);
+    setRenameValue(doc.title);
+    setTimeout(() => renameInputRef.current?.select(), 0);
+  }, []);
+
+  // リネーム確定
+  const confirmRename = useCallback(async () => {
+    if (!renamingId || !renameValue.trim()) {
+      setRenamingId(null);
+      return;
+    }
+    const trimmed = renameValue.trim();
     try {
-      const res = await fetch(`/api/editor/${id}`);
-      if (!res.ok) throw new Error();
-      const data = await res.json();
-      setActiveId(id);
-      setContent(data.document.content);
+      await fetch(`/api/editor/${renamingId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: trimmed }),
+      });
+      setDocuments((prev) =>
+        prev.map((d) =>
+          d.id === renamingId
+            ? { ...d, title: trimmed, updatedAt: new Date().toISOString() }
+            : d,
+        ),
+      );
     } catch {
       toast.error(t.loadError);
     }
-  }, [t.loadError]);
+    setRenamingId(null);
+  }, [renamingId, renameValue, t.loadError]);
 
-  // コンテンツ変更（自動保存）
-  const handleChange = useCallback(
-    (newContent: string) => {
-      setContent(newContent);
+  // リネームキャンセル
+  const cancelRename = useCallback(() => {
+    setRenamingId(null);
+  }, []);
 
-      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-      saveTimerRef.current = setTimeout(async () => {
-        if (!activeId) return;
-        setSaving(true);
-        try {
-          const title = extractTitle(newContent);
-          await fetch(`/api/editor/${activeId}`, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ content: newContent, title }),
-          });
-          // ドキュメント一覧のタイトルを更新
-          setDocuments((prev) =>
-            prev.map((d) =>
-              d.id === activeId ? { ...d, title, updatedAt: new Date().toISOString() } : d,
-            ),
-          );
-        } catch {
-          // サイレント失敗
-        } finally {
-          setSaving(false);
-        }
-      }, 500);
+  // フローティングウィンドウでドキュメントを開く
+  const openInFloatingWindow = useCallback(
+    (doc: DocItem) => {
+      floatingWindow.open({
+        title: doc.title,
+        titleJa: doc.title,
+        content: (
+          <FloatingEditorContent docId={doc.id} />
+        ),
+        initialSize: { width: 900, height: 600 },
+        initialPosition: { x: 150, y: 80 },
+        noPadding: true,
+      });
     },
-    [activeId],
+    [floatingWindow],
   );
 
-  // 新規作成
+  // 新規作成してフローティングウィンドウで開く
   const handleCreate = useCallback(async () => {
     try {
       const res = await fetch("/api/editor", {
@@ -134,188 +120,181 @@ export function EditorClient({ language }: { language: Language }) {
       });
       if (!res.ok) throw new Error();
       const data = await res.json();
-      setDocuments((prev) => [
-        { id: data.document.id, title: data.document.title, updatedAt: data.document.updatedAt },
-        ...prev,
-      ]);
-      setActiveId(data.document.id);
-      setContent("");
+      const newDoc: DocItem = {
+        id: data.document.id,
+        title: data.document.title,
+        updatedAt: data.document.updatedAt,
+        createdAt: data.document.createdAt ?? data.document.updatedAt,
+      };
+      setDocuments((prev) => [newDoc, ...prev]);
+      openInFloatingWindow(newDoc);
     } catch {
       toast.error(t.loadError);
     }
-  }, [t.untitled, t.loadError]);
+  }, [t.untitled, t.loadError, openInFloatingWindow]);
 
   // 削除
   const handleDelete = useCallback(async () => {
     if (!deleteTarget) return;
     try {
       await fetch(`/api/editor/${deleteTarget}`, { method: "DELETE" });
-      const remaining = documents.filter((d) => d.id !== deleteTarget);
-      setDocuments(remaining);
-      if (deleteTarget === activeId) {
-        if (remaining.length > 0) {
-          await selectDocument(remaining[0].id);
-        } else {
-          setActiveId(null);
-          setContent("");
-        }
+      setDocuments((prev) => prev.filter((d) => d.id !== deleteTarget));
+      // フローティングウィンドウで開いている場合は閉じる
+      if (floatingWindow.windowStatus !== "closed") {
+        floatingWindow.close();
       }
       setDeleteTarget(null);
     } catch {
       toast.error(t.loadError);
     }
-  }, [deleteTarget, documents, activeId, selectDocument, t.loadError]);
-
-  // スクロール同期
-  useEffect(() => {
-    const editorEl = editorScrollRef.current;
-    const previewEl = previewScrollRef.current;
-    if (!editorEl || !previewEl) return;
-
-    let rafId: number | null = null;
-
-    const syncScroll = (source: "editor" | "preview") => {
-      if (scrollSourceRef.current && scrollSourceRef.current !== source) return;
-      scrollSourceRef.current = source;
-
-      if (rafId) cancelAnimationFrame(rafId);
-      rafId = requestAnimationFrame(() => {
-        const from = source === "editor" ? editorEl : previewEl;
-        const to = source === "editor" ? previewEl : editorEl;
-        const maxFrom = from.scrollHeight - from.clientHeight;
-        if (maxFrom <= 0) { scrollSourceRef.current = null; return; }
-        const ratio = from.scrollTop / maxFrom;
-        const maxTo = to.scrollHeight - to.clientHeight;
-        to.scrollTop = ratio * maxTo;
-        requestAnimationFrame(() => { scrollSourceRef.current = null; });
-      });
-    };
-
-    const onEditorScroll = () => syncScroll("editor");
-    const onPreviewScroll = () => syncScroll("preview");
-
-    editorEl.addEventListener("scroll", onEditorScroll, { passive: true });
-    previewEl.addEventListener("scroll", onPreviewScroll, { passive: true });
-
-    return () => {
-      editorEl.removeEventListener("scroll", onEditorScroll);
-      previewEl.removeEventListener("scroll", onPreviewScroll);
-      if (rafId) cancelAnimationFrame(rafId);
-    };
-  }, [viewMode, activeId]);
-
-  const handleEditorScrollDom = useCallback((el: HTMLElement | null) => {
-    editorScrollRef.current = el;
-  }, []);
+  }, [deleteTarget, floatingWindow, t.loadError]);
 
   if (!mounted) {
-    return <div className="flex items-center justify-center h-[calc(100vh-200px)] text-muted-foreground text-sm">読み込み中...</div>;
+    return (
+      <div className="flex items-center justify-center h-[calc(100vh-200px)] text-muted-foreground text-sm">
+        読み込み中...
+      </div>
+    );
   }
 
-  const showPreview = viewMode === "split";
-  const isLivePreview = viewMode === "live";
+  const formatDate = (dateStr: string) => {
+    const d = new Date(dateStr);
+    return d.toLocaleDateString("ja-JP", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
 
   return (
-    <div className="editor-wrapper -mx-4 -mt-8 -mb-8" style={{ height: "calc(100vh - 56px)" }}>
-      <div className="flex h-full">
-        {/* Sidebar */}
-        {sidebarOpen && (
-          <div className="w-64 border-r bg-muted/30 flex flex-col shrink-0">
-            <div className="p-3 border-b flex items-center justify-between">
-              <span className="text-sm font-medium text-foreground">{t.myDocuments}</span>
-              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleCreate}>
-                <Plus className="h-4 w-4" />
-              </Button>
-            </div>
-            <div className="flex-1 overflow-y-auto">
-              {documents.length === 0 ? (
-                <div className="p-4 text-center text-xs text-muted-foreground">
-                  {t.noDocuments}
-                </div>
-              ) : (
-                documents.map((doc) => (
+    <div className="max-w-4xl mx-auto">
+      {/* ヘッダー */}
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-muted-foreground">
+            {documents.length}{t.documentCount}
+          </span>
+        </div>
+        <Button onClick={handleCreate}>
+          <Plus className="h-4 w-4 mr-2" />
+          {t.newDocument}
+        </Button>
+      </div>
+
+      {/* ドキュメント一覧 */}
+      {documents.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-20 text-center">
+          <FileText className="h-12 w-12 text-muted-foreground/30 mb-4" />
+          <p className="text-muted-foreground mb-1">{t.noDocuments}</p>
+          <p className="text-sm text-muted-foreground/70 mb-4">
+            {t.noDocumentsDescription}
+          </p>
+          <Button onClick={handleCreate}>
+            <Plus className="h-4 w-4 mr-2" />
+            {t.newDocument}
+          </Button>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {documents.map((doc) => (
+            <div
+              key={doc.id}
+              className="group flex items-center gap-4 px-4 py-3 bg-card border border-border rounded-lg hover:border-primary/30 hover:shadow-sm transition-all cursor-pointer"
+              onClick={() => {
+                if (renamingId !== doc.id) openInFloatingWindow(doc);
+              }}
+            >
+              <FileText className="h-5 w-5 text-muted-foreground shrink-0" />
+              <div className="flex-1 min-w-0">
+                {renamingId === doc.id ? (
                   <div
-                    key={doc.id}
-                    className={`group flex items-center gap-2 px-3 py-2 cursor-pointer transition-colors ${
-                      doc.id === activeId
-                        ? "bg-primary/10 text-foreground"
-                        : "text-muted-foreground hover:bg-muted/50"
-                    }`}
-                    onClick={() => selectDocument(doc.id)}
+                    className="flex items-center gap-2"
+                    onClick={(e) => e.stopPropagation()}
                   >
-                    <FileText className="h-4 w-4 shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm truncate">{doc.title}</div>
-                      <div className="text-[10px] text-muted-foreground">
-                        {new Date(doc.updatedAt).toLocaleDateString("ja-JP")}
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-opacity"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setDeleteTarget(doc.id);
+                    <input
+                      ref={renameInputRef}
+                      type="text"
+                      value={renameValue}
+                      onChange={(e) => setRenameValue(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") confirmRename();
+                        if (e.key === "Escape") cancelRename();
                       }}
+                      className="flex-1 text-sm font-medium bg-background border border-primary rounded px-2 py-1 outline-none focus:ring-1 focus:ring-primary"
+                      autoFocus
+                    />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-primary hover:text-primary"
+                      onClick={confirmRename}
                     >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
+                      <Check className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      onClick={cancelRename}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
                   </div>
-                ))
-              )}
-            </div>
-            <div className="p-2 border-t text-[10px] text-muted-foreground text-center">
-              {saving ? t.saving : t.saved}
-            </div>
-          </div>
-        )}
-
-        {/* Editor area */}
-        <div className="flex-1 min-w-0 flex flex-col">
-          <EditorToolbar
-            viewMode={viewMode}
-            onViewModeChange={setViewMode}
-            theme="light"
-            onThemeChange={() => {}}
-            title={documents.find((d) => d.id === activeId)?.title ?? t.untitled}
-            onSidebarToggle={() => setSidebarOpen(!sidebarOpen)}
-            sidebarOpen={sidebarOpen}
-          />
-
-          {activeId ? (
-            <>
-              <div className={`editor-content ${showPreview ? "split" : ""}`}>
-                <div className="editor-pane">
-                  <CodeMirrorEditor
-                    docId={activeId}
-                    initialDoc={content}
-                    onChange={handleChange}
-                    livePreview={isLivePreview}
-                    readOnly={false}
-                    onScrollDom={handleEditorScrollDom}
-                  />
-                </div>
-                {showPreview && (
-                  <div className="preview-container" ref={previewScrollRef}>
-                    <MarkdownPreview content={content} />
-                  </div>
+                ) : (
+                  <>
+                    <div className="text-sm font-medium text-foreground truncate">
+                      {doc.title}
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-0.5">
+                      {t.lastUpdated}: {formatDate(doc.updatedAt)}
+                    </div>
+                  </>
                 )}
               </div>
-              <ShortcutFooter />
-            </>
-          ) : (
-            <div className="flex-1 flex items-center justify-center">
-              <div className="text-center">
-                <p className="text-muted-foreground text-sm mb-3">{t.noDocumentsDescription}</p>
-                <Button onClick={handleCreate}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  {t.newDocument}
-                </Button>
-              </div>
+              {renamingId !== doc.id && (
+                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      startRename(doc);
+                    }}
+                    title={t.rename}
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openInFloatingWindow(doc);
+                    }}
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setDeleteTarget(doc.id);
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
             </div>
-          )}
+          ))}
         </div>
-      </div>
+      )}
 
       <DeleteConfirmDialog
         open={!!deleteTarget}
@@ -328,9 +307,4 @@ export function EditorClient({ language }: { language: Language }) {
       />
     </div>
   );
-}
-
-function extractTitle(content: string): string {
-  const match = content.match(/^#\s+(.+)/m);
-  return match ? match[1].trim() : "無題";
 }

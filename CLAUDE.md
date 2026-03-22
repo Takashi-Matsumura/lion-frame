@@ -134,8 +134,13 @@ cd apps/web && npx prisma db push && pnpm db:seed
 > **健康管理インポート:** フォームXLSXエクスポートをインポート。会社予約→PENDING+希望日、個人予約→BOOKED+確定日。社員マッチングは `EMPLOYEE_PICKER`（社員番号 氏名）形式を解析。
 > **健康管理メニュー:** AccessKey `health_checkup` が必要（ADMINはバイパス）。
 > **ダッシュボード個人セクション:** 非ADMINユーザ向けに「あなたのタスク」セクション（健康診断ステータス、未回答フォーム、通知）を表示。健康診断ステータスは `/api/health-checkup/my-status` で取得。
+| エディタ | EditorDocument |
 | NFCカード | NfcCard |
 | システム | SystemSetting |
+
+> **エディタモジュール:** メニュー画面はドキュメント管理（一覧・リネーム・削除）。ドキュメントをクリックするとフローティングウィンドウでマークダウンエディタが開く。コンテンツは500msデバウンスで自動保存。タイトルはコンテンツとは独立（管理画面でリネーム）。
+> **フローティングウィンドウのテーマ反転:** `.floating-window-inverted` クラスでアプリと逆のテーマを適用（ダーク時→ライト、ライト時→ダーク）。`noPadding` オプションでエディタ等の全面コンテンツ対応。ESCキーは `noPadding` 時に無効。
+> **エディタCSS変数:** テーマ変数との衝突を避けるため `--editor-` プレフィックスを使用（例: `--editor-bg-primary`, `--editor-accent`）。
 
 ## 重要なルール
 
@@ -209,6 +214,10 @@ type MenuGroupId = "guest" | "user" | "manager" | "executive" | "admin" | "backo
 | MANAGER | `bg-green-600` / `bg-green-700` |
 | EXECUTIVE | `bg-rose-600` / `bg-rose-700` |
 | ADMIN | `bg-purple-600` / `bg-purple-700` |
+
+### ダークテーマ
+
+ダークモードはネイビーベース（hue: 255, chroma: 0.03〜0.04）。グレー系ではなく青みのあるダーク。`globals.css` の `.dark` セクションで定義。
 
 ## 認証アーキテクチャ
 
