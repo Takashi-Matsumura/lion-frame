@@ -665,12 +665,10 @@ export function HealthCheckupClient({ language }: { language: Language }) {
                   <TableHeader className="sticky top-0 bg-card z-10">
                     <TableRow>
                       <TableHead className="text-xs">{t.employeeId}</TableHead>
-                      <TableHead className="text-xs">{t.employeeName}</TableHead>
-                      <TableHead className="text-xs">{t.departmentName}</TableHead>
+                      <TableHead className="text-xs">{t.employeeName} / {t.departmentName}</TableHead>
                       <TableHead className="text-xs">{t.status}</TableHead>
                       <TableHead className="text-xs">{t.bookingMethod}</TableHead>
-                      <TableHead className="text-xs">{t.facility}</TableHead>
-                      <TableHead className="text-xs">{t.checkupType}</TableHead>
+                      <TableHead className="text-xs">{t.facility} / {t.checkupType}</TableHead>
                       <TableHead className="text-xs">{t.preferredDates}</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -678,9 +676,9 @@ export function HealthCheckupClient({ language }: { language: Language }) {
                     {records.map((rec) => (
                       <TableRow key={rec.id}>
                         <TableCell className="text-sm">{rec.employee.employeeId}</TableCell>
-                        <TableCell className="text-sm">{rec.employee.name}</TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {rec.employee.department.name}
+                        <TableCell>
+                          <div className="text-sm">{rec.employee.name}</div>
+                          <div className="text-xs text-muted-foreground">{rec.employee.department.name}</div>
                         </TableCell>
                         <TableCell>
                           <Select
@@ -703,8 +701,10 @@ export function HealthCheckupClient({ language }: { language: Language }) {
                           </Select>
                         </TableCell>
                         <TableCell className="text-sm">{rec.bookingMethod ?? "-"}</TableCell>
-                        <TableCell className="text-sm text-muted-foreground">{rec.facility ?? "-"}</TableCell>
-                        <TableCell className="text-sm">{rec.checkupType ?? "-"}</TableCell>
+                        <TableCell>
+                          <div className="text-sm">{rec.facility ?? "-"}</div>
+                          <div className="text-xs text-muted-foreground">{rec.checkupType ?? "-"}</div>
+                        </TableCell>
                         <TableCell className="text-sm text-muted-foreground">
                           {rec.confirmedDate ? (
                             new Date(rec.confirmedDate).toLocaleDateString("ja-JP", {

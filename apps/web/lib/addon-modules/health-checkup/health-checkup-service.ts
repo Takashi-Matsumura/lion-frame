@@ -149,13 +149,11 @@ export class HealthCheckupService {
       where.employee = { departmentId: filters.departmentId };
     }
     if (filters?.search) {
-      where.employee = {
-        ...where.employee as Prisma.EmployeeWhereInput,
-        OR: [
-          { name: { contains: filters.search, mode: "insensitive" } },
-          { employeeId: { contains: filters.search, mode: "insensitive" } },
-        ],
-      };
+      where.OR = [
+        { employee: { ...where.employee as Prisma.EmployeeWhereInput, name: { contains: filters.search, mode: "insensitive" } } },
+        { employee: { ...where.employee as Prisma.EmployeeWhereInput, employeeId: { contains: filters.search, mode: "insensitive" } } },
+        { facility: { contains: filters.search, mode: "insensitive" } },
+      ];
     }
 
     return prisma.healthCheckupRecord.findMany({

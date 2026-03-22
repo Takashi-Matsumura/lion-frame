@@ -132,6 +132,8 @@ cd apps/web && npx prisma db push && pnpm db:seed
 
 > **健康管理ステータスフロー:** `NOT_BOOKED`(未予約) → `PENDING`(予約中/会社予約) → `BOOKED`(予約済) → `VISITED`(受診後) → `COMPLETED`(受診済)。個人予約は `NOT_BOOKED` → `BOOKED` → `VISITED` → `COMPLETED`。確定日到来で `BOOKED` → `VISITED` に自動遷移。
 > **健康管理インポート:** フォームXLSXエクスポートをインポート。会社予約→PENDING+希望日、個人予約→BOOKED+確定日。社員マッチングは `EMPLOYEE_PICKER`（社員番号 氏名）形式を解析。
+> **健康管理メニュー:** AccessKey `health_checkup` が必要（ADMINはバイパス）。
+> **ダッシュボード個人セクション:** 非ADMINユーザ向けに「あなたのタスク」セクション（健康診断ステータス、未回答フォーム、通知）を表示。健康診断ステータスは `/api/health-checkup/my-status` で取得。
 | NFCカード | NfcCard |
 | システム | SystemSetting |
 

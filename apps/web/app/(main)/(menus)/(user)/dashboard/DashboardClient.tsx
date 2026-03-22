@@ -12,9 +12,13 @@ import {
   RiShieldUserLine,
   RiStackLine,
   RiTeamLine,
+  RiFileList3Line,
+  RiNotification3Line,
+  RiHeartPulseLine,
 } from "react-icons/ri";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui";
 import {
   Card,
   CardContent,
@@ -91,12 +95,20 @@ export function DashboardClient({
   const [positions, setPositions] = useState<Position[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
 
+  // Personal data
+  const [healthRecords, setHealthRecords] = useState<{ campaignTitle: string; status: string; facility?: string; confirmedDate?: string; deadline?: string }[]>([]);
+  const [pendingForms, setPendingForms] = useState<{ id: string; title: string; titleJa?: string }[]>([]);
+  const [notifications, setNotifications] = useState<{ id: string; title: string; createdAt: string }[]>([]);
+
   const fetchData = useCallback(async () => {
     setLoading(true);
-    const [orgRes, posRes, empRes] = await Promise.allSettled([
+    const [orgRes, posRes, empRes, healthRes, formsRes, notifRes] = await Promise.allSettled([
       fetch("/api/organization"),
       fetch("/api/organization/positions"),
       fetch("/api/organization/employees?limit=9999&isActive=true"),
+      fetch("/api/health-checkup/my-status"),
+      fetch("/api/forms?status=pending"),
+      fetch("/api/notifications?limit=5&unread=true"),
     ]);
 
     if (orgRes.status === "fulfilled" && orgRes.value.ok) {
@@ -109,6 +121,20 @@ export function DashboardClient({
     if (empRes.status === "fulfilled" && empRes.value.ok) {
       const data = await empRes.value.json();
       setEmployees(data.employees ?? []);
+    }
+    if (healthRes.status === "fulfilled" && healthRes.value.ok) {
+      const data = await healthRes.value.json();
+      setHealthRecords(data.records ?? []);
+    }
+    if (formsRes.status === "fulfilled" && formsRes.value.ok) {
+      const data = await formsRes.value.json();
+      // Filter to forms that are PUBLISHED and user hasn't responded to
+      const published = (data.forms ?? []).filter((f: { status: string; hasResponded?: boolean }) => f.status === "PUBLISHED" && !f.hasResponded);
+      setPendingForms(published);
+    }
+    if (notifRes.status === "fulfilled" && notifRes.value.ok) {
+      const data = await notifRes.value.json();
+      setNotifications(data.notifications ?? []);
     }
     setLoading(false);
   }, []);
@@ -206,6 +232,114 @@ export function DashboardClient({
         <LoadingSkeleton />
       ) : hasOrg ? (
         <>
+          {/* Personal Section */}
+          <div>
+            <h3 className="text-sm font-medium text-muted-foreground mb-3">
+              {t.personalSectionTitle}
+            </h3>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              {/* Health Checkup Status */}
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <RiHeartPulseLine className="h-4 w-4 text-rose-500" />
+                    {t.healthCheckupTitle}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {healthRecords.length > 0 ? (
+                    <div className="space-y-2">
+                      {healthRecords.map((rec, i) => {
+                        const statusLabel: Record<string, string> = {
+                          NOT_BOOKED: "未予約",
+                          PENDING: "予約中",
+                          BOOKED: "予約済",
+                          VISITED: "受診後",
+                          COMPLETED: "受診済",
+                          EXEMPT: "対象外",
+                        };
+                        const statusColor: Record<string, string> = {
+                          NOT_BOOKED: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200",
+                          PENDING: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
+                          BOOKED: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
+                          VISITED: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
+                          COMPLETED: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+                          EXEMPT: "bg-muted text-muted-foreground",
+                        };
+                        return (
+                          <div key={i} className="flex items-center justify-between py-1">
+                            <span className="text-sm truncate">{rec.campaignTitle}</span>
+                            <Badge className={statusColor[rec.status] ?? ""}>
+                              {statusLabel[rec.status] ?? rec.status}
+                            </Badge>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">{t.healthCheckupNoData}</p>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Pending Forms */}
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <RiFileList3Line className="h-4 w-4 text-blue-500" />
+                    {t.pendingForms}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {pendingForms.length > 0 ? (
+                    <div className="space-y-2">
+                      {pendingForms.slice(0, 5).map((form) => (
+                        <div key={form.id} className="flex items-center justify-between py-1">
+                          <span className="text-sm truncate">{form.titleJa || form.title}</span>
+                          <Link href={`/forms/${form.id}`}>
+                            <Button variant="outline" size="sm" className="text-xs shrink-0">
+                              {t.respond}
+                            </Button>
+                          </Link>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">{t.pendingFormsNoData}</p>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Recent Notifications */}
+              <Card>
+                <CardHeader className="pb-2">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <RiNotification3Line className="h-4 w-4 text-amber-500" />
+                      {t.recentNotifications}
+                    </CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {notifications.length > 0 ? (
+                    <div className="space-y-2">
+                      {notifications.map((n) => (
+                        <div key={n.id} className="py-1">
+                          <p className="text-sm truncate">{n.title}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {new Date(n.createdAt).toLocaleDateString("ja-JP")}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground">{t.recentNotificationsNoData}</p>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+
           {/* KPI Cards */}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
             {kpiItems.map((item) => (

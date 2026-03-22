@@ -152,6 +152,16 @@ export const dashboardTranslations = {
     aiChatDesc: "Consult with AI assistant",
     adminPanel: "Admin Panel",
     adminPanelDesc: "System administration",
+    // Personal Section
+    personalSectionTitle: "Your Tasks",
+    healthCheckupTitle: "Health Checkup",
+    healthCheckupNoData: "No active campaigns",
+    pendingForms: "Pending Forms",
+    pendingFormsNoData: "All forms completed",
+    recentNotifications: "Notifications",
+    recentNotificationsNoData: "No new notifications",
+    respond: "Respond",
+    viewAll: "View All",
     // Empty State
     emptyTitle: "No Organization Data",
     emptyDescription:
@@ -182,6 +192,16 @@ export const dashboardTranslations = {
     aiChatDesc: "AIアシスタントに相談",
     adminPanel: "管理画面",
     adminPanelDesc: "システム管理",
+    // Personal Section
+    personalSectionTitle: "あなたのタスク",
+    healthCheckupTitle: "健康診断",
+    healthCheckupNoData: "対象のキャンペーンはありません",
+    pendingForms: "未回答フォーム",
+    pendingFormsNoData: "全フォーム回答済み",
+    recentNotifications: "通知",
+    recentNotificationsNoData: "新着通知はありません",
+    respond: "回答する",
+    viewAll: "すべて表示",
     // Empty State
     emptyTitle: "組織データがありません",
     emptyDescription:

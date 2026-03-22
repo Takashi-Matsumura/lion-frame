@@ -45,7 +45,7 @@ export const healthCheckupTranslations = jaOnly({
   confirmedDate: "確定日",
   allStatuses: "全ステータス",
   allDepartments: "全部署",
-  searchPlaceholder: "社員番号・氏名で検索",
+  searchPlaceholder: "社員番号・氏名・医療機関で検索",
   statusNotBooked: "未予約",
   statusPending: "予約中",
   statusBooked: "予約済",
