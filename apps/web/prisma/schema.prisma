@@ -77,6 +77,7 @@ model User {
   formSubmissions FormSubmission[] @relation("FormSubmitter")
   kioskSessions   KioskSession[]
   kioskEvents     KioskEvent[]   @relation("KioskEventCreator")
+  healthCampaigns HealthCheckupCampaign[] @relation("HealthCampaignCreator")
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 }
@@ -428,6 +429,9 @@ model Employee {
 
   // === キオスク ===
   eventAttendances    EventAttendance[]
+
+  // === 健康管理 ===
+  healthCheckupRecords HealthCheckupRecord[]
 
   @@index([positionCode])
   @@index([supervisorId])
@@ -1098,5 +1102,55 @@ model EventAttendance {
 
   @@unique([kioskSessionId, employeeId])
   @@index([kioskSessionId])
+  @@index([employeeId])
+}
+
+// ========================================
+// 社員健康管理
+// ========================================
+
+enum HealthCheckupStatus {
+  NOT_BOOKED
+  BOOKED
+  COMPLETED
+  EXEMPT
+}
+
+model HealthCheckupCampaign {
+  id            String    @id @default(cuid())
+  title         String
+  fiscalYear    Int
+  description   String?
+  deadline      DateTime?
+  sourceFormId  String?
+  columnMapping Json?
+  createdBy     String
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  records       HealthCheckupRecord[]
+  creator       User      @relation("HealthCampaignCreator", fields: [createdBy], references: [id])
+
+  @@index([fiscalYear])
+}
+
+model HealthCheckupRecord {
+  id             String                @id @default(cuid())
+  campaignId     String
+  campaign       HealthCheckupCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  employeeId     String
+  employee       Employee              @relation(fields: [employeeId], references: [id])
+  status         HealthCheckupStatus   @default(NOT_BOOKED)
+  bookingMethod  String?
+  checkupType    String?
+  preferredDates Json?
+  confirmedDate  DateTime?
+  rawData        Json?
+  notes          String?
+  importedAt     DateTime?
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+
+  @@unique([campaignId, employeeId])
+  @@index([campaignId, status])
   @@index([employeeId])
 }

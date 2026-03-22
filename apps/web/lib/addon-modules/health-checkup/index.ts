@@ -1,0 +1,1 @@
+export { healthCheckupModule } from "./module";

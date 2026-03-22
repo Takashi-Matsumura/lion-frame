@@ -6,6 +6,7 @@ import { systemModule } from "@/lib/core-modules/system";
 // アドオンモジュール（内部）
 import { formsModule } from "@/lib/addon-modules/forms";
 import { nfcCardModule } from "@/lib/addon-modules/nfc-card";
+import { healthCheckupModule } from "@/lib/addon-modules/health-checkup";
 import { workflowModule } from "@/lib/addon-modules/workflow";
 // キオスクモジュール
 import { eventAttendanceModule } from "@/lib/kiosk-modules/event-attendance";
@@ -137,6 +138,7 @@ export const moduleRegistry: ModuleRegistry = {
   // アドオンモジュール（内部）
   forms: formsModule,
   workflow: workflowModule,
+  "health-checkup": healthCheckupModule,
   "nfc-card": nfcCardModule,
   // キオスクモジュール
   "event-attendance": eventAttendanceModule,

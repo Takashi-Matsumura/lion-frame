@@ -123,6 +123,14 @@ function formatValue(value: unknown, fieldType: string): string {
   if (value === null || value === undefined) return "";
   if (fieldType === "YES_NO")
     return value === true || value === "true" ? "はい" : "いいえ";
+  if (fieldType === "EMPLOYEE_PICKER" && typeof value === "string") {
+    try {
+      const emp = JSON.parse(value);
+      if (emp?.employeeId && emp?.name) return `${emp.employeeId} ${emp.name}`;
+      if (emp?.name) return emp.name;
+    } catch { /* not JSON, return as-is */ }
+    return value;
+  }
   if (fieldType === "DATE_SLOTS" && Array.isArray(value)) {
     return value
       .map((v, i) => (v ? `第${i + 1}希望: ${v}` : ""))
