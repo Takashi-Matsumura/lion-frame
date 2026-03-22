@@ -47,8 +47,11 @@ export const POST = apiHandler(async (request) => {
     const records = preview.matched.map((m) => ({
       employeeId: m.employeeDbId,
       bookingMethod: m.bookingMethod,
+      facility: m.facility,
       checkupType: m.checkupType,
       preferredDates: m.preferredDates,
+      confirmedDate: m.confirmedDate,
+      status: m.status,
       rawData: m.rawData,
     }));
     const result = await HealthCheckupService.upsertRecords(id, records);

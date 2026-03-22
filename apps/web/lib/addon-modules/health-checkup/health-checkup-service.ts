@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
-import type { HealthCheckupStatus, Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
+import type { HealthCheckupStatus } from "@prisma/client";
 
 // ─── Types ───
 
@@ -21,7 +22,9 @@ export interface RecordFilters {
 export interface CampaignStats {
   total: number;
   notBooked: number;
+  pending: number;
   booked: number;
+  visited: number;
   completed: number;
   exempt: number;
   completionRate: number;
@@ -32,7 +35,9 @@ export interface DepartmentStat {
   departmentName: string;
   total: number;
   notBooked: number;
+  pending: number;
   booked: number;
+  visited: number;
   completed: number;
   exempt: number;
 }
@@ -40,8 +45,11 @@ export interface DepartmentStat {
 export interface ProcessedImportRecord {
   employeeId: string; // Employee.id (DB id)
   bookingMethod?: string;
+  facility?: string;
   checkupType?: string;
   preferredDates?: string[];
+  confirmedDate?: string;
+  status: "PENDING" | "BOOKED";
   rawData: Record<string, unknown>;
 }
 
@@ -176,13 +184,41 @@ export class HealthCheckupService {
     if (confirmedDate) {
       data.confirmedDate = new Date(confirmedDate + "T00:00:00+09:00");
     }
+    // PENDING → BOOKED: 確定日を設定し希望日をクリア
+    if (status === "BOOKED" && confirmedDate) {
+      data.preferredDates = Prisma.JsonNull;
+    }
     if (status === "NOT_BOOKED") {
+      data.confirmedDate = null;
+      data.preferredDates = Prisma.JsonNull;
+    }
+    if (status === "PENDING") {
       data.confirmedDate = null;
     }
     return prisma.healthCheckupRecord.update({
       where: { id: recordId },
       data,
     });
+  }
+
+  /**
+   * 確定日を過ぎた BOOKED レコードを VISITED（受診後）に自動更新
+   * キャンペーン詳細表示時に呼び出す
+   */
+  static async autoTransitionToVisited(campaignId: string) {
+    const todayJST = new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Tokyo" }).format(new Date());
+    const todayDate = new Date(todayJST + "T00:00:00+09:00");
+
+    const updated = await prisma.healthCheckupRecord.updateMany({
+      where: {
+        campaignId,
+        status: "BOOKED",
+        confirmedDate: { lt: todayDate },
+      },
+      data: { status: "VISITED" },
+    });
+
+    return updated.count;
   }
 
   // ─── Stats ───
@@ -202,21 +238,24 @@ export class HealthCheckupService {
       sm[row.status] = row._count;
     }
 
+    const pending = sm.PENDING ?? 0;
     const booked = sm.BOOKED ?? 0;
+    const visited = sm.VISITED ?? 0;
     const completed = sm.COMPLETED ?? 0;
     const exempt = sm.EXEMPT ?? 0;
     const recordedNotBooked = sm.NOT_BOOKED ?? 0;
-    const totalRecorded = booked + completed + exempt + recordedNotBooked;
-    // レコードがない社員 = 未予約
+    const totalRecorded = pending + booked + visited + completed + exempt + recordedNotBooked;
     const notBooked = totalEmployees - totalRecorded + recordedNotBooked;
 
     return {
       total: totalEmployees,
       notBooked,
+      pending,
       booked,
+      visited,
       completed,
       exempt,
-      completionRate: totalEmployees > 0 ? Math.round(((booked + completed) / totalEmployees) * 100) : 0,
+      completionRate: totalEmployees > 0 ? Math.round(((booked + visited + completed) / totalEmployees) * 100) : 0,
     };
   }
 
@@ -248,11 +287,13 @@ export class HealthCheckupService {
       let stat = deptMap.get(deptName);
       if (!stat) {
         stat = {
-          departmentId: deptName, // 名前ベースのキー
+          departmentId: deptName,
           departmentName: deptName,
           total: 0,
           notBooked: 0,
+          pending: 0,
           booked: 0,
+          visited: 0,
           completed: 0,
           exempt: 0,
         };
@@ -262,7 +303,9 @@ export class HealthCheckupService {
 
       const status = recordMap.get(emp.id);
       if (!status || status === "NOT_BOOKED") stat.notBooked++;
+      else if (status === "PENDING") stat.pending++;
       else if (status === "BOOKED") stat.booked++;
+      else if (status === "VISITED") stat.visited++;
       else if (status === "COMPLETED") stat.completed++;
       else if (status === "EXEMPT") stat.exempt++;
     }
@@ -293,17 +336,23 @@ export class HealthCheckupService {
             },
           });
 
+          const recordData = {
+            status: rec.status,
+            bookingMethod: rec.bookingMethod,
+            facility: rec.facility,
+            checkupType: rec.checkupType,
+            preferredDates: rec.preferredDates as Prisma.InputJsonValue ?? undefined,
+            confirmedDate: rec.confirmedDate
+              ? new Date(rec.confirmedDate + "T00:00:00+09:00")
+              : undefined,
+            rawData: rec.rawData as Prisma.InputJsonValue,
+            importedAt: new Date(),
+          };
+
           if (existing) {
             await tx.healthCheckupRecord.update({
               where: { id: existing.id },
-              data: {
-                status: "BOOKED",
-                bookingMethod: rec.bookingMethod,
-                checkupType: rec.checkupType,
-                preferredDates: rec.preferredDates as Prisma.InputJsonValue,
-                rawData: rec.rawData as Prisma.InputJsonValue,
-                importedAt: new Date(),
-              },
+              data: recordData,
             });
             updated++;
           } else {
@@ -311,12 +360,7 @@ export class HealthCheckupService {
               data: {
                 campaignId,
                 employeeId: rec.employeeId,
-                status: "BOOKED",
-                bookingMethod: rec.bookingMethod,
-                checkupType: rec.checkupType,
-                preferredDates: rec.preferredDates as Prisma.InputJsonValue,
-                rawData: rec.rawData as Prisma.InputJsonValue,
-                importedAt: new Date(),
+                ...recordData,
               },
             });
             created++;

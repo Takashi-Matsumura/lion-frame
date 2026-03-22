@@ -54,6 +54,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
+import { DatePicker } from "@/components/ui/date-picker";
 import { HealthCheckupAIAnalysis } from "@/components/business/health-checkup/HealthCheckupAIAnalysis";
 import { healthCheckupTranslations, type Language } from "./translations";
 
@@ -73,7 +74,9 @@ interface CampaignItem {
 interface CampaignStats {
   total: number;
   notBooked: number;
+  pending: number;
   booked: number;
+  visited: number;
   completed: number;
   exempt: number;
   completionRate: number;
@@ -84,7 +87,9 @@ interface DepartmentStat {
   departmentName: string;
   total: number;
   notBooked: number;
+  pending: number;
   booked: number;
+  visited: number;
   completed: number;
   exempt: number;
 }
@@ -93,6 +98,7 @@ interface RecordItem {
   id: string;
   status: string;
   bookingMethod: string | null;
+  facility: string | null;
   checkupType: string | null;
   preferredDates: string[] | null;
   confirmedDate: string | null;
@@ -117,7 +123,9 @@ type ViewMode = "list" | "detail" | "records" | "import";
 
 const statusColors: Record<string, string> = {
   NOT_BOOKED: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200",
+  PENDING: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
   BOOKED: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
+  VISITED: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
   COMPLETED: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
   EXEMPT: "bg-muted text-muted-foreground",
 };
@@ -133,12 +141,13 @@ export function HealthCheckupClient({ language }: { language: Language }) {
   const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(null);
   const [selectedCampaign, setSelectedCampaign] = useState<CampaignItem | null>(null);
 
-  // Create dialog
-  const [createOpen, setCreateOpen] = useState(false);
-  const [createTitle, setCreateTitle] = useState("");
-  const [createYear, setCreateYear] = useState(new Date().getFullYear());
-  const [createDesc, setCreateDesc] = useState("");
-  const [creating, setCreating] = useState(false);
+  // Create/Edit dialog
+  const [editOpen, setEditOpen] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null); // null = create, string = edit
+  const [editTitle, setEditTitle] = useState("");
+  const [editYear, setEditYear] = useState(new Date().getFullYear());
+  const [editDesc, setEditDesc] = useState("");
+  const [saving, setSaving] = useState(false);
 
   // Delete dialog
   const [deleteTarget, setDeleteTarget] = useState<CampaignItem | null>(null);
@@ -153,6 +162,10 @@ export function HealthCheckupClient({ language }: { language: Language }) {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
 
+  // Confirm date dialog state
+  const [confirmTarget, setConfirmTarget] = useState<RecordItem | null>(null);
+  const [confirmDate, setConfirmDate] = useState("");
+
   // Import state
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importHeaders, setImportHeaders] = useState<string[]>([]);
@@ -161,6 +174,7 @@ export function HealthCheckupClient({ language }: { language: Language }) {
   const [columnMapping, setColumnMapping] = useState({
     employee: "",
     bookingMethod: "",
+    facility: "",
     checkupType: "",
     preferredDates: "",
   });
@@ -185,29 +199,50 @@ export function HealthCheckupClient({ language }: { language: Language }) {
     loadCampaigns();
   }, [loadCampaigns]);
 
-  const handleCreate = async () => {
-    if (!createTitle.trim()) return;
-    setCreating(true);
+  const openCreateDialog = () => {
+    setEditId(null);
+    setEditTitle("");
+    setEditYear(new Date().getFullYear());
+    setEditDesc("");
+    setEditOpen(true);
+  };
+
+  const openEditDialog = (c: CampaignItem) => {
+    setEditId(c.id);
+    setEditTitle(c.title);
+    setEditYear(c.fiscalYear);
+    setEditDesc(c.description ?? "");
+    setEditOpen(true);
+  };
+
+  const handleSaveCampaign = async () => {
+    if (!editTitle.trim()) return;
+    setSaving(true);
     try {
-      const res = await fetch("/api/health-checkup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: createTitle,
-          fiscalYear: createYear,
-          description: createDesc || undefined,
-        }),
-      });
+      const body = {
+        title: editTitle,
+        fiscalYear: editYear,
+        description: editDesc || undefined,
+      };
+      const res = editId
+        ? await fetch(`/api/health-checkup/${editId}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+          })
+        : await fetch("/api/health-checkup", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+          });
       if (!res.ok) throw new Error();
       toast.success(t.saved);
-      setCreateOpen(false);
-      setCreateTitle("");
-      setCreateDesc("");
+      setEditOpen(false);
       loadCampaigns();
     } catch {
       toast.error(t.saveError);
     } finally {
-      setCreating(false);
+      setSaving(false);
     }
   };
 
@@ -283,6 +318,31 @@ export function HealthCheckupClient({ language }: { language: Language }) {
     }
   };
 
+  const openConfirmDialog = (rec: RecordItem) => {
+    setConfirmTarget(rec);
+    setConfirmDate("");
+  };
+
+  const handleConfirmDate = async () => {
+    if (!confirmTarget || !confirmDate) return;
+    try {
+      const res = await fetch(
+        `/api/health-checkup/${selectedCampaignId}/records/${confirmTarget.id}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: "BOOKED", confirmedDate: confirmDate }),
+        },
+      );
+      if (!res.ok) throw new Error();
+      toast.success(t.saved);
+      setConfirmTarget(null);
+      loadRecords();
+    } catch {
+      toast.error(t.saveError);
+    }
+  };
+
   // ─── Import ───
 
   const handleFileSelect = async (file: File) => {
@@ -311,6 +371,7 @@ export function HealthCheckupClient({ language }: { language: Language }) {
       for (const h of headers) {
         if (h.includes("社員") || h.includes("Employee")) autoMapping.employee = h;
         else if (h.includes("予約方法")) autoMapping.bookingMethod = h;
+        else if (h.includes("健診機関") || h.includes("医療機関")) autoMapping.facility = h;
         else if (h.includes("健康診断") || h.includes("健診")) autoMapping.checkupType = h;
         else if (h.includes("希望日") || h.includes("候補")) autoMapping.preferredDates = h;
       }
@@ -384,7 +445,9 @@ export function HealthCheckupClient({ language }: { language: Language }) {
   const getStatusLabel = (status: string) => {
     const map: Record<string, string> = {
       NOT_BOOKED: t.statusNotBooked,
+      PENDING: t.statusPending,
       BOOKED: t.statusBooked,
+      VISITED: t.statusVisited,
       COMPLETED: t.statusCompleted,
       EXEMPT: t.statusExempt,
     };
@@ -463,8 +526,16 @@ export function HealthCheckupClient({ language }: { language: Language }) {
                         <div className="text-xs text-muted-foreground">{t.totalEmployees}</div>
                       </div>
                       <div className="text-center">
+                        <div className="text-lg font-semibold text-yellow-600 dark:text-yellow-400">{stats.pending}</div>
+                        <div className="text-xs text-muted-foreground">{t.pending}</div>
+                      </div>
+                      <div className="text-center">
                         <div className="text-lg font-semibold text-blue-600 dark:text-blue-400">{stats.booked}</div>
                         <div className="text-xs text-muted-foreground">{t.booked}</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-lg font-semibold text-purple-600 dark:text-purple-400">{stats.visited}</div>
+                        <div className="text-xs text-muted-foreground">{t.visited}</div>
                       </div>
                       <div className="text-center">
                         <div className="text-lg font-semibold text-green-600 dark:text-green-400">{stats.completed}</div>
@@ -498,7 +569,9 @@ export function HealthCheckupClient({ language }: { language: Language }) {
                       <TableRow>
                         <TableHead className="text-xs">{t.department}</TableHead>
                         <TableHead className="text-xs text-right">{t.totalEmployees}</TableHead>
+                        <TableHead className="text-xs text-right">{t.pending}</TableHead>
                         <TableHead className="text-xs text-right">{t.booked}</TableHead>
+                        <TableHead className="text-xs text-right">{t.visited}</TableHead>
                         <TableHead className="text-xs text-right">{t.completed}</TableHead>
                         <TableHead className="text-xs text-right">{t.notBooked}</TableHead>
                         <TableHead className="text-xs w-32">{t.progress}</TableHead>
@@ -507,14 +580,16 @@ export function HealthCheckupClient({ language }: { language: Language }) {
                     <TableBody>
                       {deptStats.map((dept) => {
                         const rate = dept.total > 0
-                          ? Math.round(((dept.booked + dept.completed) / dept.total) * 100)
+                          ? Math.round(((dept.booked + dept.visited + dept.completed) / dept.total) * 100)
                           : 0;
                         const isComplete = dept.notBooked === 0;
                         return (
                           <TableRow key={dept.departmentId}>
                             <TableCell className="text-sm font-medium">{dept.departmentName}</TableCell>
                             <TableCell className="text-sm text-right">{dept.total}</TableCell>
+                            <TableCell className="text-sm text-right text-yellow-600 dark:text-yellow-400">{dept.pending}</TableCell>
                             <TableCell className="text-sm text-right text-blue-600 dark:text-blue-400">{dept.booked}</TableCell>
+                            <TableCell className="text-sm text-right text-purple-600 dark:text-purple-400">{dept.visited}</TableCell>
                             <TableCell className="text-sm text-right text-green-600 dark:text-green-400">{dept.completed}</TableCell>
                             <TableCell className="text-sm text-right text-orange-600 dark:text-orange-400">{dept.notBooked}</TableCell>
                             <TableCell>
@@ -566,7 +641,9 @@ export function HealthCheckupClient({ language }: { language: Language }) {
                 <SelectContent>
                   <SelectItem value="all">{t.allStatuses}</SelectItem>
                   <SelectItem value="NOT_BOOKED">{t.statusNotBooked}</SelectItem>
+                  <SelectItem value="PENDING">{t.statusPending}</SelectItem>
                   <SelectItem value="BOOKED">{t.statusBooked}</SelectItem>
+                  <SelectItem value="VISITED">{t.statusVisited}</SelectItem>
                   <SelectItem value="COMPLETED">{t.statusCompleted}</SelectItem>
                   <SelectItem value="EXEMPT">{t.statusExempt}</SelectItem>
                 </SelectContent>
@@ -592,6 +669,7 @@ export function HealthCheckupClient({ language }: { language: Language }) {
                       <TableHead className="text-xs">{t.departmentName}</TableHead>
                       <TableHead className="text-xs">{t.status}</TableHead>
                       <TableHead className="text-xs">{t.bookingMethod}</TableHead>
+                      <TableHead className="text-xs">{t.facility}</TableHead>
                       <TableHead className="text-xs">{t.checkupType}</TableHead>
                       <TableHead className="text-xs">{t.preferredDates}</TableHead>
                     </TableRow>
@@ -616,18 +694,37 @@ export function HealthCheckupClient({ language }: { language: Language }) {
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="NOT_BOOKED">{t.statusNotBooked}</SelectItem>
+                              <SelectItem value="PENDING">{t.statusPending}</SelectItem>
                               <SelectItem value="BOOKED">{t.statusBooked}</SelectItem>
+                              <SelectItem value="VISITED">{t.statusVisited}</SelectItem>
                               <SelectItem value="COMPLETED">{t.statusCompleted}</SelectItem>
                               <SelectItem value="EXEMPT">{t.statusExempt}</SelectItem>
                             </SelectContent>
                           </Select>
                         </TableCell>
                         <TableCell className="text-sm">{rec.bookingMethod ?? "-"}</TableCell>
+                        <TableCell className="text-sm text-muted-foreground">{rec.facility ?? "-"}</TableCell>
                         <TableCell className="text-sm">{rec.checkupType ?? "-"}</TableCell>
                         <TableCell className="text-sm text-muted-foreground">
-                          {rec.preferredDates
-                            ? (rec.preferredDates as string[]).filter(Boolean).join(", ")
-                            : "-"}
+                          {rec.confirmedDate ? (
+                            new Date(rec.confirmedDate).toLocaleDateString("ja-JP", {
+                              month: "long",
+                              day: "numeric",
+                              weekday: "short",
+                            })
+                          ) : rec.status === "PENDING" && rec.preferredDates ? (
+                            <button
+                              type="button"
+                              className="text-left text-primary hover:underline cursor-pointer"
+                              onClick={() => openConfirmDialog(rec)}
+                            >
+                              {(rec.preferredDates as string[]).filter(Boolean).join(", ")}
+                            </button>
+                          ) : rec.preferredDates ? (
+                            (rec.preferredDates as string[]).filter(Boolean).join(", ")
+                          ) : (
+                            "-"
+                          )}
                         </TableCell>
                       </TableRow>
                     ))}
@@ -683,6 +780,7 @@ export function HealthCheckupClient({ language }: { language: Language }) {
                       {([
                         ["employee", t.employeeColumn],
                         ["bookingMethod", t.bookingMethodColumn],
+                        ["facility", t.facilityColumn],
                         ["checkupType", t.checkupTypeColumn],
                         ["preferredDates", t.preferredDatesColumn],
                       ] as const).map(([key, label]) => (
@@ -818,6 +916,53 @@ export function HealthCheckupClient({ language }: { language: Language }) {
             </Card>
           </div>
         )}
+
+        {/* Confirm date dialog */}
+        <Dialog open={!!confirmTarget} onOpenChange={(open) => !open && setConfirmTarget(null)}>
+          <DialogContent className="sm:max-w-sm">
+            <DialogHeader>
+              <DialogTitle>{t.confirmDateTitle}</DialogTitle>
+              <DialogDescription>{t.confirmDateDescription}</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              {confirmTarget?.preferredDates && (confirmTarget.preferredDates as string[]).filter(Boolean).length > 0 && (
+                <div>
+                  <Label className="text-xs">{t.selectFromCandidates}</Label>
+                  <div className="flex flex-wrap gap-2 mt-1">
+                    {(confirmTarget.preferredDates as string[]).filter(Boolean).map((d) => (
+                      <Button
+                        key={d}
+                        variant={confirmDate === d ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setConfirmDate(d)}
+                      >
+                        {d}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <div>
+                <Label className="text-xs">{t.enterManually}</Label>
+                <DatePicker
+                  value={confirmDate}
+                  onChange={(v) => setConfirmDate(v)}
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setConfirmTarget(null)}>
+                  {t.cancel}
+                </Button>
+                <Button
+                  onClick={handleConfirmDate}
+                  disabled={!confirmDate}
+                >
+                  {t.confirm}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     );
   }
@@ -829,7 +974,7 @@ export function HealthCheckupClient({ language }: { language: Language }) {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">{t.subtitle}</p>
-        <Button onClick={() => setCreateOpen(true)}>{t.newCampaign}</Button>
+        <Button onClick={openCreateDialog}>{t.newCampaign}</Button>
       </div>
 
       {campaigns.length === 0 ? (
@@ -867,6 +1012,13 @@ export function HealthCheckupClient({ language }: { language: Language }) {
                 >
                   <Button
                     size="sm"
+                    variant="outline"
+                    onClick={() => openEditDialog(c)}
+                  >
+                    {t.edit}
+                  </Button>
+                  <Button
+                    size="sm"
                     variant="ghost"
                     className="text-destructive"
                     onClick={() => setDeleteTarget(c)}
@@ -881,18 +1033,18 @@ export function HealthCheckupClient({ language }: { language: Language }) {
       )}
 
       {/* Create dialog */}
-      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>{t.newCampaign}</DialogTitle>
+            <DialogTitle>{editId ? t.edit : t.newCampaign}</DialogTitle>
             <DialogDescription>{t.subtitle}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
               <Label className="text-xs">{t.campaignTitle}</Label>
               <Input
-                value={createTitle}
-                onChange={(e) => setCreateTitle(e.target.value)}
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
                 placeholder={t.campaignTitlePlaceholder}
               />
             </div>
@@ -900,28 +1052,28 @@ export function HealthCheckupClient({ language }: { language: Language }) {
               <Label className="text-xs">{t.fiscalYear}</Label>
               <Input
                 type="number"
-                value={createYear}
-                onChange={(e) => setCreateYear(Number(e.target.value))}
+                value={editYear}
+                onChange={(e) => setEditYear(Number(e.target.value))}
               />
             </div>
             <div>
               <Label className="text-xs">{t.campaignDescription}</Label>
               <Textarea
-                value={createDesc}
-                onChange={(e) => setCreateDesc(e.target.value)}
+                value={editDesc}
+                onChange={(e) => setEditDesc(e.target.value)}
                 rows={3}
               />
             </div>
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setCreateOpen(false)}>
+              <Button variant="outline" onClick={() => setEditOpen(false)}>
                 {t.cancel}
               </Button>
               <Button
-                onClick={handleCreate}
-                disabled={creating || !createTitle.trim()}
-                loading={creating}
+                onClick={handleSaveCampaign}
+                disabled={saving || !editTitle.trim()}
+                loading={saving}
               >
-                {t.create}
+                {editId ? t.save : t.create}
               </Button>
             </div>
           </div>

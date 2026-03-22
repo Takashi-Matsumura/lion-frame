@@ -17,6 +17,9 @@ export const GET = apiHandler(async (request) => {
   const campaign = await HealthCheckupService.getCampaignById(id);
   if (!campaign) throw ApiError.notFound("Campaign not found", "キャンペーンが見つかりません");
 
+  // 確定日を過ぎた BOOKED → VISITED に自動遷移
+  await HealthCheckupService.autoTransitionToVisited(id);
+
   const stats = await HealthCheckupService.getCampaignStats(id);
   const departments = await HealthCheckupService.getDepartmentStats(id);
 

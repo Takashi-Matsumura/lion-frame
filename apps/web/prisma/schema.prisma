@@ -1111,7 +1111,9 @@ model EventAttendance {
 
 enum HealthCheckupStatus {
   NOT_BOOKED
+  PENDING
   BOOKED
+  VISITED
   COMPLETED
   EXEMPT
 }
@@ -1141,6 +1143,7 @@ model HealthCheckupRecord {
   employee       Employee              @relation(fields: [employeeId], references: [id])
   status         HealthCheckupStatus   @default(NOT_BOOKED)
   bookingMethod  String?
+  facility       String?
   checkupType    String?
   preferredDates Json?
   confirmedDate  DateTime?

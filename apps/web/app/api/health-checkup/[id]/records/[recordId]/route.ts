@@ -3,7 +3,7 @@ import { ApiError } from "@/lib/api/api-error";
 import { HealthCheckupService } from "@/lib/addon-modules/health-checkup/health-checkup-service";
 import type { HealthCheckupStatus, Role } from "@prisma/client";
 
-const validStatuses: HealthCheckupStatus[] = ["NOT_BOOKED", "BOOKED", "COMPLETED", "EXEMPT"];
+const validStatuses: HealthCheckupStatus[] = ["NOT_BOOKED", "PENDING", "BOOKED", "VISITED", "COMPLETED", "EXEMPT"];
 
 export const PATCH = apiHandler(async (request) => {
   const url = new URL(request.url);

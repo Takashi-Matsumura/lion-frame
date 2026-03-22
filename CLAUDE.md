@@ -128,6 +128,10 @@ cd apps/web && npx prisma db push && pnpm db:seed
 > **ラジオフィールドのデフォルト値:** `config.defaultValue` に選択肢の文字列を設定。プレビュー・回答画面で初期選択される。
 > **フォーム回答:** `allowMultiple: false` の場合、再送信で既存回答を上書き（delete + create）。回答済みフォームを開くと既存回答がプリフィルされる。
 > **公開中フォームのレビュー:** フォーム公開後、エディタ画面は左右分割（左: フィールド構成一覧、右: 回答者視点のライブプレビュー）。
+| 健康管理 | HealthCheckupCampaign, HealthCheckupRecord |
+
+> **健康管理ステータスフロー:** `NOT_BOOKED`(未予約) → `PENDING`(予約中/会社予約) → `BOOKED`(予約済) → `VISITED`(受診後) → `COMPLETED`(受診済)。個人予約は `NOT_BOOKED` → `BOOKED` → `VISITED` → `COMPLETED`。確定日到来で `BOOKED` → `VISITED` に自動遷移。
+> **健康管理インポート:** フォームXLSXエクスポートをインポート。会社予約→PENDING+希望日、個人予約→BOOKED+確定日。社員マッチングは `EMPLOYEE_PICKER`（社員番号 氏名）形式を解析。
 | NFCカード | NfcCard |
 | システム | SystemSetting |
 

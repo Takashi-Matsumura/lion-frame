@@ -175,21 +175,34 @@ export async function previewImport(
     seenEmployeeIds.add(employee.id);
 
     // レコード構築
+    const bookingMethod = mapping.bookingMethod ? row[mapping.bookingMethod] : undefined;
+    const isPersonal = bookingMethod === "個人予約";
+
     const record: MatchedRecord = {
       employeeDbId: employee.id,
       employeeId: employee.employeeId,
       employeeName: employee.name,
+      bookingMethod,
+      status: isPersonal ? "BOOKED" : "PENDING",
       rawData: { ...row },
     };
 
-    if (mapping.bookingMethod && row[mapping.bookingMethod]) {
-      record.bookingMethod = row[mapping.bookingMethod];
+    if (mapping.facility && row[mapping.facility]) {
+      record.facility = row[mapping.facility];
     }
     if (mapping.checkupType && row[mapping.checkupType]) {
       record.checkupType = row[mapping.checkupType];
     }
+
     if (mapping.preferredDates && row[mapping.preferredDates]) {
-      record.preferredDates = parseDateSlots(row[mapping.preferredDates]!);
+      const dates = parseDateSlots(row[mapping.preferredDates]!);
+      if (isPersonal && dates.length > 0) {
+        // 個人予約: 最初の日付を確定日として設定
+        record.confirmedDate = dates[0];
+      } else {
+        // 会社予約: 候補日として設定
+        record.preferredDates = dates;
+      }
     }
 
     matched.push(record);
