@@ -9,22 +9,29 @@ import {
 import { EditorState, Range } from "@codemirror/state";
 import { syntaxTree } from "@codemirror/language";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type SyntaxNodeLike = any;
+// Structural type for syntax tree nodes (avoids @lezer/common dependency)
+interface TreeNode {
+  from: number;
+  to: number;
+  type: { name: string };
+  getChild(name: string): TreeNode | null;
+  getChildren(name: string): TreeNode[];
+  parent?: TreeNode | null;
+}
 
-// ── Widget classes ──
+// ── Widget singletons ──
 
-class BulletWidget extends WidgetType {
+const bulletWidget = new (class extends WidgetType {
   toDOM() {
     const span = document.createElement("span");
     span.className = "cm-list-bullet-widget";
-    span.textContent = "•";
+    span.textContent = "\u2022";
     return span;
   }
   eq() {
     return true;
   }
-}
+})();
 
 class CheckboxWidget extends WidgetType {
   constructor(readonly checked: boolean) {
@@ -33,13 +40,16 @@ class CheckboxWidget extends WidgetType {
   toDOM() {
     const span = document.createElement("span");
     span.className = `cm-checkbox-widget ${this.checked ? "checked" : ""}`;
-    span.textContent = this.checked ? "☑" : "☐";
+    span.textContent = this.checked ? "\u2611" : "\u2610";
     return span;
   }
   eq(other: CheckboxWidget) {
     return this.checked === other.checked;
   }
 }
+
+const checkboxUnchecked = new CheckboxWidget(false);
+const checkboxChecked = new CheckboxWidget(true);
 
 // ── Helpers ──
 
@@ -70,14 +80,37 @@ function nodeHasCursor(
   return false;
 }
 
+/** Shared pattern: hide symmetric markers, style content between them */
+function hideMarkers(
+  decos: Range<Decoration>[],
+  from: number,
+  to: number,
+  markerLen: number,
+  contentClass: string
+) {
+  if (to - from <= markerLen * 2) return;
+  decos.push(
+    Decoration.mark({ class: "cm-hide-syntax" }).range(from, from + markerLen)
+  );
+  decos.push(
+    Decoration.mark({ class: "cm-hide-syntax" }).range(to - markerLen, to)
+  );
+  decos.push(
+    Decoration.mark({ class: contentClass }).range(
+      from + markerLen,
+      to - markerLen
+    )
+  );
+}
+
 // ── Inline element handlers ──
 
 function handleHeading(
   state: EditorState,
-  node: { from: number; to: number; type: { name: string }; node: SyntaxNodeLike },
+  node: { from: number; to: number; type: { name: string }; node: TreeNode },
   decos: Range<Decoration>[]
 ) {
-  const level = parseInt(node.type.name.charAt(node.type.name.length - 1));
+  const level = node.type.name.charCodeAt(10) - 48; // "ATXHeading1"[10] = '1'
   const headerMark = node.node.getChild("HeaderMark");
   if (!headerMark) return;
 
@@ -91,79 +124,13 @@ function handleHeading(
   }
   if (afterMark < node.to) {
     decos.push(
-      Decoration.mark({ class: `cm-heading-${level}` }).range(
-        afterMark,
-        node.to
-      )
+      Decoration.mark({ class: `cm-heading-${level}` }).range(afterMark, node.to)
     );
   }
 }
 
-function handleStrongEmphasis(
-  state: EditorState,
-  from: number,
-  to: number,
-  decos: Range<Decoration>[]
-) {
-  const text = state.sliceDoc(from, to);
-  const marker = text.startsWith("__") ? "__" : "**";
-  const mLen = marker.length;
-  if (to - from <= mLen * 2) return;
-
-  decos.push(
-    Decoration.mark({ class: "cm-hide-syntax" }).range(from, from + mLen)
-  );
-  decos.push(
-    Decoration.mark({ class: "cm-hide-syntax" }).range(to - mLen, to)
-  );
-  decos.push(
-    Decoration.mark({ class: "cm-rendered-bold" }).range(
-      from + mLen,
-      to - mLen
-    )
-  );
-}
-
-function handleEmphasis(
-  state: EditorState,
-  from: number,
-  to: number,
-  decos: Range<Decoration>[]
-) {
-  const text = state.sliceDoc(from, to);
-  const marker = text.startsWith("_") ? "_" : "*";
-  const mLen = marker.length;
-  if (to - from <= mLen * 2) return;
-
-  decos.push(
-    Decoration.mark({ class: "cm-hide-syntax" }).range(from, from + mLen)
-  );
-  decos.push(
-    Decoration.mark({ class: "cm-hide-syntax" }).range(to - mLen, to)
-  );
-  decos.push(
-    Decoration.mark({ class: "cm-rendered-italic" }).range(
-      from + mLen,
-      to - mLen
-    )
-  );
-}
-
-function handleInlineCode(from: number, to: number, decos: Range<Decoration>[]) {
-  if (to - from <= 2) return;
-  decos.push(
-    Decoration.mark({ class: "cm-hide-syntax" }).range(from, from + 1)
-  );
-  decos.push(
-    Decoration.mark({ class: "cm-hide-syntax" }).range(to - 1, to)
-  );
-  decos.push(
-    Decoration.mark({ class: "cm-rendered-code" }).range(from + 1, to - 1)
-  );
-}
-
 function handleLink(
-  node: { from: number; to: number; node: SyntaxNodeLike },
+  node: { from: number; to: number; node: TreeNode },
   decos: Range<Decoration>[]
 ) {
   const linkMarks = node.node.getChildren("LinkMark");
@@ -184,40 +151,17 @@ function handleLink(
   );
 }
 
-function handleStrikethrough(from: number, to: number, decos: Range<Decoration>[]) {
-  if (to - from <= 4) return;
-  decos.push(
-    Decoration.mark({ class: "cm-hide-syntax" }).range(from, from + 2)
-  );
-  decos.push(
-    Decoration.mark({ class: "cm-hide-syntax" }).range(to - 2, to)
-  );
-  decos.push(
-    Decoration.mark({ class: "cm-rendered-strikethrough" }).range(
-      from + 2,
-      to - 2
-    )
-  );
-}
-
-function handleHorizontalRule(from: number, to: number, decos: Range<Decoration>[]) {
-  decos.push(
-    Decoration.mark({ class: "cm-rendered-hr-line" }).range(from, to)
-  );
-}
-
 // ── Block element handlers ──
 
 function handleBlockquote(
   state: EditorState,
-  node: { from: number; to: number; node: SyntaxNodeLike },
+  node: { from: number; to: number; node: TreeNode },
   cursorLines: Set<number>,
   decos: Range<Decoration>[]
 ) {
   const firstLine = state.doc.lineAt(node.from).number;
   const lastLine = state.doc.lineAt(node.to).number;
 
-  // Add border-left line decoration to all lines
   for (let lineNum = firstLine; lineNum <= lastLine; lineNum++) {
     const line = state.doc.line(lineNum);
     decos.push(
@@ -225,8 +169,7 @@ function handleBlockquote(
     );
   }
 
-  // Hide all QuoteMark (>) descendants on non-cursor lines
-  // Use syntaxTree iterate to find all QuoteMarks including nested ones
+  // Find all QuoteMark descendants (including nested blockquotes)
   syntaxTree(state).iterate({
     from: node.from,
     to: node.to,
@@ -239,10 +182,7 @@ function handleBlockquote(
       const afterMark = Math.min(child.to + 1, lineObj.to);
       if (afterMark > child.from) {
         decos.push(
-          Decoration.mark({ class: "cm-hide-syntax" }).range(
-            child.from,
-            afterMark
-          )
+          Decoration.mark({ class: "cm-hide-syntax" }).range(child.from, afterMark)
         );
       }
     },
@@ -251,30 +191,20 @@ function handleBlockquote(
 
 function handleFencedCode(
   state: EditorState,
-  node: { from: number; to: number; node: SyntaxNodeLike },
+  node: { from: number; to: number; node: TreeNode },
   cursorLines: Set<number>,
   decos: Range<Decoration>[]
 ) {
   const firstLine = state.doc.lineAt(node.from).number;
   const lastLine = state.doc.lineAt(node.to).number;
+  const cursorInBlock = nodeHasCursor(state, node.from, node.to, cursorLines);
 
-  // Check if cursor is anywhere in the code block
-  let cursorInBlock = false;
-  for (let l = firstLine; l <= lastLine; l++) {
-    if (cursorLines.has(l)) {
-      cursorInBlock = true;
-      break;
-    }
-  }
-
-  // Get CodeMark positions (opening/closing ```)
   const codeMarks = node.node.getChildren("CodeMark");
   const fenceLines = new Set<number>();
   for (const cm of codeMarks) {
     fenceLines.add(state.doc.lineAt(cm.from).number);
   }
 
-  // Also treat the CodeInfo line (language tag) as part of fence
   const codeInfo = node.node.getChild("CodeInfo");
   if (codeInfo) {
     fenceLines.add(state.doc.lineAt(codeInfo.from).number);
@@ -282,30 +212,23 @@ function handleFencedCode(
 
   for (let lineNum = firstLine; lineNum <= lastLine; lineNum++) {
     const line = state.doc.line(lineNum);
-    const isFenceLine = fenceLines.has(lineNum);
 
-    if (isFenceLine) {
+    if (fenceLines.has(lineNum)) {
       if (!cursorInBlock) {
-        // Hide fence lines when cursor is outside block
         decos.push(
           Decoration.line({ class: "cm-code-fence-hidden" }).range(line.from)
         );
         if (line.to > line.from) {
           decos.push(
-            Decoration.mark({ class: "cm-hide-syntax" }).range(
-              line.from,
-              line.to
-            )
+            Decoration.mark({ class: "cm-hide-syntax" }).range(line.from, line.to)
           );
         }
       } else {
-        // Dim fence lines when cursor is inside block
         decos.push(
           Decoration.line({ class: "cm-code-fence-visible" }).range(line.from)
         );
       }
     } else {
-      // Code content line — always apply code background
       decos.push(
         Decoration.line({ class: "cm-code-block-line" }).range(line.from)
       );
@@ -315,7 +238,7 @@ function handleFencedCode(
 
 function handleListItem(
   state: EditorState,
-  node: { from: number; to: number; node: SyntaxNodeLike },
+  node: { from: number; to: number; node: TreeNode },
   cursorLines: Set<number>,
   isOrdered: boolean,
   decos: Range<Decoration>[]
@@ -326,36 +249,31 @@ function handleListItem(
   const markLine = state.doc.lineAt(listMark.from).number;
   if (cursorLines.has(markLine)) return;
 
-  // Check for task marker (checkbox): "[ ]" or "[x]"
   const lineObj = state.doc.line(markLine);
   const afterMark = listMark.to;
   const restOfLine = state.sliceDoc(afterMark, Math.min(afterMark + 4, lineObj.to));
   const taskMatch = restOfLine.match(/^\s?\[([ xX])\]/);
 
   if (taskMatch) {
-    // Task list item — hide marker + checkbox syntax, show widget
     const checked = taskMatch[1] !== " ";
     const taskEnd = afterMark + taskMatch[0].length;
-    // Hide "- [ ] " or "- [x] "
     const hideEnd = Math.min(taskEnd + 1, lineObj.to);
     decos.push(
       Decoration.replace({
-        widget: new CheckboxWidget(checked),
+        widget: checked ? checkboxChecked : checkboxUnchecked,
       }).range(listMark.from, hideEnd)
     );
   } else if (!isOrdered) {
-    // Bullet list — hide marker, show bullet widget
     const hideEnd = Math.min(afterMark + 1, lineObj.to);
     decos.push(
-      Decoration.replace({
-        widget: new BulletWidget(),
-      }).range(listMark.from, hideEnd)
+      Decoration.replace({ widget: bulletWidget }).range(listMark.from, hideEnd)
     );
   }
-  // Ordered lists: keep numbers visible (they're semantic)
 }
 
 // ── Main build function ──
+
+const ATX_HEADING_PREFIX = "ATXHeading";
 
 function buildDecorations(state: EditorState): DecorationSet {
   if (state.doc.length === 0) return Decoration.none;
@@ -371,62 +289,51 @@ function buildDecorations(state: EditorState): DecorationSet {
 
       const type = node.type.name;
 
-      // ── Block elements (per-line cursor handling) ──
-
+      // Block elements (per-line cursor handling)
       if (type === "FencedCode") {
-        handleFencedCode(state, node, cursorLines, decos);
+        handleFencedCode(state, node as unknown as { from: number; to: number; node: TreeNode }, cursorLines, decos);
         return false;
       }
-
       if (type === "Blockquote") {
-        handleBlockquote(state, node, cursorLines, decos);
+        handleBlockquote(state, node as unknown as { from: number; to: number; node: TreeNode }, cursorLines, decos);
         return false;
       }
-
-      // List items — handled individually for per-line cursor
       if (type === "ListItem") {
-        const parent = node.node.parent;
+        const parent = (node as unknown as { node: TreeNode }).node?.parent;
         const isOrdered = parent?.type.name === "OrderedList";
-        handleListItem(state, node, cursorLines, isOrdered, decos);
-        // Don't return false — let children be processed for inline elements
+        handleListItem(state, node as unknown as { from: number; to: number; node: TreeNode }, cursorLines, isOrdered, decos);
       }
 
-      // ── Inline elements (skip if on cursor line) ──
-
+      // Inline elements (skip if on cursor line)
       if (nodeHasCursor(state, from, to, cursorLines)) return;
 
-      if (/^ATXHeading(\d)$/.test(type)) {
-        handleHeading(state, node, decos);
+      if (type.startsWith(ATX_HEADING_PREFIX) && type.length === 11) {
+        handleHeading(state, node as unknown as { from: number; to: number; type: { name: string }; node: TreeNode }, decos);
         return false;
       }
-
       if (type === "HorizontalRule") {
-        handleHorizontalRule(from, to, decos);
+        decos.push(Decoration.mark({ class: "cm-rendered-hr-line" }).range(from, to));
         return false;
       }
-
       if (type === "StrongEmphasis") {
-        handleStrongEmphasis(state, from, to, decos);
+        const text = state.sliceDoc(from, to);
+        hideMarkers(decos, from, to, text.startsWith("__") ? 2 : 2, "cm-rendered-bold");
         return false;
       }
-
       if (type === "Emphasis") {
-        handleEmphasis(state, from, to, decos);
+        hideMarkers(decos, from, to, 1, "cm-rendered-italic");
         return false;
       }
-
       if (type === "InlineCode") {
-        handleInlineCode(from, to, decos);
+        hideMarkers(decos, from, to, 1, "cm-rendered-code");
         return false;
       }
-
       if (type === "Link") {
-        handleLink(node, decos);
+        handleLink(node as unknown as { from: number; to: number; node: TreeNode }, decos);
         return false;
       }
-
       if (type === "Strikethrough") {
-        handleStrikethrough(from, to, decos);
+        hideMarkers(decos, from, to, 2, "cm-rendered-strikethrough");
         return false;
       }
     },

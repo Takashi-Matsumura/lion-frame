@@ -18,7 +18,7 @@ const ShortcutFooter = dynamic(
   { ssr: false },
 );
 
-export type ViewMode = "live" | "source";
+type ViewMode = "live" | "source";
 
 interface FloatingEditorContentProps {
   docId: string;
@@ -28,7 +28,6 @@ export default function FloatingEditorContent({
   docId,
 }: FloatingEditorContentProps) {
   const [content, setContent] = useState("");
-  const [title, setTitle] = useState("");
   const [viewMode, setViewMode] = useState<ViewMode>("live");
   const [saving, setSaving] = useState(false);
   const [loaded, setLoaded] = useState(false);
@@ -42,7 +41,6 @@ export default function FloatingEditorContent({
         if (!res.ok) throw new Error();
         const data = await res.json();
         setContent(data.document.content);
-        setTitle(data.document.title);
         setLoaded(true);
       } catch {
         toast.error("読み込みに失敗しました");

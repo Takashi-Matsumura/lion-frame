@@ -8,9 +8,6 @@ interface ToolbarProps {
   viewMode: ViewMode;
   onViewModeChange: (mode: ViewMode) => void;
   content: string;
-  onSidebarToggle?: () => void;
-  sidebarOpen?: boolean;
-  showSidebarToggle?: boolean;
 }
 
 function formatBytes(bytes: number): string {
@@ -22,9 +19,6 @@ export default function Toolbar({
   viewMode,
   onViewModeChange,
   content,
-  onSidebarToggle,
-  sidebarOpen,
-  showSidebarToggle = true,
 }: ToolbarProps) {
   const stats = useMemo(() => {
     const chars = content.length;
@@ -36,20 +30,6 @@ export default function Toolbar({
   return (
     <div className="toolbar">
       <div className="toolbar-group">
-        {showSidebarToggle && onSidebarToggle && (
-          <button
-            className={`toolbar-btn ${sidebarOpen ? "active" : ""}`}
-            onClick={onSidebarToggle}
-            title="サイドバー"
-            style={{ marginRight: 4 }}
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <line x1="3" y1="6" x2="21" y2="6" />
-              <line x1="3" y1="12" x2="21" y2="12" />
-              <line x1="3" y1="18" x2="21" y2="18" />
-            </svg>
-          </button>
-        )}
         <span className="toolbar-stats">
           {stats.chars}文字 · {stats.lines}行 · {formatBytes(stats.size)}
         </span>
