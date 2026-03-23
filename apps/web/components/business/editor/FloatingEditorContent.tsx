@@ -138,36 +138,39 @@ export default function FloatingEditorContent({
     );
   }
 
-  const showPreview = viewMode === "split";
-  const isLivePreview = viewMode === "live";
+  const showEditor = viewMode === "source" || viewMode === "split";
+  const showPreview = viewMode === "live" || viewMode === "split";
+  const isSplit = viewMode === "split";
 
   return (
     <div className="editor-wrapper flex flex-col h-full">
       <EditorToolbar
         viewMode={viewMode}
         onViewModeChange={setViewMode}
-        title={title}
+        content={content}
         showSidebarToggle={false}
       />
 
-      <div className={`editor-content ${showPreview ? "split" : ""}`}>
-        <div className="editor-pane">
-          <CodeMirrorEditor
-            docId={docId}
-            initialDoc={content}
-            onChange={handleChange}
-            livePreview={isLivePreview}
-            readOnly={false}
-            onScrollDom={handleEditorScrollDom}
-          />
-        </div>
+      <div className={`editor-content ${isSplit ? "split" : ""}`}>
+        {showEditor && (
+          <div className="editor-pane">
+            <CodeMirrorEditor
+              docId={docId}
+              initialDoc={content}
+              onChange={handleChange}
+              livePreview={false}
+              readOnly={false}
+              onScrollDom={handleEditorScrollDom}
+            />
+          </div>
+        )}
         {showPreview && (
-          <div className="preview-container" ref={previewScrollRef}>
+          <div className={`preview-container ${viewMode === "live" ? "live-full" : ""}`} ref={previewScrollRef}>
             <MarkdownPreview content={content} />
           </div>
         )}
       </div>
-      <ShortcutFooter />
+      {showEditor && <ShortcutFooter />}
 
       {/* 保存ステータス */}
       <div className="absolute bottom-7 right-3 text-[10px] text-muted-foreground">

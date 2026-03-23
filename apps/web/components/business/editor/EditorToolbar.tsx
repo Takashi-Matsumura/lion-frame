@@ -1,24 +1,38 @@
 "use client";
 
+import { useMemo } from "react";
+
 type ViewMode = "live" | "source" | "split";
 
 interface ToolbarProps {
   viewMode: ViewMode;
   onViewModeChange: (mode: ViewMode) => void;
-  title: string;
+  content: string;
   onSidebarToggle?: () => void;
   sidebarOpen?: boolean;
   showSidebarToggle?: boolean;
 }
 
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  return `${(bytes / 1024).toFixed(1)} KB`;
+}
+
 export default function Toolbar({
   viewMode,
   onViewModeChange,
-  title,
+  content,
   onSidebarToggle,
   sidebarOpen,
   showSidebarToggle = true,
 }: ToolbarProps) {
+  const stats = useMemo(() => {
+    const chars = content.length;
+    const lines = content ? content.split("\n").length : 0;
+    const size = new TextEncoder().encode(content).byteLength;
+    return { chars, lines, size };
+  }, [content]);
+
   return (
     <div className="toolbar">
       <div className="toolbar-group">
@@ -36,7 +50,9 @@ export default function Toolbar({
             </svg>
           </button>
         )}
-        <span className="toolbar-doc-title" title={title}>{title}</span>
+        <span className="toolbar-stats">
+          {stats.chars}文字 · {stats.lines}行 · {formatBytes(stats.size)}
+        </span>
       </div>
       <div className="toolbar-group">
         <button
