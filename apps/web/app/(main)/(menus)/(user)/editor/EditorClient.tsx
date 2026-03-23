@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef } from "react";
 import { toast } from "sonner";
-import { Plus, Trash2, FileText, ExternalLink, Pencil, Check, X, PenTool, ChevronDown } from "lucide-react";
+import { Plus, Trash2, FileText, ExternalLink, Pencil, Check, X, PenTool, ChevronDown, Download, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import {
@@ -48,6 +48,7 @@ export function EditorClient({ language }: { language: Language }) {
   const [mounted, setMounted] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [exportingId, setExportingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const renameInputRef = useRef<HTMLInputElement>(null);
 
@@ -146,6 +147,35 @@ export function EditorClient({ language }: { language: Language }) {
       toast.error(t.loadError);
     }
   }, [t.untitled, t.loadError, openInFloatingWindow]);
+
+  const handleExportPdf = useCallback(async (doc: DocItem) => {
+    setExportingId(doc.id);
+    try {
+      const res = await fetch(`/api/editor/${doc.id}`);
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      const content = data.document.content as string;
+      const docType = (doc.type ?? "markdown") as DocType;
+
+      if (docType === "markdown") {
+        const { exportMarkdownToPdf } = await import(
+          "@/components/business/editor/pdf-export"
+        );
+        await exportMarkdownToPdf(content, doc.title);
+      } else if (docType === "excalidraw") {
+        const { exportExcalidrawToPdf } = await import(
+          "@/components/business/editor/pdf-export"
+        );
+        await exportExcalidrawToPdf(content, doc.title);
+      }
+      toast.success("PDFをダウンロードしました");
+    } catch (err) {
+      console.error("PDF export error:", err);
+      toast.error("PDF生成に失敗しました");
+    } finally {
+      setExportingId(null);
+    }
+  }, []);
 
   const handleDelete = useCallback(async () => {
     if (!deleteTarget) return;
@@ -307,6 +337,23 @@ export function EditorClient({ language }: { language: Language }) {
                       }}
                     >
                       <ExternalLink className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      disabled={exportingId === doc.id}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleExportPdf(doc);
+                      }}
+                      title="PDF"
+                    >
+                      {exportingId === doc.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Download className="h-4 w-4" />
+                      )}
                     </Button>
                     <Button
                       variant="ghost"
