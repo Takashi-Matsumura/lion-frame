@@ -61,6 +61,7 @@ interface FloatingWindowStore {
   setPosition: (position: FloatingWindowPosition) => void;
   setSize: (size: FloatingWindowSize) => void;
   setContent: (content: ReactNode) => void;
+  centerWindow: () => void;
 }
 
 export const useFloatingWindowStore = create<FloatingWindowStore>(
@@ -153,6 +154,22 @@ export const useFloatingWindowStore = create<FloatingWindowStore>(
 
     setContent: (content) => {
       set({ content });
+    },
+
+    centerWindow: () => {
+      const { size, windowStatus } = get();
+      if (windowStatus === "closed") return;
+      const vw = typeof window !== "undefined" ? window.innerWidth : 1200;
+      const vh = typeof window !== "undefined" ? window.innerHeight : 800;
+      set({
+        windowStatus: "normal",
+        position: {
+          x: Math.round((vw - size.width) / 2),
+          y: Math.round((vh - size.height) / 2),
+        },
+        prevPosition: null,
+        prevSize: null,
+      });
     },
   }),
 );

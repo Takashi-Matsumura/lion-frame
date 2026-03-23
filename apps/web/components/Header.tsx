@@ -16,7 +16,8 @@ interface TabItem {
   active: boolean;
 }
 
-import { Info, Menu } from "lucide-react";
+import { Info, Menu, AppWindow } from "lucide-react";
+import { useFloatingWindowStore } from "@/lib/stores/floating-window-store";
 import {
   FaChartBar,
   FaDatabase,
@@ -51,6 +52,30 @@ function MobileMenuButton() {
       <Menu className="h-5 w-5" />
       <span className="sr-only">Menu</span>
     </Button>
+  );
+}
+
+function FloatingWindowCenterButton({ language }: { language: "en" | "ja" }) {
+  const { windowStatus, centerWindow } = useFloatingWindowStore();
+  if (windowStatus === "closed") return null;
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-muted-foreground hover:text-foreground"
+            onClick={centerWindow}
+          >
+            <AppWindow className="h-5 w-5" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>{language === "ja" ? "ウィンドウを中央に表示" : "Center window"}</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 }
 
@@ -356,6 +381,7 @@ function HeaderInner({
           </div>
           {session && (
             <div className="flex items-center gap-2">
+              <FloatingWindowCenterButton language={language as "en" | "ja"} />
               <NotificationBell language={language as "en" | "ja"} />
               <TooltipProvider>
                 <Tooltip>

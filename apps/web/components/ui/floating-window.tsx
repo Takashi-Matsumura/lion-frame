@@ -192,7 +192,7 @@ export function FloatingWindow({ language = "en" }: FloatingWindowProps) {
   const windowContent = (
     <div
       ref={windowRef}
-      className="floating-window-inverted fixed z-[100] bg-card border border-border rounded-lg shadow-xl flex flex-col overflow-hidden"
+      className="floating-window-inverted fixed z-[100] bg-card border border-border rounded-lg shadow-[0_8px_32px_rgba(0,0,0,0.3),0_2px_8px_rgba(0,0,0,0.2)] flex flex-col overflow-hidden"
       style={{
         left: isMaximized ? 0 : position.x,
         top: isMaximized ? 0 : position.y,
