@@ -11,7 +11,6 @@ interface CodeMirrorEditorProps {
   onChange: (doc: string) => void;
   livePreview: boolean;
   readOnly?: boolean;
-  onScrollDom?: (el: HTMLElement | null) => void;
 }
 
 export default function CodeMirrorEditor({
@@ -20,7 +19,6 @@ export default function CodeMirrorEditor({
   onChange,
   livePreview,
   readOnly = false,
-  onScrollDom,
 }: CodeMirrorEditorProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
@@ -28,9 +26,6 @@ export default function CodeMirrorEditor({
 
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
-
-  const onScrollDomRef = useRef(onScrollDom);
-  onScrollDomRef.current = onScrollDom;
 
   const stableOnChange = useCallback((doc: string) => {
     onChangeRef.current(doc);
@@ -60,11 +55,7 @@ export default function CodeMirrorEditor({
     });
     viewRef.current = view;
 
-    // エディタのスクロール要素を親に公開
-    onScrollDomRef.current?.(view.scrollDOM);
-
     return () => {
-      onScrollDomRef.current?.(null);
       view.destroy();
       viewRef.current = null;
     };

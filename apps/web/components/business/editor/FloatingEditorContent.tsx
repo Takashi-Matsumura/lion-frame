@@ -9,10 +9,6 @@ const CodeMirrorEditor = dynamic(
   () => import("@/components/business/editor/CodeMirrorEditor"),
   { ssr: false },
 );
-const MarkdownPreview = dynamic(
-  () => import("@/components/business/editor/MarkdownPreview"),
-  { ssr: false },
-);
 const EditorToolbar = dynamic(
   () => import("@/components/business/editor/EditorToolbar"),
   { ssr: false },
@@ -22,7 +18,7 @@ const ShortcutFooter = dynamic(
   { ssr: false },
 );
 
-type ViewMode = "live" | "source" | "split";
+export type ViewMode = "live" | "source";
 
 interface FloatingEditorContentProps {
   docId: string;
@@ -37,11 +33,6 @@ export default function FloatingEditorContent({
   const [saving, setSaving] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // スクロール同期用
-  const editorScrollRef = useRef<HTMLElement | null>(null);
-  const previewScrollRef = useRef<HTMLDivElement | null>(null);
-  const scrollSourceRef = useRef<"editor" | "preview" | null>(null);
 
   // ドキュメント読み込み
   useEffect(() => {
@@ -83,53 +74,6 @@ export default function FloatingEditorContent({
     [docId],
   );
 
-  // スクロール同期
-  useEffect(() => {
-    const editorEl = editorScrollRef.current;
-    const previewEl = previewScrollRef.current;
-    if (!editorEl || !previewEl) return;
-
-    let rafId: number | null = null;
-
-    const syncScroll = (source: "editor" | "preview") => {
-      if (scrollSourceRef.current && scrollSourceRef.current !== source) return;
-      scrollSourceRef.current = source;
-
-      if (rafId) cancelAnimationFrame(rafId);
-      rafId = requestAnimationFrame(() => {
-        const from = source === "editor" ? editorEl : previewEl;
-        const to = source === "editor" ? previewEl : editorEl;
-        const maxFrom = from.scrollHeight - from.clientHeight;
-        if (maxFrom <= 0) {
-          scrollSourceRef.current = null;
-          return;
-        }
-        const ratio = from.scrollTop / maxFrom;
-        const maxTo = to.scrollHeight - to.clientHeight;
-        to.scrollTop = ratio * maxTo;
-        requestAnimationFrame(() => {
-          scrollSourceRef.current = null;
-        });
-      });
-    };
-
-    const onEditorScroll = () => syncScroll("editor");
-    const onPreviewScroll = () => syncScroll("preview");
-
-    editorEl.addEventListener("scroll", onEditorScroll, { passive: true });
-    previewEl.addEventListener("scroll", onPreviewScroll, { passive: true });
-
-    return () => {
-      editorEl.removeEventListener("scroll", onEditorScroll);
-      previewEl.removeEventListener("scroll", onPreviewScroll);
-      if (rafId) cancelAnimationFrame(rafId);
-    };
-  }, [viewMode]);
-
-  const handleEditorScrollDom = useCallback((el: HTMLElement | null) => {
-    editorScrollRef.current = el;
-  }, []);
-
   if (!loaded) {
     return (
       <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
@@ -138,39 +82,26 @@ export default function FloatingEditorContent({
     );
   }
 
-  const showEditor = viewMode === "source" || viewMode === "split";
-  const showPreview = viewMode === "live" || viewMode === "split";
-  const isSplit = viewMode === "split";
-
   return (
     <div className="editor-wrapper flex flex-col h-full">
       <EditorToolbar
         viewMode={viewMode}
         onViewModeChange={setViewMode}
         content={content}
-        showSidebarToggle={false}
       />
 
-      <div className={`editor-content ${isSplit ? "split" : ""}`}>
-        {showEditor && (
-          <div className="editor-pane">
-            <CodeMirrorEditor
-              docId={docId}
-              initialDoc={content}
-              onChange={handleChange}
-              livePreview={false}
-              readOnly={false}
-              onScrollDom={handleEditorScrollDom}
-            />
-          </div>
-        )}
-        {showPreview && (
-          <div className={`preview-container ${viewMode === "live" ? "live-full" : ""}`} ref={previewScrollRef}>
-            <MarkdownPreview content={content} />
-          </div>
-        )}
+      <div className="editor-content">
+        <div className="editor-pane">
+          <CodeMirrorEditor
+            docId={docId}
+            initialDoc={content}
+            onChange={handleChange}
+            livePreview={viewMode === "live"}
+            readOnly={false}
+          />
+        </div>
       </div>
-      {showEditor && <ShortcutFooter />}
+      <ShortcutFooter />
 
       {/* 保存ステータス */}
       <div className="absolute bottom-7 right-3 text-[10px] text-muted-foreground">

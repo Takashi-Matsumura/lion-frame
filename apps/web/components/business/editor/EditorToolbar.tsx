@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 
-type ViewMode = "live" | "source" | "split";
+type ViewMode = "live" | "source";
 
 interface ToolbarProps {
   viewMode: ViewMode;
@@ -76,17 +76,6 @@ export default function Toolbar({
             <polyline points="8 6 2 12 8 18" />
           </svg>
           <span className="toolbar-btn-label">ソース</span>
-        </button>
-        <button
-          className={`toolbar-btn ${viewMode === "split" ? "active" : ""}`}
-          onClick={() => onViewModeChange("split")}
-          title="分割表示"
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-            <line x1="12" y1="3" x2="12" y2="21" />
-          </svg>
-          <span className="toolbar-btn-label">分割</span>
         </button>
       </div>
     </div>
