@@ -1,32 +1,64 @@
-/* Editor Theme Variables - mapped to LionFrame's theme */
+/* Editor Theme — inherits from app theme via data-theme attribute */
+
+/* Light theme (default) */
 .editor-wrapper {
-  --editor-bg-primary: var(--background);
-  --editor-bg-secondary: var(--muted);
-  --editor-bg-tertiary: var(--accent);
-  --editor-text-normal: var(--foreground);
-  --editor-text-muted: var(--muted-foreground);
-  --editor-text-faint: var(--muted-foreground);
-  --editor-text-bold: var(--foreground);
-  --editor-text-italic: var(--primary);
-  --editor-accent: var(--primary);
-  --editor-accent-hover: var(--primary);
-  --editor-link-color: var(--primary);
+  --editor-bg-primary: oklch(0.99 0 0);
+  --editor-bg-secondary: oklch(0.96 0 0);
+  --editor-bg-tertiary: oklch(0.96 0 0);
+  --editor-text-normal: oklch(0.15 0 0);
+  --editor-text-muted: oklch(0.5 0 0);
+  --editor-text-faint: oklch(0.5 0 0);
+  --editor-text-bold: oklch(0.15 0 0);
+  --editor-text-italic: oklch(0.45 0.03 260);
+  --editor-accent: oklch(0.45 0.03 260);
+  --editor-accent-hover: oklch(0.45 0.03 260);
+  --editor-link-color: oklch(0.45 0.03 260);
+  --editor-code-color: #c7254e;
+  --editor-code-bg: oklch(0.96 0 0);
+  --editor-h1-color: oklch(0.15 0 0);
+  --editor-h2-color: oklch(0.15 0 0);
+  --editor-h3-color: oklch(0.15 0 0);
+  --editor-h4-color: oklch(0.5 0 0);
+  --editor-h5-color: oklch(0.5 0 0);
+  --editor-h6-color: oklch(0.5 0 0);
+  --editor-border-color: oklch(0.9 0 0);
+  --editor-selection-bg: rgba(72, 120, 190, 0.2);
+  --editor-selection-bg-focus: rgba(72, 120, 190, 0.3);
+  --editor-active-line-bg: rgba(72, 120, 190, 0.08);
+  --editor-scrollbar-thumb: rgba(0, 0, 0, 0.15);
+  --editor-scrollbar-thumb-hover: rgba(0, 0, 0, 0.25);
+  --editor-link-hover-color: oklch(0.45 0.03 260);
+  --editor-font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+/* Dark theme (navy) — mirrors .dark in globals.css */
+.editor-wrapper[data-theme="dark"] {
+  --editor-bg-primary: oklch(0.18 0.03 255);
+  --editor-bg-secondary: oklch(0.20 0.025 255);
+  --editor-bg-tertiary: oklch(0.28 0.04 255);
+  --editor-text-normal: oklch(0.97 0 0);
+  --editor-text-muted: oklch(0.70 0 0);
+  --editor-text-faint: oklch(0.70 0 0);
+  --editor-text-bold: oklch(0.97 0 0);
+  --editor-text-italic: oklch(0.55 0.15 255);
+  --editor-accent: oklch(0.55 0.15 255);
+  --editor-accent-hover: oklch(0.55 0.15 255);
+  --editor-link-color: oklch(0.55 0.15 255);
   --editor-code-color: #e06c75;
-  --editor-code-bg: var(--muted);
-  --editor-h1-color: var(--foreground);
-  --editor-h2-color: var(--foreground);
-  --editor-h3-color: var(--foreground);
-  --editor-h4-color: var(--muted-foreground);
-  --editor-h5-color: var(--muted-foreground);
-  --editor-h6-color: var(--muted-foreground);
-  --editor-border-color: var(--border);
+  --editor-code-bg: oklch(0.20 0.025 255);
+  --editor-h1-color: oklch(0.97 0 0);
+  --editor-h2-color: oklch(0.97 0 0);
+  --editor-h3-color: oklch(0.97 0 0);
+  --editor-h4-color: oklch(0.70 0 0);
+  --editor-h5-color: oklch(0.70 0 0);
+  --editor-h6-color: oklch(0.70 0 0);
+  --editor-border-color: oklch(0.34 0.04 255);
   --editor-selection-bg: rgba(72, 120, 190, 0.3);
   --editor-selection-bg-focus: rgba(72, 120, 190, 0.4);
-  --editor-active-line-bg: color-mix(in oklch, var(--primary) 50%, transparent);
-  --editor-scrollbar-thumb: color-mix(in oklch, var(--muted-foreground) 30%, transparent);
-  --editor-scrollbar-thumb-hover: color-mix(in oklch, var(--muted-foreground) 50%, transparent);
-  --editor-link-hover-color: var(--primary);
-  --editor-font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --editor-active-line-bg: color-mix(in oklch, oklch(0.55 0.15 255) 15%, transparent);
+  --editor-scrollbar-thumb: rgba(255, 255, 255, 0.15);
+  --editor-scrollbar-thumb-hover: rgba(255, 255, 255, 0.25);
+  --editor-link-hover-color: oklch(0.55 0.15 255);
 }
 
 /* Toolbar */

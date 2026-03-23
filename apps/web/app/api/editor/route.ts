@@ -7,7 +7,7 @@ export const GET = apiHandler(async (request, session) => {
   if (!userId) throw ApiError.unauthorized();
 
   const url = new URL(request.url);
-  const type = url.searchParams.get("type") ?? "markdown";
+  const type = url.searchParams.get("type") ?? undefined;
   const documents = await EditorService.listDocuments(userId, type);
   return { documents };
 }, {});

@@ -138,7 +138,7 @@ cd apps/web && npx prisma db push && pnpm db:seed
 | NFCカード | NfcCard |
 | システム | SystemSetting |
 
-> **エディタモジュール:** メニュー画面はドキュメント管理（一覧・リネーム・削除）。ドキュメントをクリックするとフローティングウィンドウでマークダウンエディタが開く。コンテンツは500msデバウンスで自動保存。タイトルはコンテンツとは独立（管理画面でリネーム）。
+> **エディタモジュール:** 複合型エディタ。`EditorDocument.type`でドキュメント種別を管理。`"markdown"`（マークダウン）と`"excalidraw"`（ホワイトボード）をサポート。マークダウンはCodeMirror 6のLive Preview、ExcalidrawはフローティングウィンドウでExcalidrawキャンバスを全面表示。自動保存: マークダウン500ms、Excalidraw 1000msデバウンス。Excalidrawデータは`JSON.stringify({ elements, appState })`で`content`フィールドに格納。タイトルはコンテンツとは独立（管理画面でリネーム）。
 > **フローティングウィンドウのテーマ反転:** `.floating-window-inverted` クラスでアプリと逆のテーマを適用（ダーク時→ライト、ライト時→ダーク）。`noPadding` オプションでエディタ等の全面コンテンツ対応。ESCキーは `noPadding` 時に無効。
 > **エディタCSS変数:** テーマ変数との衝突を避けるため `--editor-` プレフィックスを使用（例: `--editor-bg-primary`, `--editor-accent`）。
 

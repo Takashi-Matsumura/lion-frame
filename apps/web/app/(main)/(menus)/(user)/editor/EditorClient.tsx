@@ -2,9 +2,15 @@
 
 import { useState, useCallback, useEffect, useRef } from "react";
 import { toast } from "sonner";
-import { Plus, Trash2, FileText, ExternalLink, Pencil, Check, X } from "lucide-react";
+import { Plus, Trash2, FileText, ExternalLink, Pencil, Check, X, PenTool, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
 import { useFloatingWindowStore } from "@/lib/stores/floating-window-store";
 import dynamic from "next/dynamic";
 import { editorTranslations, type Language } from "./translations";
@@ -14,12 +20,25 @@ const FloatingEditorContent = dynamic(
   { ssr: false },
 );
 
+type DocType = "markdown" | "excalidraw";
+
 interface DocItem {
   id: string;
   title: string;
+  type: DocType;
   updatedAt: string;
   createdAt: string;
 }
+
+const DOC_TYPE_ICON: Record<DocType, typeof FileText> = {
+  markdown: FileText,
+  excalidraw: PenTool,
+};
+
+const DEFAULT_WINDOW_SIZE: Record<DocType, { width: number; height: number }> = {
+  markdown: { width: 900, height: 600 },
+  excalidraw: { width: 1100, height: 700 },
+};
 
 export function EditorClient({ language }: { language: Language }) {
   const t = editorTranslations[language];
@@ -32,7 +51,6 @@ export function EditorClient({ language }: { language: Language }) {
   const [renameValue, setRenameValue] = useState("");
   const renameInputRef = useRef<HTMLInputElement>(null);
 
-  // ドキュメント一覧を取得
   const loadDocuments = useCallback(async () => {
     try {
       const res = await fetch("/api/editor");
@@ -46,7 +64,6 @@ export function EditorClient({ language }: { language: Language }) {
     }
   }, [t.loadError]);
 
-  // 初期化
   useEffect(() => {
     (async () => {
       await loadDocuments();
@@ -55,14 +72,12 @@ export function EditorClient({ language }: { language: Language }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // リネーム開始
   const startRename = useCallback((doc: DocItem) => {
     setRenamingId(doc.id);
     setRenameValue(doc.title);
     setTimeout(() => renameInputRef.current?.select(), 0);
   }, []);
 
-  // リネーム確定
   const confirmRename = useCallback(async () => {
     if (!renamingId || !renameValue.trim()) {
       setRenamingId(null);
@@ -88,21 +103,20 @@ export function EditorClient({ language }: { language: Language }) {
     setRenamingId(null);
   }, [renamingId, renameValue, t.loadError]);
 
-  // リネームキャンセル
   const cancelRename = useCallback(() => {
     setRenamingId(null);
   }, []);
 
-  // フローティングウィンドウでドキュメントを開く
   const openInFloatingWindow = useCallback(
     (doc: DocItem) => {
+      const docType = (doc.type ?? "markdown") as DocType;
       floatingWindow.open({
         title: doc.title,
         titleJa: doc.title,
         content: (
-          <FloatingEditorContent docId={doc.id} />
+          <FloatingEditorContent docId={doc.id} docType={docType} />
         ),
-        initialSize: { width: 900, height: 600 },
+        initialSize: DEFAULT_WINDOW_SIZE[docType],
         initialPosition: { x: 150, y: 80 },
         noPadding: true,
       });
@@ -110,19 +124,19 @@ export function EditorClient({ language }: { language: Language }) {
     [floatingWindow],
   );
 
-  // 新規作成してフローティングウィンドウで開く
-  const handleCreate = useCallback(async () => {
+  const handleCreate = useCallback(async (type: DocType) => {
     try {
       const res = await fetch("/api/editor", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: t.untitled }),
+        body: JSON.stringify({ title: t.untitled, type }),
       });
       if (!res.ok) throw new Error();
       const data = await res.json();
       const newDoc: DocItem = {
         id: data.document.id,
         title: data.document.title,
+        type: data.document.type ?? type,
         updatedAt: data.document.updatedAt,
         createdAt: data.document.createdAt ?? data.document.updatedAt,
       };
@@ -133,13 +147,11 @@ export function EditorClient({ language }: { language: Language }) {
     }
   }, [t.untitled, t.loadError, openInFloatingWindow]);
 
-  // 削除
   const handleDelete = useCallback(async () => {
     if (!deleteTarget) return;
     try {
       await fetch(`/api/editor/${deleteTarget}`, { method: "DELETE" });
       setDocuments((prev) => prev.filter((d) => d.id !== deleteTarget));
-      // フローティングウィンドウで開いている場合は閉じる
       if (floatingWindow.windowStatus !== "closed") {
         floatingWindow.close();
       }
@@ -177,10 +189,25 @@ export function EditorClient({ language }: { language: Language }) {
             {documents.length}{t.documentCount}
           </span>
         </div>
-        <Button onClick={handleCreate}>
-          <Plus className="h-4 w-4 mr-2" />
-          {t.newDocument}
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button>
+              <Plus className="h-4 w-4 mr-2" />
+              {t.newDocument}
+              <ChevronDown className="h-3.5 w-3.5 ml-1.5 opacity-60" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => handleCreate("markdown")}>
+              <FileText className="h-4 w-4 mr-2" />
+              {t.newMarkdown}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleCreate("excalidraw")}>
+              <PenTool className="h-4 w-4 mr-2" />
+              {t.newWhiteboard}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* ドキュメント一覧 */}
@@ -191,108 +218,112 @@ export function EditorClient({ language }: { language: Language }) {
           <p className="text-sm text-muted-foreground/70 mb-4">
             {t.noDocumentsDescription}
           </p>
-          <Button onClick={handleCreate}>
+          <Button onClick={() => handleCreate("markdown")}>
             <Plus className="h-4 w-4 mr-2" />
             {t.newDocument}
           </Button>
         </div>
       ) : (
         <div className="space-y-2">
-          {documents.map((doc) => (
-            <div
-              key={doc.id}
-              className="group flex items-center gap-4 px-4 py-3 bg-card border border-border rounded-lg hover:border-primary/30 hover:shadow-sm transition-all cursor-pointer"
-              onClick={() => {
-                if (renamingId !== doc.id) openInFloatingWindow(doc);
-              }}
-            >
-              <FileText className="h-5 w-5 text-muted-foreground shrink-0" />
-              <div className="flex-1 min-w-0">
-                {renamingId === doc.id ? (
-                  <div
-                    className="flex items-center gap-2"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <input
-                      ref={renameInputRef}
-                      type="text"
-                      value={renameValue}
-                      onChange={(e) => setRenameValue(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") confirmRename();
-                        if (e.key === "Escape") cancelRename();
-                      }}
-                      className="flex-1 text-sm font-medium bg-background border border-primary rounded px-2 py-1 outline-none focus:ring-1 focus:ring-primary"
-                      autoFocus
-                    />
+          {documents.map((doc) => {
+            const docType = (doc.type ?? "markdown") as DocType;
+            const Icon = DOC_TYPE_ICON[docType] ?? FileText;
+            return (
+              <div
+                key={doc.id}
+                className="group flex items-center gap-4 px-4 py-3 bg-card border border-border rounded-lg hover:border-primary/30 hover:shadow-sm transition-all cursor-pointer"
+                onClick={() => {
+                  if (renamingId !== doc.id) openInFloatingWindow(doc);
+                }}
+              >
+                <Icon className="h-5 w-5 text-muted-foreground shrink-0" />
+                <div className="flex-1 min-w-0">
+                  {renamingId === doc.id ? (
+                    <div
+                      className="flex items-center gap-2"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <input
+                        ref={renameInputRef}
+                        type="text"
+                        value={renameValue}
+                        onChange={(e) => setRenameValue(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") confirmRename();
+                          if (e.key === "Escape") cancelRename();
+                        }}
+                        className="flex-1 text-sm font-medium bg-background border border-primary rounded px-2 py-1 outline-none focus:ring-1 focus:ring-primary"
+                        autoFocus
+                      />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-primary hover:text-primary"
+                        onClick={confirmRename}
+                      >
+                        <Check className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={cancelRename}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="text-sm font-medium text-foreground truncate">
+                        {doc.title}
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-0.5">
+                        {t.lastUpdated}: {formatDate(doc.updatedAt)}
+                      </div>
+                    </>
+                  )}
+                </div>
+                {renamingId !== doc.id && (
+                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-7 w-7 text-primary hover:text-primary"
-                      onClick={confirmRename}
+                      className="h-8 w-8"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        startRename(doc);
+                      }}
+                      title={t.rename}
                     >
-                      <Check className="h-4 w-4" />
+                      <Pencil className="h-3.5 w-3.5" />
                     </Button>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-7 w-7"
-                      onClick={cancelRename}
+                      className="h-8 w-8"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openInFloatingWindow(doc);
+                      }}
                     >
-                      <X className="h-4 w-4" />
+                      <ExternalLink className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDeleteTarget(doc.id);
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
-                ) : (
-                  <>
-                    <div className="text-sm font-medium text-foreground truncate">
-                      {doc.title}
-                    </div>
-                    <div className="text-xs text-muted-foreground mt-0.5">
-                      {t.lastUpdated}: {formatDate(doc.updatedAt)}
-                    </div>
-                  </>
                 )}
               </div>
-              {renamingId !== doc.id && (
-                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      startRename(doc);
-                    }}
-                    title={t.rename}
-                  >
-                    <Pencil className="h-3.5 w-3.5" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      openInFloatingWindow(doc);
-                    }}
-                  >
-                    <ExternalLink className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setDeleteTarget(doc.id);
-                    }}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              )}
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 

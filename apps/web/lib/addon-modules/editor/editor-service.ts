@@ -1,9 +1,9 @@
 import { prisma } from "@/lib/prisma";
 
 export class EditorService {
-  static async listDocuments(userId: string, type = "markdown") {
+  static async listDocuments(userId: string, type?: string) {
     return prisma.editorDocument.findMany({
-      where: { createdBy: userId, type },
+      where: { createdBy: userId, ...(type ? { type } : {}) },
       select: {
         id: true,
         title: true,

@@ -3,6 +3,8 @@ import { jaOnly } from "@/lib/i18n/ja-only";
 export const editorTranslations = jaOnly({
   title: "エディタ",
   newDocument: "新規作成",
+  newMarkdown: "マークダウン",
+  newWhiteboard: "ホワイトボード",
   untitled: "無題",
   myDocuments: "マイドキュメント",
   sample: "サンプル",
