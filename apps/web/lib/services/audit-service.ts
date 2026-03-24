@@ -6,6 +6,7 @@ export type AuditCategory =
   | "USER_MANAGEMENT"
   | "SYSTEM_SETTING"
   | "MODULE"
+  | "TAG"
   | "USAGE"
   | "WORKFLOW";
 
@@ -60,6 +61,12 @@ export type AuditAction =
   | "ORG_CONTEXT_TOGGLE"
   | "PAGE_GUIDE_EDIT"
   | "PAGE_GUIDE_REVERT"
+  // TAG
+  | "TAG_CREATE"
+  | "TAG_UPDATE"
+  | "TAG_DELETE"
+  | "TAG_ASSIGN"
+  | "TAG_UNASSIGN"
   // USAGE
   | "PAGE_ACCESS"
   // WORKFLOW

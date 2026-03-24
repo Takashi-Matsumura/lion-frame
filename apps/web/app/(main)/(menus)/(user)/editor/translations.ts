@@ -23,6 +23,12 @@ export const editorTranslations = jaOnly({
   lastUpdated: "最終更新",
   created: "作成日",
   editorWindow: "エディタ",
+  tags: "タグ",
+  filterByTag: "タグで絞り込み",
+  allDocuments: "すべて",
+  searchDocuments: "ドキュメントを検索...",
+  type: "種別",
+  noMatchingDocuments: "一致するドキュメントがありません",
 });
 
 export type Language = keyof typeof editorTranslations;

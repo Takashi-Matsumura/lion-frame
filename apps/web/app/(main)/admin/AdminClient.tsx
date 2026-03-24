@@ -12,6 +12,7 @@ import {
   AnnouncementsTabSkeleton,
   ModulesTabSkeleton,
   SystemTabSkeleton,
+  TagsTabSkeleton,
   UsersTabSkeleton,
 } from "./components/skeletons";
 import type { AppMenu, AppModule } from "@/types/module";
@@ -31,6 +32,9 @@ const ModulesTab = dynamic(() => import("./components/ModulesTab").then((m) => (
 });
 const AnnouncementsTab = dynamic(() => import("./components/AnnouncementsTab").then((m) => ({ default: m.AnnouncementsTab })), {
   loading: () => <AnnouncementsTabSkeleton />,
+});
+const TagsTab = dynamic(() => import("./components/TagsTab").then((m) => ({ default: m.TagsTab })), {
+  loading: () => <TagsTabSkeleton />,
 });
 
 type AccessKeyWithTargetUser = AccessKey & {
@@ -63,7 +67,8 @@ type TabType =
   | "users"
   | "access-keys"
   | "modules"
-  | "announcements";
+  | "announcements"
+  | "tags";
 
 export function AdminClient({
   language,
@@ -90,8 +95,8 @@ export function AdminClient({
         left: sidebarLeft,
       }}
     >
-      <div className={`flex-1 ${["users", "access-keys", "announcements"].includes(activeTab) ? "overflow-hidden" : "overflow-y-auto"}`}>
-        <div className={`max-w-7xl mx-auto p-6 ${["users", "access-keys", "announcements"].includes(activeTab) ? "h-full flex flex-col" : "space-y-6"}`}>
+      <div className={`flex-1 ${["users", "access-keys", "announcements", "tags"].includes(activeTab) ? "overflow-hidden" : "overflow-y-auto"}`}>
+        <div className={`max-w-7xl mx-auto p-6 ${["users", "access-keys", "announcements", "tags"].includes(activeTab) ? "h-full flex flex-col" : "space-y-6"}`}>
           {/* システム情報タブ */}
           {activeTab === "system" && (
             <SystemTab language={language} />
@@ -126,6 +131,11 @@ export function AdminClient({
           {/* アナウンスタブ */}
           {activeTab === "announcements" && (
             <AnnouncementsTab language={language} />
+          )}
+
+          {/* タグ管理タブ */}
+          {activeTab === "tags" && (
+            <TagsTab language={language} />
           )}
         </div>
       </div>

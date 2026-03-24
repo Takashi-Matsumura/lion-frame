@@ -135,12 +135,14 @@ cd apps/web && npx prisma db push && pnpm db:seed
 > **健康管理メニュー:** AccessKey `health_checkup` が必要（ADMINはバイパス）。
 > **ダッシュボード個人セクション:** 非ADMINユーザ向けに「あなたのタスク」セクション（健康診断ステータス、未回答フォーム、通知）を表示。健康診断ステータスは `/api/health-checkup/my-status` で取得。
 | エディタ | EditorDocument |
+| タグ | Tag, TagAssignment |
 | NFCカード | NfcCard |
 | システム | SystemSetting |
 
 > **エディタモジュール:** 複合型エディタ。`EditorDocument.type`でドキュメント種別を管理。`"markdown"`（マークダウン）と`"excalidraw"`（ホワイトボード）をサポート。マークダウンはCodeMirror 6のLive Preview、ExcalidrawはフローティングウィンドウでExcalidrawキャンバスを全面表示。自動保存: マークダウン500ms、Excalidraw 1000msデバウンス。Excalidrawデータは`JSON.stringify({ elements, appState })`で`content`フィールドに格納。タイトルはコンテンツとは独立（管理画面でリネーム）。
 > **フローティングウィンドウのテーマ反転:** `.floating-window-inverted` クラスでアプリと逆のテーマを適用（ダーク時→ライト、ライト時→ダーク）。`noPadding` オプションでエディタ等の全面コンテンツ対応。ESCキーは `noPadding` 時に無効。
 > **エディタCSS変数:** テーマ変数との衝突を避けるため `--editor-` プレフィックスを使用（例: `--editor-bg-primary`, `--editor-accent`）。
+> **タグシステム:** フレーム横断のメタデータ基盤。2種類のタグ: **システムタグ**（ADMINが管理画面で作成・全社共有、色・説明付き）と**ユーザタグ**（ユーザがデータごとに自由入力、マスタ管理なし）。`TagAssignment`はポリモーフィック（`entityType` + `entityId`）で任意モデルに紐づけ可能。サービス: `TagService`（`lib/services/tag-service.ts`）。API: `/api/tags/`（CRUD・割り当て・統計）。UIコンポーネント: `TagBadge`（スクエア角丸、`#`付き表示）、`TagPicker`（Popover型選択）。管理画面: システム環境→タグ管理タブ。エディタモジュールが初の統合先。将来LLM/RAG連携のメタデータとして活用予定。
 
 ## 重要なルール
 

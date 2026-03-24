@@ -1,18 +1,30 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { toast } from "sonner";
-import { Plus, Trash2, FileText, ExternalLink, Pencil, Check, X, PenTool, ChevronDown, Download, Loader2 } from "lucide-react";
+import { Plus, Trash2, FileText, ExternalLink, Pencil, Check, X, PenTool, ChevronDown, Download, Loader2, Hash, Search } from "lucide-react";
 import { Button } from "@/components/ui";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
+import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { TagBadge } from "@/components/ui/tag-badge";
+import { TagPicker } from "@/components/ui/tag-picker";
 import { useFloatingWindowStore } from "@/lib/stores/floating-window-store";
 import dynamic from "next/dynamic";
+import { type DocType, DEFAULT_WINDOW_SIZE } from "@/components/business/editor/types";
 import { editorTranslations, type Language } from "./translations";
 
 const FloatingEditorContent = dynamic(
@@ -20,7 +32,17 @@ const FloatingEditorContent = dynamic(
   { ssr: false },
 );
 
-type DocType = "markdown" | "excalidraw";
+interface SystemTagInfo {
+  id: string;
+  name: string;
+  nameJa: string | null;
+  color: string;
+}
+
+interface DocTags {
+  systemTags: SystemTagInfo[];
+  userTags: string[];
+}
 
 interface DocItem {
   id: string;
@@ -28,6 +50,7 @@ interface DocItem {
   type: DocType;
   updatedAt: string;
   createdAt: string;
+  tags?: DocTags;
 }
 
 const DOC_TYPE_ICON: Record<DocType, typeof FileText> = {
@@ -35,9 +58,9 @@ const DOC_TYPE_ICON: Record<DocType, typeof FileText> = {
   excalidraw: PenTool,
 };
 
-const DEFAULT_WINDOW_SIZE: Record<DocType, { width: number; height: number }> = {
-  markdown: { width: 900, height: 600 },
-  excalidraw: { width: 1100, height: 700 },
+const DOC_TYPE_LABEL: Record<DocType, string> = {
+  markdown: "マークダウン",
+  excalidraw: "ホワイトボード",
 };
 
 export function EditorClient({ language }: { language: Language }) {
@@ -51,10 +74,15 @@ export function EditorClient({ language }: { language: Language }) {
   const [exportingId, setExportingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const renameInputRef = useRef<HTMLInputElement>(null);
+  const [filterTagId, setFilterTagId] = useState<string | null>(null);
+  const [allSystemTags, setAllSystemTags] = useState<SystemTagInfo[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
 
-  const loadDocuments = useCallback(async () => {
+  const loadDocuments = useCallback(async (tagId?: string | null) => {
     try {
-      const res = await fetch("/api/editor");
+      const params = new URLSearchParams();
+      if (tagId) params.set("tagId", tagId);
+      const res = await fetch(`/api/editor${params.toString() ? `?${params}` : ""}`);
       if (!res.ok) throw new Error();
       const data = await res.json();
       setDocuments(data.documents ?? []);
@@ -65,12 +93,47 @@ export function EditorClient({ language }: { language: Language }) {
     }
   }, [t.loadError]);
 
+  const loadSystemTags = useCallback(async () => {
+    try {
+      const res = await fetch("/api/tags");
+      if (!res.ok) return;
+      const data = await res.json();
+      setAllSystemTags(data.tags ?? []);
+    } catch { /* ignore */ }
+  }, []);
+
   useEffect(() => {
     (async () => {
-      await loadDocuments();
+      await Promise.all([loadDocuments(), loadSystemTags()]);
       setMounted(true);
     })();
   // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const filteredDocuments = useMemo(() => {
+    if (!searchQuery.trim()) return documents;
+    const q = searchQuery.toLowerCase();
+    return documents.filter((doc) => {
+      if (doc.title.toLowerCase().includes(q)) return true;
+      const tagNames = [
+        ...(doc.tags?.systemTags.map((t) => t.nameJa ?? t.name) ?? []),
+        ...(doc.tags?.userTags ?? []),
+      ];
+      return tagNames.some((name) => name.toLowerCase().includes(q));
+    });
+  }, [documents, searchQuery]);
+
+  const handleFilterByTag = useCallback((tagId: string | null) => {
+    setFilterTagId(tagId);
+    loadDocuments(tagId);
+  }, [loadDocuments]);
+
+  const handleTagsChange = useCallback((docId: string, systemTags: SystemTagInfo[], userTags: string[]) => {
+    setDocuments((prev) =>
+      prev.map((d) =>
+        d.id === docId ? { ...d, tags: { systemTags, userTags } } : d,
+      ),
+    );
   }, []);
 
   const startRename = useCallback((doc: DocItem) => {
@@ -140,6 +203,7 @@ export function EditorClient({ language }: { language: Language }) {
         type: data.document.type ?? type,
         updatedAt: data.document.updatedAt,
         createdAt: data.document.createdAt ?? data.document.updatedAt,
+        tags: { systemTags: [], userTags: [] },
       };
       setDocuments((prev) => [newDoc, ...prev]);
       openInFloatingWindow(newDoc);
@@ -169,8 +233,7 @@ export function EditorClient({ language }: { language: Language }) {
         await exportExcalidrawToPdf(content, doc.title);
       }
       toast.success("PDFをダウンロードしました");
-    } catch (err) {
-      console.error("PDF export error:", err);
+    } catch {
       toast.error("PDF生成に失敗しました");
     } finally {
       setExportingId(null);
@@ -211,9 +274,9 @@ export function EditorClient({ language }: { language: Language }) {
   };
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="max-w-5xl mx-auto">
       {/* ヘッダー */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
           <span className="text-sm text-muted-foreground">
             {documents.length}{t.documentCount}
@@ -240,139 +303,211 @@ export function EditorClient({ language }: { language: Language }) {
         </DropdownMenu>
       </div>
 
-      {/* ドキュメント一覧 */}
-      {documents.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <FileText className="h-12 w-12 text-muted-foreground/30 mb-4" />
-          <p className="text-muted-foreground mb-1">{t.noDocuments}</p>
-          <p className="text-sm text-muted-foreground/70 mb-4">
-            {t.noDocumentsDescription}
-          </p>
-          <Button onClick={() => handleCreate("markdown")}>
-            <Plus className="h-4 w-4 mr-2" />
-            {t.newDocument}
-          </Button>
+      {/* 検索 + タグフィルタ */}
+      <div className="flex items-center gap-4 mb-3">
+        <div className="relative max-w-sm flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder={t.searchDocuments}
+            className="pl-9"
+          />
         </div>
-      ) : (
-        <div className="space-y-2">
-          {documents.map((doc) => {
-            const docType = (doc.type ?? "markdown") as DocType;
-            const Icon = DOC_TYPE_ICON[docType] ?? FileText;
-            return (
-              <div
-                key={doc.id}
-                className="group flex items-center gap-4 px-4 py-3 bg-card border border-border rounded-lg hover:border-primary/30 hover:shadow-sm transition-all cursor-pointer"
-                onClick={() => {
-                  if (renamingId !== doc.id) openInFloatingWindow(doc);
-                }}
-              >
-                <Icon className="h-5 w-5 text-muted-foreground shrink-0" />
-                <div className="flex-1 min-w-0">
-                  {renamingId === doc.id ? (
-                    <div
-                      className="flex items-center gap-2"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <input
-                        ref={renameInputRef}
-                        type="text"
-                        value={renameValue}
-                        onChange={(e) => setRenameValue(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") confirmRename();
-                          if (e.key === "Escape") cancelRename();
-                        }}
-                        className="flex-1 text-sm font-medium bg-background border border-primary rounded px-2 py-1 outline-none focus:ring-1 focus:ring-primary"
-                        autoFocus
-                      />
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-primary hover:text-primary"
-                        onClick={confirmRename}
-                      >
-                        <Check className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7"
-                        onClick={cancelRename}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="text-sm font-medium text-foreground truncate">
-                        {doc.title}
-                      </div>
-                      <div className="text-xs text-muted-foreground mt-0.5">
-                        {t.lastUpdated}: {formatDate(doc.updatedAt)}
-                      </div>
-                    </>
-                  )}
-                </div>
-                {renamingId !== doc.id && (
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        startRename(doc);
-                      }}
-                      title={t.rename}
-                    >
-                      <Pencil className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        openInFloatingWindow(doc);
-                      }}
-                    >
-                      <ExternalLink className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      disabled={exportingId === doc.id}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleExportPdf(doc);
-                      }}
-                      title="PDF"
-                    >
-                      {exportingId === doc.id ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Download className="h-4 w-4" />
-                      )}
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setDeleteTarget(doc.id);
-                      }}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                )}
-              </div>
-            );
-          })}
+        <span className="text-sm text-muted-foreground">
+          {searchQuery
+            ? `${filteredDocuments.length} / ${documents.length}`
+            : `${documents.length}${t.documentCount}`}
+        </span>
+      </div>
+
+      {allSystemTags.length > 0 && (
+        <div className="flex items-center gap-2 mb-4 flex-wrap">
+          <Hash className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+          <button
+            type="button"
+            className={`text-xs px-2 py-0.5 rounded transition-colors ${
+              filterTagId === null
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted text-muted-foreground hover:bg-muted/80"
+            }`}
+            onClick={() => handleFilterByTag(null)}
+          >
+            {t.allDocuments}
+          </button>
+          {allSystemTags.map((tag) => (
+            <TagBadge
+              key={tag.id}
+              name={language === "ja" && tag.nameJa ? tag.nameJa : tag.name}
+              color={tag.color}
+              onClick={() => handleFilterByTag(filterTagId === tag.id ? null : tag.id)}
+              className={filterTagId === tag.id ? "ring-2 ring-primary ring-offset-1" : "opacity-70 hover:opacity-100"}
+            />
+          ))}
         </div>
       )}
+
+      {/* ドキュメントテーブル */}
+      <div className="rounded-lg border">
+        {documents.length === 0 && !searchQuery ? (
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <FileText className="h-12 w-12 text-muted-foreground/30 mb-4" />
+            <p className="text-muted-foreground mb-1">
+              {filterTagId ? t.filterByTag : t.noDocuments}
+            </p>
+            {!filterTagId && (
+              <>
+                <p className="text-sm text-muted-foreground/70 mb-4">
+                  {t.noDocumentsDescription}
+                </p>
+                <Button onClick={() => handleCreate("markdown")}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  {t.newDocument}
+                </Button>
+              </>
+            )}
+          </div>
+        ) : filteredDocuments.length === 0 ? (
+          <div className="flex items-center justify-center py-12 text-muted-foreground text-sm">
+            {t.noMatchingDocuments}
+          </div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[40px] pl-4" />
+                <TableHead>{t.title}</TableHead>
+                <TableHead>{t.tags}</TableHead>
+                <TableHead className="w-[160px]">{t.lastUpdated}</TableHead>
+                <TableHead className="w-[130px]" />
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredDocuments.map((doc) => {
+                const docType = (doc.type ?? "markdown") as DocType;
+                const Icon = DOC_TYPE_ICON[docType] ?? FileText;
+                const hasTags = (doc.tags?.systemTags?.length ?? 0) > 0 || (doc.tags?.userTags?.length ?? 0) > 0;
+                return (
+                  <TableRow
+                    key={doc.id}
+                    className="group cursor-pointer"
+                    onClick={() => {
+                      if (renamingId !== doc.id) openInFloatingWindow(doc);
+                    }}
+                  >
+                    <TableCell className="pl-4">
+                      <Icon className="h-4 w-4 text-muted-foreground" title={DOC_TYPE_LABEL[docType]} />
+                    </TableCell>
+                    <TableCell>
+                      {renamingId === doc.id ? (
+                        <div
+                          className="flex items-center gap-2"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <input
+                            ref={renameInputRef}
+                            type="text"
+                            value={renameValue}
+                            onChange={(e) => setRenameValue(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") confirmRename();
+                              if (e.key === "Escape") cancelRename();
+                            }}
+                            className="flex-1 text-sm font-medium bg-background border border-primary rounded px-2 py-1 outline-none focus:ring-1 focus:ring-primary"
+                            autoFocus
+                          />
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-primary" onClick={confirmRename}>
+                            <Check className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={cancelRename}>
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <span className="text-sm font-medium">{doc.title}</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {hasTags && (
+                        <div className="flex items-center gap-1 flex-wrap">
+                          {doc.tags?.systemTags.map((tag) => (
+                            <TagBadge
+                              key={tag.id}
+                              name={language === "ja" && tag.nameJa ? tag.nameJa : tag.name}
+                              color={tag.color}
+                            />
+                          ))}
+                          {doc.tags?.userTags.map((tag) => (
+                            <TagBadge key={tag} name={tag} isUserTag />
+                          ))}
+                        </div>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {formatDate(doc.updatedAt)}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div onClick={(e) => e.stopPropagation()}>
+                          <TagPicker
+                            entityType="EditorDocument"
+                            entityId={doc.id}
+                            currentSystemTags={doc.tags?.systemTags ?? []}
+                            currentUserTags={doc.tags?.userTags ?? []}
+                            onTagsChange={(systemTags, userTags) => handleTagsChange(doc.id, systemTags, userTags)}
+                            compact
+                            language={language}
+                          />
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            startRename(doc);
+                          }}
+                          title={t.rename}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          disabled={exportingId === doc.id}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleExportPdf(doc);
+                          }}
+                          title="PDF"
+                        >
+                          {exportingId === doc.id ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Download className="h-3.5 w-3.5" />
+                          )}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeleteTarget(doc.id);
+                          }}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        )}
+      </div>
 
       <DeleteConfirmDialog
         open={!!deleteTarget}

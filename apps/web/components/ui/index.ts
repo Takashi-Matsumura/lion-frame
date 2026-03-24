@@ -69,3 +69,7 @@ export {
   LocaleTime,
   LocaleTimeRange,
 } from "./locale-date";
+export type { TagBadgeProps } from "./tag-badge";
+export { TagBadge } from "./tag-badge";
+export type { TagPickerProps } from "./tag-picker";
+export { TagPicker } from "./tag-picker";

@@ -3,8 +3,8 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import "@excalidraw/excalidraw/index.css";
 
-// Volatile appState keys to strip before saving
-const VOLATILE_KEYS = new Set([
+// appStateからセーブ時に除外するキー（揮発的 + アプリ制御）
+const EXCLUDED_SAVE_KEYS = new Set([
   "collaborators",
   "selectedElementIds",
   "selectedGroupIds",
@@ -25,31 +25,25 @@ const VOLATILE_KEYS = new Set([
   "userToFollow",
 ]);
 
+// appStateからロード時に除外するキー（アプリが常にpropから設定する）
+const APP_CONTROLLED_KEYS = new Set(["theme", "viewBackgroundColor"]);
+
+function filterKeys(
+  obj: Record<string, unknown>,
+  excludeKeys: Set<string>
+): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+  for (const key of Object.keys(obj)) {
+    if (!excludeKeys.has(key)) result[key] = obj[key];
+  }
+  return result;
+}
+
 interface ExcalidrawEditorProps {
   initialData: string;
   onChange: (content: string) => void;
   theme: "light" | "dark";
 }
-
-interface ExcalidrawScene {
-  elements: readonly Record<string, unknown>[];
-  appState: Record<string, unknown>;
-}
-
-function stripVolatileState(
-  appState: Record<string, unknown>
-): Record<string, unknown> {
-  const cleaned: Record<string, unknown> = {};
-  for (const key of Object.keys(appState)) {
-    if (!VOLATILE_KEYS.has(key)) {
-      cleaned[key] = appState[key];
-    }
-  }
-  return cleaned;
-}
-
-// Keys in appState controlled by the app, not saved data
-const APP_CONTROLLED_KEYS = new Set(["theme", "viewBackgroundColor"]);
 
 function parseInitialData(content: string): {
   elements: readonly Record<string, unknown>[];
@@ -58,17 +52,9 @@ function parseInitialData(content: string): {
   if (!content) return { elements: [], appState: {} };
   try {
     const data = JSON.parse(content);
-    const appState = data.appState ?? {};
-    // Remove app-controlled keys so they're always set from props
-    const cleaned: Record<string, unknown> = {};
-    for (const key of Object.keys(appState)) {
-      if (!APP_CONTROLLED_KEYS.has(key)) {
-        cleaned[key] = appState[key];
-      }
-    }
     return {
       elements: data.elements ?? [],
-      appState: cleaned,
+      appState: filterKeys(data.appState ?? {}, APP_CONTROLLED_KEYS),
     };
   } catch {
     return { elements: [], appState: {} };
@@ -86,7 +72,6 @@ export default function ExcalidrawEditor({
   onChangeRef.current = onChange;
   const initialRef = useRef(parseInitialData(initialData));
 
-  // Dynamic import (SSR-safe)
   useEffect(() => {
     import("@excalidraw/excalidraw").then((mod) => {
       setExcalidrawComp(() => mod.Excalidraw);
@@ -98,7 +83,7 @@ export default function ExcalidrawEditor({
       elements: readonly Record<string, unknown>[],
       appState: Record<string, unknown>
     ) => {
-      const cleaned = stripVolatileState(appState);
+      const cleaned = filterKeys(appState, EXCLUDED_SAVE_KEYS);
       const json = JSON.stringify({ elements, appState: cleaned });
       onChangeRef.current(json);
     },

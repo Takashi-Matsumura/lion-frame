@@ -1,4 +1,5 @@
 import { FaBullhorn, FaInfoCircle, FaUsers } from "react-icons/fa";
+import { Hash } from "lucide-react";
 import type { AppModule, AppTab } from "@/types/module";
 import { getMenuIcon } from "@/lib/modules/icons";
 
@@ -87,6 +88,17 @@ const adminTabs: AppTab[] = [
     allowAccessKey: true,
     description: "Manage system announcements",
     descriptionJa: "システムアナウンスを管理します",
+  },
+  {
+    id: "tags",
+    name: "Tags",
+    nameJa: "タグ管理",
+    icon: <Hash className="w-5 h-5" />,
+    order: 6,
+    enabled: true,
+    allowAccessKey: true,
+    description: "Manage system tags",
+    descriptionJa: "システムタグを管理します",
   },
 ];
 

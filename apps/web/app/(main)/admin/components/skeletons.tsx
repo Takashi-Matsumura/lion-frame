@@ -207,6 +207,36 @@ export function ModulesTabSkeleton() {
 }
 
 /**
+ * TagsTab のスケルトン
+ */
+export function TagsTabSkeleton() {
+  return (
+    <Card className="flex-1 flex flex-col min-h-0">
+      <CardContent className="p-6 flex-1 flex flex-col min-h-0">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-6 w-32" />
+            <Skeleton className="h-5 w-8 rounded-full" />
+          </div>
+          <Skeleton className="h-9 w-24" />
+        </div>
+        <Skeleton className="h-4 w-96 mb-4" />
+        <div className="space-y-2">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="flex items-center gap-4 px-4 py-3 border rounded-lg">
+              <Skeleton className="h-5 w-20 rounded-full" />
+              <Skeleton className="h-4 w-32 flex-1" />
+              <Skeleton className="h-4 w-16" />
+              <Skeleton className="h-4 w-20" />
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+/**
  * AccessKeyManager のスケルトン
  * Card(flex-1 flex flex-col min-h-0) 内に CardHeader + テーブル3行
  */

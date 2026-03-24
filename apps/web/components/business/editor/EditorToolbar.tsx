@@ -1,8 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-
-type ViewMode = "live" | "source";
+import type { ViewMode } from "@/components/business/editor/types";
 
 interface ToolbarProps {
   viewMode: ViewMode;

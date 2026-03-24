@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import dynamic from "next/dynamic";
 import { useTheme } from "next-themes";
+import { type DocType, type ViewMode, SAVE_DEBOUNCE } from "@/components/business/editor/types";
 import "@/components/business/editor/editor.css";
 
 const CodeMirrorEditor = dynamic(
@@ -23,14 +24,6 @@ const ShortcutFooter = dynamic(
   { ssr: false },
 );
 
-type ViewMode = "live" | "source";
-type DocType = "markdown" | "excalidraw";
-
-const SAVE_DEBOUNCE: Record<DocType, number> = {
-  markdown: 500,
-  excalidraw: 1000,
-};
-
 interface FloatingEditorContentProps {
   docId: string;
   docType?: DocType;
@@ -45,16 +38,10 @@ export default function FloatingEditorContent({
   const [viewMode, setViewMode] = useState<ViewMode>("live");
   const [saving, setSaving] = useState(false);
   const [loaded, setLoaded] = useState(false);
-  const [themeMounted, setThemeMounted] = useState(false);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { resolvedTheme } = useTheme();
 
   const appTheme = (resolvedTheme ?? "light") as "light" | "dark";
-
-  // next-themes の resolvedTheme はクライアント初回レンダリング後に確定する
-  useEffect(() => {
-    setThemeMounted(true);
-  }, []);
 
   useEffect(() => {
     (async () => {
@@ -94,7 +81,14 @@ export default function FloatingEditorContent({
     [docId, docType],
   );
 
-  if (!loaded || !themeMounted) {
+  // アンマウント時に保存タイマーをクリア
+  useEffect(() => {
+    return () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    };
+  }, []);
+
+  if (!loaded || !resolvedTheme) {
     return (
       <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
         読み込み中...
@@ -102,7 +96,6 @@ export default function FloatingEditorContent({
     );
   }
 
-  // Excalidraw: 全面表示（独自ツールバーなし）
   if (docType === "excalidraw") {
     return (
       <div className="flex flex-col h-full">
@@ -120,7 +113,6 @@ export default function FloatingEditorContent({
     );
   }
 
-  // Markdown: 既存のToolbar + CodeMirror + Footer
   return (
     <div className="editor-wrapper flex flex-col h-full" data-theme={appTheme}>
       <EditorToolbar
@@ -136,7 +128,6 @@ export default function FloatingEditorContent({
             initialDoc={content}
             onChange={handleChange}
             livePreview={viewMode === "live"}
-            readOnly={false}
           />
         </div>
       </div>

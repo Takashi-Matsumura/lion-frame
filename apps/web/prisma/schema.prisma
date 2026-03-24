@@ -1184,3 +1184,39 @@ model EditorDocument {
 
   @@index([createdBy, type])
 }
+
+// ========================================
+// タグシステム
+// ========================================
+
+model Tag {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  nameJa      String?
+  color       String   @default("blue")
+  description String?
+  createdBy   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  assignments TagAssignment[]
+
+  @@index([name])
+}
+
+model TagAssignment {
+  id         String   @id @default(cuid())
+  tagId      String?
+  userTag    String?
+  entityType String
+  entityId   String
+  assignedBy String
+  assignedAt DateTime @default(now())
+
+  tag        Tag?     @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([tagId, entityType, entityId])
+  @@unique([userTag, entityType, entityId, assignedBy])
+  @@index([entityType, entityId])
+  @@index([tagId])
+}
