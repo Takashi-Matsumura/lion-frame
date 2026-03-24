@@ -28,6 +28,81 @@ const MD_STYLES = `
   a { color: #2563eb; text-decoration: underline; }
 `;
 
+// 改ページ不可の要素セレクタ
+const AVOID_BREAK_SELECTORS = "h1, h2, h3, h4, h5, h6, table, blockquote, pre, li";
+// 見出し要素（直後での改ページを避ける）
+const HEADING_TAGS = new Set(["H1", "H2", "H3", "H4", "H5", "H6"]);
+
+interface BreakPoint {
+  top: number;    // canvas px (scaled)
+  bottom: number; // canvas px (scaled)
+  isHeading: boolean;
+}
+
+/** iframe内のブロック要素の位置を収集（canvas座標系） */
+function collectBreakPoints(body: HTMLElement, scale: number): BreakPoint[] {
+  const points: BreakPoint[] = [];
+  const elements = body.querySelectorAll(AVOID_BREAK_SELECTORS);
+
+  for (const el of elements) {
+    const htmlEl = el as HTMLElement;
+    const top = htmlEl.offsetTop * scale;
+    const bottom = (htmlEl.offsetTop + htmlEl.offsetHeight) * scale;
+    points.push({ top, bottom, isHeading: HEADING_TAGS.has(el.tagName) });
+  }
+
+  // topでソート
+  points.sort((a, b) => a.top - b.top);
+  return points;
+}
+
+/**
+ * 安全な改ページ位置を見つける
+ * - スライス末尾が要素の途中に来る場合、その要素の前（top）で切る
+ * - 見出しがスライス末尾付近にある場合、見出しの前で切る
+ * - 安全な位置が見つからない場合（巨大な要素）はそのまま切る
+ */
+function findSafeBreak(
+  srcY: number,
+  defaultSliceH: number,
+  breakPoints: BreakPoint[],
+  pageSlicePx: number,
+): number {
+  const sliceBottom = srcY + defaultSliceH;
+  const minSlice = pageSlicePx * 0.4; // 最低40%は使う
+
+  let bestBreak = defaultSliceH;
+
+  for (const bp of breakPoints) {
+    // この要素がスライス範囲外なら無視
+    if (bp.bottom <= srcY) continue;
+    if (bp.top >= sliceBottom) break;
+
+    // 要素がスライス末尾をまたぐ場合 → 要素の前で切る
+    if (bp.top > srcY && bp.top < sliceBottom && bp.bottom > sliceBottom) {
+      const candidate = bp.top - srcY;
+      if (candidate >= minSlice) {
+        bestBreak = candidate;
+        break;
+      }
+    }
+
+    // 見出しがスライス末尾の近く(下20%)にある場合 → 見出しの前で切る
+    if (bp.isHeading && bp.top > srcY) {
+      const threshold = srcY + defaultSliceH * 0.8;
+      if (bp.top >= threshold && bp.top < sliceBottom) {
+        const candidate = bp.top - srcY;
+        if (candidate >= minSlice) {
+          bestBreak = candidate;
+          break;
+        }
+      }
+    }
+  }
+
+  return bestBreak;
+}
+
 /**
  * マークダウンをPDFとしてエクスポート
  * iframe で完全分離 → html2canvas でキャプチャ → jsPDF
@@ -67,15 +142,15 @@ export async function exportMarkdownToPdf(
   await new Promise((r) => setTimeout(r, 50));
 
   try {
+    const scale = 1.5;
     const canvas = await html2canvas(iframeDoc.body, {
-      scale: 2,
+      scale,
       useCORS: true,
       backgroundColor: "#ffffff",
       width: 680,
       windowWidth: 760,
     });
 
-    const imgData = canvas.toDataURL("image/png");
     const imgW = canvas.width;
     const imgH = canvas.height;
 
@@ -86,31 +161,40 @@ export async function exportMarkdownToPdf(
     const contentWidth = pageWidth - margin * 2;
     const contentHeight = pageHeight - margin * 2;
 
-    // アスペクト比を保持してA4幅にフィット
+    // CSS px → canvas px の比率
     const ratio = contentWidth / imgW;
     const totalHeight = imgH * ratio;
 
     if (totalHeight <= contentHeight) {
-      doc.addImage(imgData, "PNG", margin, margin, contentWidth, totalHeight);
+      const imgData = canvas.toDataURL("image/jpeg", 0.85);
+      doc.addImage(imgData, "JPEG", margin, margin, contentWidth, totalHeight);
     } else {
-      // 複数ページに分割（ソース画像上の1ページ分の高さ）
+      // スマートスライス: 要素境界を考慮した改ページ
       const pageSlicePx = contentHeight / ratio;
+      const breakPoints = collectBreakPoints(iframeDoc.body, scale);
+
       let srcY = 0;
       let page = 0;
 
       while (srcY < imgH) {
         if (page > 0) doc.addPage();
 
-        const sliceH = Math.min(pageSlicePx, imgH - srcY);
+        let sliceH = Math.min(pageSlicePx, imgH - srcY);
+
+        // ページ末尾が要素の途中に来る場合、手前の安全な位置で切る
+        if (srcY + sliceH < imgH) {
+          sliceH = findSafeBreak(srcY, sliceH, breakPoints, pageSlicePx);
+        }
+
         const sliceCanvas = document.createElement("canvas");
         sliceCanvas.width = imgW;
         sliceCanvas.height = sliceH;
         const ctx = sliceCanvas.getContext("2d")!;
         ctx.drawImage(canvas, 0, srcY, imgW, sliceH, 0, 0, imgW, sliceH);
 
-        const sliceData = sliceCanvas.toDataURL("image/png");
+        const sliceData = sliceCanvas.toDataURL("image/jpeg", 0.85);
         const sliceScaledH = sliceH * ratio;
-        doc.addImage(sliceData, "PNG", margin, margin, contentWidth, sliceScaledH);
+        doc.addImage(sliceData, "JPEG", margin, margin, contentWidth, sliceScaledH);
 
         srcY += sliceH;
         page++;

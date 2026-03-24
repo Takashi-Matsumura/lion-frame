@@ -51,6 +51,90 @@ class CheckboxWidget extends WidgetType {
 const checkboxUnchecked = new CheckboxWidget(false);
 const checkboxChecked = new CheckboxWidget(true);
 
+// ── Emoji ──
+
+const EMOJI_MAP: Record<string, string> = {
+  warning: "⚠️",
+  info: "ℹ️",
+  note: "📝",
+  tip: "💡",
+  important: "❗",
+  caution: "⚠️",
+  check: "✅",
+  x: "❌",
+  star: "⭐",
+  fire: "🔥",
+  rocket: "🚀",
+  bulb: "💡",
+  memo: "📝",
+  book: "📖",
+  link: "🔗",
+  question: "❓",
+  exclamation: "❗",
+  thumbsup: "👍",
+  thumbsdown: "👎",
+  heart: "❤️",
+  smile: "😊",
+  thinking: "🤔",
+  tada: "🎉",
+  construction: "🚧",
+  lock: "🔒",
+  key: "🔑",
+  chart: "📊",
+  calendar: "📅",
+  email: "📧",
+  phone: "📞",
+  pin: "📌",
+  clip: "📎",
+  folder: "📁",
+  file: "📄",
+  gear: "⚙️",
+  wrench: "🔧",
+  hammer: "🔨",
+  shield: "🛡️",
+  trophy: "🏆",
+  flag: "🚩",
+  bell: "🔔",
+  clock: "🕐",
+  hourglass: "⏳",
+  mag: "🔍",
+  sparkles: "✨",
+  zap: "⚡",
+  package: "📦",
+  truck: "🚚",
+  money: "💰",
+  yen: "💴",
+  dollar: "💵",
+  handshake: "🤝",
+  muscle: "💪",
+  eyes: "👀",
+  point_right: "👉",
+  point_left: "👈",
+  point_up: "👆",
+  point_down: "👇",
+  white_check_mark: "✅",
+  heavy_check_mark: "✔️",
+  arrow_right: "➡️",
+  arrow_left: "⬅️",
+  arrow_up: "⬆️",
+  arrow_down: "⬇️",
+};
+
+class EmojiWidget extends WidgetType {
+  constructor(readonly emoji: string) {
+    super();
+  }
+  toDOM() {
+    const span = document.createElement("span");
+    span.className = "cm-emoji-widget";
+    span.textContent = this.emoji;
+    return span;
+  }
+  eq(other: EmojiWidget) {
+    return this.emoji === other.emoji;
+  }
+}
+
 // ── Helpers ──
 
 function getCursorLines(state: EditorState): Set<number> {
@@ -409,7 +493,7 @@ function buildDecorations(state: EditorState): DecorationSet {
       }
       if (type === "Blockquote") {
         handleBlockquote(state, node as unknown as { from: number; to: number; node: TreeNode }, cursorLines, decos);
-        return false;
+        // Don't return false — allow traversal into children for inline formatting (bold, italic, etc.)
       }
       if (type === "ListItem") {
         const parent = (node as unknown as { node: TreeNode }).node?.parent;
@@ -443,6 +527,17 @@ function buildDecorations(state: EditorState): DecorationSet {
       }
       if (type === "Link") {
         handleLink(node as unknown as { from: number; to: number; node: TreeNode }, decos);
+        return false;
+      }
+      if (type === "Emoji") {
+        const emojiText = state.sliceDoc(from, to); // e.g. ":warning:"
+        const name = emojiText.slice(1, -1); // remove colons
+        const emoji = EMOJI_MAP[name];
+        if (emoji) {
+          decos.push(
+            Decoration.replace({ widget: new EmojiWidget(emoji) }).range(from, to)
+          );
+        }
         return false;
       }
       if (type === "Strikethrough") {
