@@ -9,13 +9,15 @@ import {
 } from "@codemirror/view";
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { languages } from "@codemirror/language-data";
+import { GFM } from "@lezer/markdown";
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 import { obsidianTheme, obsidianHighlighting } from "./theme";
-import { livePreviewPlugin } from "./live-preview";
+import { livePreviewPlugin, tableDecorationField } from "./live-preview";
 import { markdownKeymap } from "./keybindings";
 import { imeSupport } from "./ime-support";
 
 export const livePreviewCompartment = new Compartment();
+export const tablePreviewCompartment = new Compartment();
 
 export function createEditorState(
   doc: string,
@@ -30,10 +32,11 @@ export function createEditorState(
     highlightActiveLine(),
     highlightActiveLineGutter(),
     keymap.of([...markdownKeymap, ...defaultKeymap, ...historyKeymap]),
-    markdown({ base: markdownLanguage, codeLanguages: languages }),
+    markdown({ base: markdownLanguage, codeLanguages: languages, extensions: GFM }),
     EditorView.lineWrapping,
     obsidianTheme,
     obsidianHighlighting,
+    tablePreviewCompartment.of(livePreview ? tableDecorationField : []),
     livePreviewCompartment.of(livePreview ? livePreviewPlugin : []),
     imeSupport,
     EditorView.updateListener.of((update) => {

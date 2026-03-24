@@ -50,6 +50,9 @@ importers:
       '@lezer/highlight':
         specifier: ^1.2.3
         version: 1.2.3
+      '@lezer/markdown':
+        specifier: ^1.6.3
+        version: 1.6.3
       '@lionframe/module-types':
         specifier: workspace:*
         version: link:../../packages/module-types

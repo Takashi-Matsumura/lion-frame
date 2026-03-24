@@ -30,6 +30,7 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@excalidraw/excalidraw": "^0.18.0",
     "@lezer/highlight": "^1.2.3",
+    "@lezer/markdown": "^1.6.3",
     "@lionframe/module-types": "workspace:*",
     "@prisma/client": "^6.19.1",
     "@radix-ui/react-alert-dialog": "^1.1.15",

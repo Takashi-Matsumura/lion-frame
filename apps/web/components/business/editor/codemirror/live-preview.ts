@@ -6,7 +6,7 @@ import {
   ViewUpdate,
   WidgetType,
 } from "@codemirror/view";
-import { EditorState, Range } from "@codemirror/state";
+import { EditorState, Range, StateField, Transaction } from "@codemirror/state";
 import { syntaxTree } from "@codemirror/language";
 
 // Structural type for syntax tree nodes (avoids @lezer/common dependency)
@@ -271,6 +271,117 @@ function handleListItem(
   }
 }
 
+// ── Table handler ──
+
+class TableWidget extends WidgetType {
+  constructor(
+    readonly tableHtml: string,
+    readonly sourceFrom: number,
+  ) {
+    super();
+  }
+  toDOM(view: EditorView) {
+    const wrapper = document.createElement("div");
+    wrapper.className = "cm-table-widget";
+    wrapper.style.cursor = "text";
+    wrapper.innerHTML = this.tableHtml;
+    wrapper.addEventListener("click", (e) => {
+      e.preventDefault();
+      // Move cursor into the table source to trigger source view
+      view.dispatch({
+        selection: { anchor: this.sourceFrom },
+        scrollIntoView: true,
+      });
+      view.focus();
+    });
+    return wrapper;
+  }
+  eq(other: TableWidget) {
+    return this.tableHtml === other.tableHtml && this.sourceFrom === other.sourceFrom;
+  }
+}
+
+function handleTable(
+  state: EditorState,
+  node: { from: number; to: number; node: TreeNode },
+  cursorLines: Set<number>,
+  decos: Range<Decoration>[]
+): boolean {
+  const cursorInTable = nodeHasCursor(state, node.from, node.to, cursorLines);
+  if (cursorInTable) return false;
+
+  const text = state.sliceDoc(node.from, node.to);
+  const lines = text.split("\n");
+  if (lines.length < 2) return false;
+
+  // Parse table — split by | and remove leading/trailing empty segments
+  const parseRow = (line: string) => {
+    const cells = line.split("|").map((c) => c.trim());
+    // Remove first empty (before leading |) and last empty (after trailing |)
+    if (cells.length > 0 && cells[0] === "") cells.shift();
+    if (cells.length > 0 && cells[cells.length - 1] === "") cells.pop();
+    return cells;
+  };
+
+  const headerCells = parseRow(lines[0]);
+  const bodyRows = lines.slice(2).filter((l) => l.trim()).map(parseRow);
+
+  // Detect alignment from delimiter row
+  const alignments: string[] = [];
+  if (lines[1]) {
+    const delims = parseRow(lines[1]);
+    for (const d of delims) {
+      if (d.startsWith(":") && d.endsWith(":")) alignments.push("center");
+      else if (d.endsWith(":")) alignments.push("right");
+      else alignments.push("left");
+    }
+  }
+
+  let html = '<table class="cm-rendered-table"><thead><tr>';
+  for (let i = 0; i < headerCells.length; i++) {
+    const align = alignments[i] ? ` style="text-align:${alignments[i]}"` : "";
+    html += `<th${align}>${escapeHtml(headerCells[i])}</th>`;
+  }
+  html += "</tr></thead><tbody>";
+  for (const row of bodyRows) {
+    html += "<tr>";
+    for (let i = 0; i < headerCells.length; i++) {
+      const align = alignments[i] ? ` style="text-align:${alignments[i]}"` : "";
+      html += `<td${align}>${escapeHtml(row[i] ?? "")}</td>`;
+    }
+    html += "</tr>";
+  }
+  html += "</tbody></table>";
+
+  // Insert rendered table as block widget before first line
+  const firstLine = state.doc.lineAt(node.from);
+  decos.push(
+    Decoration.widget({ widget: new TableWidget(html, node.from), block: true, side: -1 }).range(firstLine.from)
+  );
+
+  // Hide all source lines via line class
+  const startLine = firstLine.number;
+  const endPos = Math.max(node.from, node.to - 1);
+  const endLine = state.doc.lineAt(endPos).number;
+  for (let lineNum = startLine; lineNum <= endLine; lineNum++) {
+    const line = state.doc.line(lineNum);
+    decos.push(
+      Decoration.line({ class: "cm-table-source-hidden" }).range(line.from)
+    );
+  }
+  return true;
+}
+
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+    .replace(/\*(.+?)\*/g, "<em>$1</em>")
+    .replace(/`(.+?)`/g, "<code>$1</code>");
+}
+
 // ── Main build function ──
 
 const ATX_HEADING_PREFIX = "ATXHeading";
@@ -290,6 +401,8 @@ function buildDecorations(state: EditorState): DecorationSet {
       const type = node.type.name;
 
       // Block elements (per-line cursor handling)
+      // Table is handled by a separate StateField (block widgets not allowed in plugins)
+      if (type === "Table") return false;
       if (type === "FencedCode") {
         handleFencedCode(state, node as unknown as { from: number; to: number; node: TreeNode }, cursorLines, decos);
         return false;
@@ -341,6 +454,54 @@ function buildDecorations(state: EditorState): DecorationSet {
 
   return Decoration.set(decos, true);
 }
+
+// ── Table StateField (block decorations require StateField, not ViewPlugin) ──
+
+function buildTableDecorations(state: EditorState): DecorationSet {
+  if (state.doc.length === 0) return Decoration.none;
+
+  const decos: Range<Decoration>[] = [];
+  const cursorLines = getCursorLines(state);
+
+  syntaxTree(state).iterate({
+    enter(node) {
+      if (node.type.name === "Table") {
+        handleTable(
+          state,
+          node as unknown as { from: number; to: number; node: TreeNode },
+          cursorLines,
+          decos,
+        );
+        return false;
+      }
+    },
+  });
+
+  return Decoration.set(decos, true);
+}
+
+export const tableDecorationField = StateField.define<DecorationSet>({
+  create(state) {
+    try {
+      return buildTableDecorations(state);
+    } catch {
+      return Decoration.none;
+    }
+  },
+  update(decos, tr: Transaction) {
+    if (tr.docChanged || tr.selection) {
+      try {
+        return buildTableDecorations(tr.state);
+      } catch {
+        return Decoration.none;
+      }
+    }
+    return decos;
+  },
+  provide: (f) => EditorView.decorations.from(f),
+});
+
+// ── Inline/block plugin (everything except Table) ──
 
 export const livePreviewPlugin = ViewPlugin.fromClass(
   class {

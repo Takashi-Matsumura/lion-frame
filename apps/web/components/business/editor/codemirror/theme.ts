@@ -48,6 +48,48 @@ export const obsidianTheme = EditorView.theme(
     ".cm-scroller": {
       overflow: "auto",
     },
+    // Live Preview: hide syntax markers
+    ".cm-hide-syntax": {
+      fontSize: "0",
+      display: "inline",
+      width: "0",
+      overflow: "hidden",
+    },
+    // Live Preview: table source lines hidden
+    ".cm-line.cm-table-source-hidden": {
+      fontSize: "0 !important",
+      height: "0 !important",
+      lineHeight: "0 !important",
+      overflow: "hidden !important",
+      padding: "0 !important",
+      margin: "0 !important",
+      minHeight: "0 !important",
+      border: "none !important",
+      display: "block !important",
+      maxHeight: "0 !important",
+    },
+    ".cm-table-widget": {
+      margin: "4px 0 0 0",
+      overflowX: "auto",
+    },
+    ".cm-table-widget table": {
+      width: "100%",
+      borderCollapse: "collapse",
+      fontSize: "0.9em",
+      tableLayout: "auto",
+    },
+    ".cm-table-widget th, .cm-table-widget td": {
+      border: "1px solid var(--editor-border-color)",
+      padding: "6px 12px",
+      wordBreak: "break-word",
+    },
+    ".cm-table-widget th": {
+      backgroundColor: "var(--editor-bg-secondary)",
+      fontWeight: "600",
+    },
+    ".cm-table-widget tr:nth-child(even) td": {
+      backgroundColor: "var(--editor-bg-tertiary)",
+    },
   },
   { dark: false }
 );

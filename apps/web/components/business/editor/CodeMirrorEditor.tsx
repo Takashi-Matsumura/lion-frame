@@ -2,8 +2,8 @@
 
 import { useEffect, useRef, useCallback } from "react";
 import { EditorView } from "@codemirror/view";
-import { createEditorState, livePreviewCompartment } from "@/components/business/editor/codemirror/setup";
-import { livePreviewPlugin } from "@/components/business/editor/codemirror/live-preview";
+import { createEditorState, livePreviewCompartment, tablePreviewCompartment } from "@/components/business/editor/codemirror/setup";
+import { livePreviewPlugin, tableDecorationField } from "@/components/business/editor/codemirror/live-preview";
 
 interface CodeMirrorEditorProps {
   docId: string;
@@ -67,9 +67,14 @@ export default function CodeMirrorEditor({
     if (!view) return;
     try {
       view.dispatch({
-        effects: livePreviewCompartment.reconfigure(
-          livePreview ? livePreviewPlugin : []
-        ),
+        effects: [
+          livePreviewCompartment.reconfigure(
+            livePreview ? livePreviewPlugin : []
+          ),
+          tablePreviewCompartment.reconfigure(
+            livePreview ? tableDecorationField : []
+          ),
+        ],
       });
     } catch {
       // View may be in transition during document switch

@@ -58,7 +58,7 @@ const DOC_TYPE_ICON: Record<DocType, typeof FileText> = {
   excalidraw: PenTool,
 };
 
-const DOC_TYPE_LABEL: Record<DocType, string> = {
+const DOC_TYPE_LABEL: Record<string, string> = {
   markdown: "マークダウン",
   excalidraw: "ホワイトボード",
 };
@@ -396,7 +396,9 @@ export function EditorClient({ language }: { language: Language }) {
                     }}
                   >
                     <TableCell className="pl-4">
-                      <Icon className="h-4 w-4 text-muted-foreground" title={DOC_TYPE_LABEL[docType]} />
+                      <span title={DOC_TYPE_LABEL[docType] ?? docType}>
+                        <Icon className="h-4 w-4 text-muted-foreground" />
+                      </span>
                     </TableCell>
                     <TableCell>
                       {renamingId === doc.id ? (
