@@ -63,7 +63,7 @@ const DOC_TYPE_LABEL: Record<string, string> = {
   excalidraw: "ホワイトボード",
 };
 
-export function EditorClient({ language }: { language: Language }) {
+export function EditorClient({ language, pdfEnabled }: { language: Language; pdfEnabled: boolean }) {
   const t = editorTranslations[language];
   const floatingWindow = useFloatingWindowStore();
 
@@ -473,23 +473,25 @@ export function EditorClient({ language }: { language: Language }) {
                         >
                           <Pencil className="h-3.5 w-3.5" />
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7"
-                          disabled={exportingId === doc.id}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleExportPdf(doc);
-                          }}
-                          title="PDF"
-                        >
-                          {exportingId === doc.id ? (
-                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          ) : (
-                            <Download className="h-3.5 w-3.5" />
-                          )}
-                        </Button>
+                        {pdfEnabled && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            disabled={exportingId === doc.id}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleExportPdf(doc);
+                            }}
+                            title="PDF"
+                          >
+                            {exportingId === doc.id ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <Download className="h-3.5 w-3.5" />
+                            )}
+                          </Button>
+                        )}
                         <Button
                           variant="ghost"
                           size="icon"
