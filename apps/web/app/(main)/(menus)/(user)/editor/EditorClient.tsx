@@ -324,9 +324,7 @@ export function EditorClient({ language, pdfEnabled }: { language: Language; pdf
         const { exportExcalidrawToPdf } = await import(
           "@/lib/addon-modules/pdf/pdf-export-service"
         );
-        setExportingId(doc.id);
         await exportExcalidrawToPdf(content, doc.title, tid);
-        toast.success("PDFをダウンロードしました");
       }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "PDF生成に失敗しました");

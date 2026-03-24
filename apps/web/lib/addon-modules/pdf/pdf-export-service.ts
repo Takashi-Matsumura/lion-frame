@@ -1,6 +1,4 @@
-import { jsPDF } from "jspdf";
-
-// ── Excalidraw → PDF（Canvas方式: Excalidrawのみ使用） ──
+// ── Excalidraw → PDF（ブラウザ印刷方式: マークダウンと同じHQ方式） ──
 
 export async function exportExcalidrawToPdf(
   content: string,
@@ -35,46 +33,131 @@ export async function exportExcalidrawToPdf(
     getDimensions: () => ({ width: 1920, height: 1080, scale: 2 }),
   });
 
-  const imgUrl = URL.createObjectURL(blob);
-  const img = new Image();
-
-  await new Promise<void>((resolve, reject) => {
-    img.onload = () => resolve();
-    img.onerror = reject;
-    img.src = imgUrl;
+  // Blob → Data URL に変換（印刷ウィンドウで使用するため）
+  const dataUrl = await new Promise<string>((resolve) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result as string);
+    reader.readAsDataURL(blob);
   });
 
-  const doc = new jsPDF({
-    orientation: img.width > img.height ? "landscape" : "portrait",
-    unit: "mm",
-    format: "a4",
-  });
-
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const pageHeight = doc.internal.pageSize.getHeight();
-
-  // テンプレートのマージン設定を適用
-  const mL = template?.marginLeft ?? 10;
-  const mR = template?.marginRight ?? 10;
+  // テンプレート設定
   const mT = template?.marginTop ?? 10;
   const mB = template?.marginBottom ?? 10;
-  const hasHeader = template && (template.headerLeft || template.headerCenter || template.headerRight);
-  const hasFooter = template && (template.footerLeft || template.footerCenter || template.footerRight);
-  const contentTop = mT + (hasHeader ? 6 : 0);
-  const contentBottom = pageHeight - mB - (hasFooter ? 5 : 0);
-  const maxW = pageWidth - mL - mR;
-  const maxH = contentBottom - contentTop;
+  const mL = template?.marginLeft ?? 10;
+  const mR = template?.marginRight ?? 10;
 
-  const ratio = Math.min(maxW / img.width, maxH / img.height);
-  const w = img.width * ratio;
-  const h = img.height * ratio;
-  const x = mL + (maxW - w) / 2;
-  const y = contentTop + (maxH - h) / 2;
+  const hasHeader = !!(template && (template.headerLeft || template.headerCenter || template.headerRight));
+  const hasFooter = !!(template && (template.footerLeft || template.footerCenter || template.footerRight));
 
-  doc.addImage(imgUrl, "PNG", x, y, w, h);
-  doc.save(`${title}.pdf`);
+  const styles = buildExcalidrawPrintStyles(mT, mB, mL, mR, hasHeader, hasFooter);
+  const headerFooterHtml = template ? buildPrintHeaderFooterHtml(template, title) : "";
 
-  URL.revokeObjectURL(imgUrl);
+  const headerSpacerHtml = hasHeader ? `<thead><tr><td class="header-spacer"></td></tr></thead>` : "";
+  const footerSpacerHtml = hasFooter ? `<tfoot><tr><td class="footer-spacer"></td></tr></tfoot>` : "";
+
+  // 画像をページ中央に配置
+  const imgHtml = `<div class="excalidraw-container"><img src="${dataUrl}" /></div>`;
+
+  const printWindow = window.open("", "_blank");
+  if (!printWindow) {
+    throw new Error("ポップアップがブロックされました。ポップアップを許可してください。");
+  }
+
+  printWindow.document.open();
+  printWindow.document.write(`<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>${title}</title>
+  <style>${styles}</style>
+</head>
+<body>
+  ${headerFooterHtml}
+  <table class="layout-table">
+    ${headerSpacerHtml}
+    ${footerSpacerHtml}
+    <tbody><tr><td class="content-area">${imgHtml}</td></tr></tbody>
+  </table>
+</body>
+</html>`);
+  printWindow.document.close();
+
+  await new Promise<void>((resolve) => {
+    printWindow.onload = () => resolve();
+    setTimeout(resolve, 500);
+  });
+
+  printWindow.print();
+}
+
+/**
+ * Excalidraw 印刷用スタイル（画像を1ページに収める）
+ */
+function buildExcalidrawPrintStyles(mT: number, mB: number, mL: number, mR: number, hasHeader: boolean, hasFooter: boolean): string {
+  const headerHeight = hasHeader ? 12 : 0;
+  const footerHeight = hasFooter ? 10 : 0;
+
+  return `
+  @page {
+    size: A4 landscape;
+    margin: ${mT}mm ${mR}mm ${mB}mm ${mL}mm;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 0;
+    background: #ffffff;
+    font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Noto Sans JP', sans-serif;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .layout-table { width: 100%; border-collapse: collapse; }
+  .layout-table td, .layout-table th { border: none; padding: 0; vertical-align: top; }
+  .layout-table thead { display: table-header-group; }
+  .layout-table tfoot { display: table-footer-group; }
+  .header-spacer { height: ${headerHeight}mm; }
+  .footer-spacer { height: ${footerHeight}mm; }
+
+  .pdf-header {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: ${headerHeight - 2}mm;
+    padding: 1mm 0;
+    display: flex;
+    align-items: center;
+    color: #646464;
+    border-bottom: 0.5px solid #c8c8c8;
+  }
+  .pdf-header-left { flex: 1; text-align: left; }
+  .pdf-header-center { flex: 1; text-align: center; }
+  .pdf-header-right { flex: 1; text-align: right; }
+  .pdf-footer {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    height: ${footerHeight - 2}mm;
+    padding: 1mm 0;
+    display: flex;
+    align-items: center;
+    color: #646464;
+    border-top: 0.5px solid #c8c8c8;
+  }
+  .pdf-footer-left { flex: 1; text-align: left; }
+  .pdf-footer-center { flex: 1; text-align: center; }
+  .pdf-footer-right { flex: 1; text-align: right; }
+
+  .excalidraw-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: calc(100vh - ${mT + mB + headerHeight + footerHeight}mm);
+  }
+  .excalidraw-container img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+  }
+  `;
 }
 
 // ── テンプレート適用 ──
