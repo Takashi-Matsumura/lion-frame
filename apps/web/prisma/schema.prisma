@@ -1220,3 +1220,30 @@ model TagAssignment {
   @@index([entityType, entityId])
   @@index([tagId])
 }
+
+// ========================================
+// PDFテンプレート
+// ========================================
+
+model PdfTemplate {
+  id               String   @id @default(cuid())
+  name             String
+  isDefault        Boolean  @default(false)
+  headerLeft       String?
+  headerCenter     String?
+  headerRight      String?
+  footerLeft       String?
+  footerCenter     String?
+  footerRight      String?
+  headerFontSize   Float    @default(9)
+  footerFontSize   Float    @default(8)
+  marginTop        Float    @default(15)
+  marginBottom     Float    @default(15)
+  marginLeft       Float    @default(10)
+  marginRight      Float    @default(10)
+  showPageNumber   Boolean  @default(true)
+  pageNumberFormat String   @default("%page / %total")
+  createdBy        String
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}

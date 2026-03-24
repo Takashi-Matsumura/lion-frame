@@ -7,6 +7,7 @@ import { systemModule } from "@/lib/core-modules/system";
 import { formsModule } from "@/lib/addon-modules/forms";
 import { nfcCardModule } from "@/lib/addon-modules/nfc-card";
 import { editorModule } from "@/lib/addon-modules/editor";
+import { pdfModule } from "@/lib/addon-modules/pdf";
 import { healthCheckupModule } from "@/lib/addon-modules/health-checkup";
 import { workflowModule } from "@/lib/addon-modules/workflow";
 // キオスクモジュール
@@ -142,6 +143,7 @@ export const moduleRegistry: ModuleRegistry = {
   editor: editorModule,
   "health-checkup": healthCheckupModule,
   "nfc-card": nfcCardModule,
+  pdf: pdfModule,
   // キオスクモジュール
   "event-attendance": eventAttendanceModule,
   // 外部アドオンモジュール（addons.ts から自動登録）

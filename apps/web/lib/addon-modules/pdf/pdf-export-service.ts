@@ -201,6 +201,9 @@ export async function exportMarkdownToPdf(
       }
     }
 
+    // テンプレート（ヘッダー/フッター）を適用
+    await applyDefaultTemplate(doc, title);
+
     doc.save(`${title}.pdf`);
   } finally {
     document.body.removeChild(iframe);
@@ -267,7 +270,136 @@ export async function exportExcalidrawToPdf(
   const y = (pageHeight - h) / 2;
 
   doc.addImage(imgUrl, "PNG", x, y, w, h);
+
+  await applyDefaultTemplate(doc, title);
+
   doc.save(`${title}.pdf`);
 
   URL.revokeObjectURL(imgUrl);
+}
+
+// ── テンプレート適用 ──
+
+interface PdfTemplateData {
+  headerLeft?: string | null;
+  headerCenter?: string | null;
+  headerRight?: string | null;
+  footerLeft?: string | null;
+  footerCenter?: string | null;
+  footerRight?: string | null;
+  headerFontSize: number;
+  footerFontSize: number;
+  marginTop: number;
+  marginBottom: number;
+  marginLeft: number;
+  marginRight: number;
+}
+
+function replacePlaceholders(text: string, page: number, total: number, title: string): string {
+  const today = new Date().toLocaleDateString("ja-JP", { year: "numeric", month: "2-digit", day: "2-digit" });
+  return text
+    .replace(/%page/g, String(page))
+    .replace(/%total/g, String(total))
+    .replace(/%title/g, title)
+    .replace(/%date/g, today);
+}
+
+async function applyDefaultTemplate(doc: jsPDF, title: string): Promise<void> {
+  let template: PdfTemplateData | null = null;
+
+  try {
+    const res = await fetch("/api/pdf/templates/default");
+    if (res.ok) {
+      const data = await res.json();
+      template = data.template;
+    }
+  } catch {
+    // テンプレートなしで続行
+  }
+
+  if (!template) return;
+
+  const totalPages = doc.getNumberOfPages();
+  const pageWidth = doc.internal.pageSize.getWidth();
+
+  for (let i = 1; i <= totalPages; i++) {
+    doc.setPage(i);
+    const pageHeight = doc.internal.pageSize.getHeight();
+
+    // ヘッダー描画
+    if (template.headerLeft || template.headerCenter || template.headerRight) {
+      doc.setFontSize(template.headerFontSize);
+      doc.setTextColor(100, 100, 100);
+
+      const headerY = template.marginTop * 0.6;
+
+      if (template.headerLeft) {
+        doc.text(
+          replacePlaceholders(template.headerLeft, i, totalPages, title),
+          template.marginLeft,
+          headerY,
+        );
+      }
+      if (template.headerCenter) {
+        doc.text(
+          replacePlaceholders(template.headerCenter, i, totalPages, title),
+          pageWidth / 2,
+          headerY,
+          { align: "center" },
+        );
+      }
+      if (template.headerRight) {
+        doc.text(
+          replacePlaceholders(template.headerRight, i, totalPages, title),
+          pageWidth - template.marginRight,
+          headerY,
+          { align: "right" },
+        );
+      }
+
+      // ヘッダー区切り線
+      doc.setDrawColor(200, 200, 200);
+      doc.setLineWidth(0.3);
+      doc.line(template.marginLeft, headerY + 1.5, pageWidth - template.marginRight, headerY + 1.5);
+    }
+
+    // フッター描画
+    if (template.footerLeft || template.footerCenter || template.footerRight) {
+      doc.setFontSize(template.footerFontSize);
+      doc.setTextColor(100, 100, 100);
+
+      const footerY = pageHeight - template.marginBottom * 0.4;
+
+      // フッター区切り線
+      doc.setDrawColor(200, 200, 200);
+      doc.setLineWidth(0.3);
+      doc.line(template.marginLeft, footerY - 2, pageWidth - template.marginRight, footerY - 2);
+
+      if (template.footerLeft) {
+        doc.text(
+          replacePlaceholders(template.footerLeft, i, totalPages, title),
+          template.marginLeft,
+          footerY,
+        );
+      }
+      if (template.footerCenter) {
+        doc.text(
+          replacePlaceholders(template.footerCenter, i, totalPages, title),
+          pageWidth / 2,
+          footerY,
+          { align: "center" },
+        );
+      }
+      if (template.footerRight) {
+        doc.text(
+          replacePlaceholders(template.footerRight, i, totalPages, title),
+          pageWidth - template.marginRight,
+          footerY,
+          { align: "right" },
+        );
+      }
+    }
+
+    doc.setTextColor(0, 0, 0); // テキスト色をリセット
+  }
 }

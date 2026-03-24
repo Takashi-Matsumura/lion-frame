@@ -223,12 +223,12 @@ export function EditorClient({ language }: { language: Language }) {
 
       if (docType === "markdown") {
         const { exportMarkdownToPdf } = await import(
-          "@/components/business/editor/pdf-export"
+          "@/lib/addon-modules/pdf/pdf-export-service"
         );
         await exportMarkdownToPdf(content, doc.title);
       } else if (docType === "excalidraw") {
         const { exportExcalidrawToPdf } = await import(
-          "@/components/business/editor/pdf-export"
+          "@/lib/addon-modules/pdf/pdf-export-service"
         );
         await exportExcalidrawToPdf(content, doc.title);
       }
