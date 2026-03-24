@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import dynamic from "next/dynamic";
 import { useTheme } from "next-themes";
 import { type DocType, type ViewMode, SAVE_DEBOUNCE } from "@/components/business/editor/types";
+import type { CodeMirrorEditorHandle } from "@/components/business/editor/CodeMirrorEditor";
 import "@/components/business/editor/editor.css";
 
 const CodeMirrorEditor = dynamic(
@@ -27,11 +28,13 @@ const ShortcutFooter = dynamic(
 interface FloatingEditorContentProps {
   docId: string;
   docType?: DocType;
+  readOnly?: boolean;
 }
 
 export default function FloatingEditorContent({
   docId,
   docType: initialDocType,
+  readOnly = false,
 }: FloatingEditorContentProps) {
   const [content, setContent] = useState("");
   const [docType, setDocType] = useState<DocType>(initialDocType ?? "markdown");
@@ -39,6 +42,7 @@ export default function FloatingEditorContent({
   const [saving, setSaving] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const editorRef = useRef<CodeMirrorEditorHandle>(null);
   const { resolvedTheme } = useTheme();
 
   const appTheme = (resolvedTheme ?? "light") as "light" | "dark";
@@ -60,6 +64,7 @@ export default function FloatingEditorContent({
 
   const handleChange = useCallback(
     (newContent: string) => {
+      if (readOnly) return;
       setContent(newContent);
 
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
@@ -78,7 +83,7 @@ export default function FloatingEditorContent({
         }
       }, SAVE_DEBOUNCE[docType]);
     },
-    [docId, docType],
+    [docId, docType, readOnly],
   );
 
   // アンマウント時に保存タイマーをクリア
@@ -87,6 +92,19 @@ export default function FloatingEditorContent({
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     };
   }, []);
+
+  // 閲覧モード: Escキーでエディタのフォーカスを外してプレビューに戻す
+  useEffect(() => {
+    if (!readOnly) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        editorRef.current?.clearFocus();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [readOnly]);
 
   if (!loaded || !resolvedTheme) {
     return (
@@ -115,27 +133,44 @@ export default function FloatingEditorContent({
 
   return (
     <div className="editor-wrapper flex flex-col h-full" data-theme={appTheme}>
-      <EditorToolbar
-        viewMode={viewMode}
-        onViewModeChange={setViewMode}
-        content={content}
-      />
+      {readOnly ? (
+        <button
+          type="button"
+          className="flex items-center justify-between w-full px-3 py-1.5 border-b bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300 text-xs hover:bg-amber-100 dark:hover:bg-amber-950/50 transition-colors cursor-pointer"
+          onClick={() => {
+            editorRef.current?.clearFocus();
+          }}
+        >
+          <span>閲覧モード — このドキュメントは読み取り専用です（クリックでプレビューに戻る）</span>
+          <kbd className="ml-2 px-1.5 py-0.5 rounded bg-amber-200/60 dark:bg-amber-800/40 text-[10px] font-mono">Esc</kbd>
+        </button>
+      ) : (
+        <EditorToolbar
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
+          content={content}
+        />
+      )}
 
       <div className="editor-content">
         <div className="editor-pane">
           <CodeMirrorEditor
+            ref={editorRef}
             docId={docId}
             initialDoc={content}
             onChange={handleChange}
-            livePreview={viewMode === "live"}
+            livePreview={readOnly || viewMode === "live"}
+            readOnly={readOnly}
           />
         </div>
       </div>
-      <ShortcutFooter />
+      {!readOnly && <ShortcutFooter />}
 
-      <div className="absolute bottom-7 right-3 text-[10px] text-muted-foreground">
-        {saving ? "保存中..." : ""}
-      </div>
+      {!readOnly && (
+        <div className="absolute bottom-7 right-3 text-[10px] text-muted-foreground">
+          {saving ? "保存中..." : ""}
+        </div>
+      )}
     </div>
   );
 }

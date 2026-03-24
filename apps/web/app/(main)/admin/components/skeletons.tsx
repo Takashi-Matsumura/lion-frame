@@ -213,21 +213,45 @@ export function TagsTabSkeleton() {
   return (
     <Card className="flex-1 flex flex-col min-h-0">
       <CardContent className="p-6 flex-1 flex flex-col min-h-0">
+        {/* ヘッダー: タイトル + バッジ + ボタン */}
         <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <Skeleton className="h-6 w-32" />
+          <div className="flex items-center gap-3">
+            <Skeleton className="h-7 w-36" />
             <Skeleton className="h-5 w-8 rounded-full" />
           </div>
-          <Skeleton className="h-9 w-24" />
+          <Skeleton className="h-9 w-24 rounded-md" />
         </div>
-        <Skeleton className="h-4 w-96 mb-4" />
-        <div className="space-y-2">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="flex items-center gap-4 px-4 py-3 border rounded-lg">
-              <Skeleton className="h-5 w-20 rounded-full" />
-              <Skeleton className="h-4 w-32 flex-1" />
-              <Skeleton className="h-4 w-16" />
+        {/* 検索バー */}
+        <div className="flex items-center gap-4 mb-4">
+          <Skeleton className="h-9 w-64 rounded-md" />
+          <Skeleton className="h-4 w-16" />
+        </div>
+        {/* テーブル */}
+        <div className="rounded-lg border flex-1 overflow-hidden">
+          {/* テーブルヘッダー */}
+          <div className="grid grid-cols-[100px_120px_1fr_60px_80px_60px] gap-4 px-4 py-3 border-b bg-muted/30">
+            <Skeleton className="h-4 w-8" />
+            <Skeleton className="h-4 w-12" />
+            <Skeleton className="h-4 w-8" />
+            <Skeleton className="h-4 w-10" />
+            <Skeleton className="h-4 w-10" />
+            <div />
+          </div>
+          {/* テーブル行 */}
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="grid grid-cols-[100px_120px_1fr_60px_80px_60px] gap-4 px-4 py-3 border-b last:border-b-0 items-center">
+              <Skeleton className="h-5 w-16 rounded" />
+              <div>
+                <Skeleton className="h-4 w-20 mb-1" />
+                <Skeleton className="h-3 w-12" />
+              </div>
+              <Skeleton className="h-4 w-40" />
+              <Skeleton className="h-4 w-6 mx-auto" />
               <Skeleton className="h-4 w-20" />
+              <div className="flex gap-1 justify-end">
+                <Skeleton className="h-7 w-7 rounded" />
+                <Skeleton className="h-7 w-7 rounded" />
+              </div>
             </div>
           ))}
         </div>

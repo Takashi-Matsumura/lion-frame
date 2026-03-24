@@ -12,7 +12,7 @@ import { languages } from "@codemirror/language-data";
 import { GFM, Emoji } from "@lezer/markdown";
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 import { obsidianTheme, obsidianHighlighting } from "./theme";
-import { livePreviewPlugin, tableDecorationField } from "./live-preview";
+import { livePreviewPlugin, tableDecorationField, editorFocusField, focusTracker } from "./live-preview";
 import { markdownKeymap } from "./keybindings";
 import { imeSupport } from "./ime-support";
 
@@ -36,6 +36,8 @@ export function createEditorState(
     EditorView.lineWrapping,
     obsidianTheme,
     obsidianHighlighting,
+    editorFocusField,
+    focusTracker,
     tablePreviewCompartment.of(livePreview ? tableDecorationField : []),
     livePreviewCompartment.of(livePreview ? livePreviewPlugin : []),
     imeSupport,

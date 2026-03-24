@@ -2,17 +2,25 @@
 
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { toast } from "sonner";
-import { Plus, Trash2, FileText, ExternalLink, Pencil, Check, X, PenTool, ChevronDown, Printer, Loader2, Hash, Search } from "lucide-react";
+import { Plus, Trash2, FileText, ExternalLink, Pencil, Check, X, PenTool, ChevronDown, Printer, Loader2, Hash, Search, Settings2 } from "lucide-react";
 import { Button } from "@/components/ui";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
+import { StatusBadge, ReadOnlyBadge } from "@/components/ui/status-badge";
 import {
   Table,
   TableBody,
@@ -45,13 +53,20 @@ interface DocTags {
   userTags: string[];
 }
 
+type DocStatus = "DRAFT" | "PUBLISHED" | "ARCHIVED";
+type DocVisibility = "PRIVATE" | "DEPARTMENT" | "ORGANIZATION";
+
 interface DocItem {
   id: string;
   title: string;
   type: DocType;
+  status: DocStatus;
+  visibility: DocVisibility;
   updatedAt: string;
   createdAt: string;
   tags?: DocTags;
+  isOwner?: boolean;
+  creator?: { name: string | null };
 }
 
 interface PdfTemplateInfo {
@@ -85,12 +100,17 @@ export function EditorClient({ language, pdfEnabled }: { language: Language; pdf
   const [allSystemTags, setAllSystemTags] = useState<SystemTagInfo[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [pdfTemplates, setPdfTemplates] = useState<PdfTemplateInfo[]>([]);
+  const [scope, setScope] = useState<"all" | "mine" | "shared">("all");
+  const [publishTarget, setPublishTarget] = useState<DocItem | null>(null);
+  const [publishStatus, setPublishStatus] = useState<DocStatus>("DRAFT");
+  const [publishVisibility, setPublishVisibility] = useState<DocVisibility>("PRIVATE");
 
-  const loadDocuments = useCallback(async (tagId?: string | null) => {
+  const loadDocuments = useCallback(async (tagId?: string | null, scopeOverride?: string) => {
     try {
       const params = new URLSearchParams();
       if (tagId) params.set("tagId", tagId);
-      const res = await fetch(`/api/editor${params.toString() ? `?${params}` : ""}`);
+      params.set("scope", scopeOverride ?? scope);
+      const res = await fetch(`/api/editor?${params}`);
       if (!res.ok) throw new Error();
       const data = await res.json();
       setDocuments(data.documents ?? []);
@@ -146,6 +166,40 @@ export function EditorClient({ language, pdfEnabled }: { language: Language; pdf
     loadDocuments(tagId);
   }, [loadDocuments]);
 
+  const handleScopeChange = useCallback((newScope: "all" | "mine" | "shared") => {
+    setScope(newScope);
+    loadDocuments(filterTagId, newScope);
+  }, [loadDocuments, filterTagId]);
+
+  const openPublishDialog = useCallback((doc: DocItem) => {
+    setPublishTarget(doc);
+    setPublishStatus(doc.status);
+    setPublishVisibility(doc.visibility);
+  }, []);
+
+  const handlePublishSave = useCallback(async () => {
+    if (!publishTarget) return;
+    try {
+      const res = await fetch(`/api/editor/${publishTarget.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: publishStatus, visibility: publishVisibility }),
+      });
+      if (!res.ok) throw new Error();
+      setDocuments((prev) =>
+        prev.map((d) =>
+          d.id === publishTarget.id
+            ? { ...d, status: publishStatus, visibility: publishVisibility }
+            : d,
+        ),
+      );
+      setPublishTarget(null);
+      toast.success(language === "ja" ? "公開設定を更新しました" : "Publish settings updated");
+    } catch {
+      toast.error(language === "ja" ? "更新に失敗しました" : "Failed to update");
+    }
+  }, [publishTarget, publishStatus, publishVisibility, language]);
+
   const handleTagsChange = useCallback((docId: string, systemTags: SystemTagInfo[], userTags: string[]) => {
     setDocuments((prev) =>
       prev.map((d) =>
@@ -192,11 +246,12 @@ export function EditorClient({ language, pdfEnabled }: { language: Language; pdf
   const openInFloatingWindow = useCallback(
     (doc: DocItem) => {
       const docType = (doc.type ?? "markdown") as DocType;
+      const isReadOnly = doc.isOwner === false;
       floatingWindow.open({
-        title: doc.title,
-        titleJa: doc.title,
+        title: isReadOnly ? `${doc.title}（閲覧のみ）` : doc.title,
+        titleJa: isReadOnly ? `${doc.title}（閲覧のみ）` : doc.title,
         content: (
-          <FloatingEditorContent docId={doc.id} docType={docType} />
+          <FloatingEditorContent docId={doc.id} docType={docType} readOnly={isReadOnly} />
         ),
         initialSize: DEFAULT_WINDOW_SIZE[docType],
         initialPosition: { x: 150, y: 80 },
@@ -219,6 +274,8 @@ export function EditorClient({ language, pdfEnabled }: { language: Language; pdf
         id: data.document.id,
         title: data.document.title,
         type: data.document.type ?? type,
+        status: data.document.status ?? "DRAFT",
+        visibility: data.document.visibility ?? "PRIVATE",
         updatedAt: data.document.updatedAt,
         createdAt: data.document.createdAt ?? data.document.updatedAt,
         tags: { systemTags: [], userTags: [] },
@@ -378,6 +435,27 @@ export function EditorClient({ language, pdfEnabled }: { language: Language; pdf
         </span>
       </div>
 
+      {/* スコープフィルタ */}
+      <div className="flex items-center gap-2 mb-3">
+        {(["all", "mine", "shared"] as const).map((s) => {
+          const labels = { all: language === "ja" ? "すべて" : "All", mine: language === "ja" ? "自分の" : "Mine", shared: language === "ja" ? "共有" : "Shared" };
+          return (
+            <button
+              key={s}
+              type="button"
+              className={`text-xs px-3 py-1 rounded-full transition-colors ${
+                scope === s
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted text-muted-foreground hover:bg-muted/80"
+              }`}
+              onClick={() => handleScopeChange(s)}
+            >
+              {labels[s]}
+            </button>
+          );
+        })}
+      </div>
+
       {allSystemTags.length > 0 && (
         <div className="flex items-center gap-2 mb-4 flex-wrap">
           <Hash className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
@@ -458,6 +536,14 @@ export function EditorClient({ language, pdfEnabled }: { language: Language; pdf
                       </span>
                     </TableCell>
                     <TableCell>
+                      <div className="flex items-center gap-2">
+                        {renamingId !== doc.id && (
+                          <>
+                            <StatusBadge status={doc.status} visibility={doc.visibility} language={language} />
+                            {doc.isOwner === false && <ReadOnlyBadge language={language} />}
+                          </>
+                        )}
+                      </div>
                       {renamingId === doc.id ? (
                         <div
                           className="flex items-center gap-2"
@@ -507,6 +593,20 @@ export function EditorClient({ language, pdfEnabled }: { language: Language; pdf
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                        {doc.isOwner !== false && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openPublishDialog(doc);
+                            }}
+                            title={language === "ja" ? "公開設定" : "Publish settings"}
+                          >
+                            <Settings2 className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
                         <div onClick={(e) => e.stopPropagation()}>
                           <TagPicker
                             entityType="EditorDocument"
@@ -607,6 +707,87 @@ export function EditorClient({ language, pdfEnabled }: { language: Language; pdf
         deleteLabel={t.delete}
         onDelete={handleDelete}
       />
+
+      {/* 公開設定ダイアログ */}
+      <Dialog open={!!publishTarget} onOpenChange={(open) => !open && setPublishTarget(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{language === "ja" ? "公開設定" : "Publish Settings"}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <label className="text-sm font-medium mb-2 block">
+                {language === "ja" ? "ステータス" : "Status"}
+              </label>
+              <div className="flex gap-2">
+                {(["DRAFT", "PUBLISHED", "ARCHIVED"] as const).map((s) => {
+                  const labels = { DRAFT: language === "ja" ? "下書き" : "Draft", PUBLISHED: language === "ja" ? "公開" : "Published", ARCHIVED: language === "ja" ? "アーカイブ" : "Archived" };
+                  return (
+                    <button
+                      key={s}
+                      type="button"
+                      className={`text-sm px-3 py-1.5 rounded-md border transition-colors ${
+                        publishStatus === s
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "bg-background text-foreground border-border hover:bg-muted"
+                      }`}
+                      onClick={() => setPublishStatus(s)}
+                    >
+                      {labels[s]}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-2 block">
+                {language === "ja" ? "公開範囲" : "Visibility"}
+              </label>
+              <div className="flex gap-2">
+                {(["PRIVATE", "DEPARTMENT", "ORGANIZATION"] as const).map((v) => {
+                  const labels = { PRIVATE: language === "ja" ? "個人" : "Private", DEPARTMENT: language === "ja" ? "部署内" : "Dept", ORGANIZATION: language === "ja" ? "全社" : "Organization" };
+                  const disabled = publishStatus === "PUBLISHED" && v === "PRIVATE";
+                  return (
+                    <button
+                      key={v}
+                      type="button"
+                      disabled={disabled}
+                      className={`text-sm px-3 py-1.5 rounded-md border transition-colors ${
+                        publishVisibility === v
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : disabled
+                            ? "bg-muted/50 text-muted-foreground border-border cursor-not-allowed opacity-50"
+                            : "bg-background text-foreground border-border hover:bg-muted"
+                      }`}
+                      onClick={() => !disabled && setPublishVisibility(v)}
+                    >
+                      {labels[v]}
+                    </button>
+                  );
+                })}
+              </div>
+              {publishStatus === "PUBLISHED" && publishVisibility === "PRIVATE" && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  {language === "ja" ? "公開時は「部署内」以上の範囲が必要です" : "Published documents require at least department visibility"}
+                </p>
+              )}
+            </div>
+            {/* プレビュー */}
+            <div className="flex items-center gap-2 pt-2 border-t">
+              <span className="text-sm text-muted-foreground">{language === "ja" ? "プレビュー:" : "Preview:"}</span>
+              <StatusBadge status={publishStatus} visibility={publishVisibility} language={language} size="md" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPublishTarget(null)}>
+              {language === "ja" ? "キャンセル" : "Cancel"}
+            </Button>
+            <Button onClick={handlePublishSave}>
+              {language === "ja" ? "保存" : "Save"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

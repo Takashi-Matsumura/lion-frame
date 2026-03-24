@@ -1172,17 +1172,34 @@ model HealthCheckupRecord {
 // エディタ
 // ========================================
 
+enum EditorDocumentStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum EditorDocumentVisibility {
+  PRIVATE
+  DEPARTMENT
+  ORGANIZATION
+}
+
 model EditorDocument {
-  id        String   @id @default(cuid())
-  title     String
-  content   String   @default("")
-  type      String   @default("markdown")
-  createdBy String
-  creator   User     @relation("EditorDocumentCreator", fields: [createdBy], references: [id])
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String                     @id @default(cuid())
+  title       String
+  content     String                     @default("")
+  type        String                     @default("markdown")
+  status      EditorDocumentStatus       @default(DRAFT)
+  visibility  EditorDocumentVisibility   @default(PRIVATE)
+  publishedAt DateTime?
+  publishedBy String?
+  createdBy   String
+  creator     User                       @relation("EditorDocumentCreator", fields: [createdBy], references: [id])
+  createdAt   DateTime                   @default(now())
+  updatedAt   DateTime                   @updatedAt
 
   @@index([createdBy, type])
+  @@index([status, visibility])
 }
 
 // ========================================

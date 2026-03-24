@@ -6,7 +6,7 @@ import {
   ViewUpdate,
   WidgetType,
 } from "@codemirror/view";
-import { EditorState, Range, StateField, Transaction } from "@codemirror/state";
+import { EditorState, Range, StateField, StateEffect } from "@codemirror/state";
 import { syntaxTree } from "@codemirror/language";
 
 // Structural type for syntax tree nodes (avoids @lezer/common dependency)
@@ -135,10 +135,45 @@ class EmojiWidget extends WidgetType {
   }
 }
 
+// ── フォーカス状態の追跡 ──
+// StateField でフォーカス状態を管理し、StateField/ViewPlugin 両方からアクセス可能にする
+
+const setFocused = StateEffect.define<boolean>();
+
+export const editorFocusField = StateField.define<boolean>({
+  create: () => false,
+  update(focused, tr) {
+    for (const e of tr.effects) {
+      if (e.is(setFocused)) return e.value;
+    }
+    return focused;
+  },
+});
+
+/** フォーカス変更を検出して editorFocusField を更新する ViewPlugin */
+export const focusTracker = ViewPlugin.fromClass(
+  class {
+    constructor(private view: EditorView) {
+      // 初期状態を同期
+      Promise.resolve().then(() => {
+        this.view.dispatch({ effects: setFocused.of(this.view.hasFocus) });
+      });
+    }
+    update(update: ViewUpdate) {
+      if (update.focusChanged) {
+        this.view.dispatch({ effects: setFocused.of(this.view.hasFocus) });
+      }
+    }
+  },
+);
+
 // ── Helpers ──
 
 function getCursorLines(state: EditorState): Set<number> {
   const lines = new Set<number>();
+  // エディタにフォーカスがない場合はカーソル行なし → 全行プレビュー表示
+  const focused = state.field(editorFocusField, false);
+  if (focused === false) return lines;
   for (const range of state.selection.ranges) {
     if (range.from > state.doc.length || range.to > state.doc.length) continue;
     const lineFrom = state.doc.lineAt(range.from).number;
@@ -583,8 +618,8 @@ export const tableDecorationField = StateField.define<DecorationSet>({
       return Decoration.none;
     }
   },
-  update(decos, tr: Transaction) {
-    if (tr.docChanged || tr.selection) {
+  update(decos, tr) {
+    if (tr.docChanged || tr.selection || tr.effects.some((e) => e.is(setFocused))) {
       try {
         return buildTableDecorations(tr.state);
       } catch {
@@ -609,7 +644,7 @@ export const livePreviewPlugin = ViewPlugin.fromClass(
       }
     }
     update(update: ViewUpdate) {
-      if (update.docChanged || update.selectionSet || update.viewportChanged) {
+      if (update.docChanged || update.selectionSet || update.viewportChanged || update.transactions.some((tr) => tr.effects.some((e) => e.is(setFocused)))) {
         try {
           this.decorations = buildDecorations(update.state);
         } catch {
