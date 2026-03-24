@@ -43,7 +43,23 @@ interface TagsTabProps {
   language: "en" | "ja";
 }
 
+/**
+ * TagsTab — Card ラッパー付き（単独タブとして使用する場合）
+ */
 export function TagsTab({ language }: TagsTabProps) {
+  return (
+    <Card className="flex-1 flex flex-col min-h-0">
+      <CardContent className="p-6 flex-1 flex flex-col min-h-0">
+        <TagsTabContent language={language} />
+      </CardContent>
+    </Card>
+  );
+}
+
+/**
+ * TagsTabContent — Card ラッパーなし（SettingsTab 内に埋め込むために使用）
+ */
+export function TagsTabContent({ language }: TagsTabProps) {
   const t = (en: string, ja: string) => (language === "ja" ? ja : en);
 
   const [tags, setTags] = useState<TagItem[]>([]);
@@ -195,131 +211,129 @@ export function TagsTab({ language }: TagsTabProps) {
   };
 
   return (
-    <Card className="flex-1 flex flex-col min-h-0">
-      <CardContent className="p-6 flex-1 flex flex-col min-h-0">
-        {/* ヘッダー */}
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <Hash className="w-5 h-5 text-primary" />
-            <h3 className="text-lg font-semibold">
-              {t("System Tags", "システムタグ")}
-            </h3>
-            <Badge variant="secondary">{tags.length}</Badge>
-          </div>
-          <Button onClick={openCreateModal}>
-            <Plus className="h-4 w-4 mr-2" />
-            {t("New Tag", "新規タグ")}
-          </Button>
+    <>
+      {/* ヘッダー */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <Hash className="w-5 h-5 text-primary" />
+          <h3 className="text-lg font-semibold">
+            {t("System Tags", "システムタグ")}
+          </h3>
+          <Badge variant="secondary">{tags.length}</Badge>
         </div>
+        <Button onClick={openCreateModal}>
+          <Plus className="h-4 w-4 mr-2" />
+          {t("New Tag", "新規タグ")}
+        </Button>
+      </div>
 
-        {/* 検索 */}
-        <div className="flex items-center gap-4 mb-4">
-          <div className="relative max-w-sm flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={t("Search tags...", "タグを検索...")}
-              className="pl-9"
+      {/* 検索 */}
+      <div className="flex items-center gap-4 mb-4">
+        <div className="relative max-w-sm flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder={t("Search tags...", "タグを検索...")}
+            className="pl-9"
+          />
+        </div>
+        <span className="text-sm text-muted-foreground">
+          {t("Total:", "合計:")}{" "}
+          {searchQuery ? `${filteredTags.length} / ${tags.length}` : tags.length}
+        </span>
+      </div>
+
+      {/* テーブル */}
+      <div className="flex-1 overflow-y-auto min-h-0 rounded-lg border">
+        {loading ? (
+          <div className="flex items-center justify-center py-12 text-muted-foreground text-sm">
+            {t("Loading...", "読み込み中...")}
+          </div>
+        ) : tags.length === 0 ? (
+          <div className="py-12">
+            <EmptyState
+              icon={<Hash className="h-12 w-12" />}
+              message={t("No tags", "タグがありません")}
+              description={t(
+                "Create system tags for your organization.",
+                "組織で使用するシステムタグを作成してください。",
+              )}
             />
           </div>
-          <span className="text-sm text-muted-foreground">
-            {t("Total:", "合計:")}{" "}
-            {searchQuery ? `${filteredTags.length} / ${tags.length}` : tags.length}
-          </span>
-        </div>
-
-        {/* テーブル */}
-        <div className="flex-1 overflow-y-auto min-h-0 rounded-lg border">
-          {loading ? (
-            <div className="flex items-center justify-center py-12 text-muted-foreground text-sm">
-              {t("Loading...", "読み込み中...")}
-            </div>
-          ) : tags.length === 0 ? (
-            <div className="py-12">
-              <EmptyState
-                icon={<Hash className="h-12 w-12" />}
-                message={t("No tags", "タグがありません")}
-                description={t(
-                  "Create system tags for your organization.",
-                  "組織で使用するシステムタグを作成してください。",
-                )}
-              />
-            </div>
-          ) : filteredTags.length === 0 ? (
-            <div className="flex items-center justify-center py-12 text-muted-foreground text-sm">
-              {t("No matching tags", "一致するタグがありません")}
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[140px] pl-4">{t("Tag", "タグ")}</TableHead>
-                  <TableHead>{t("Name", "タグ名")}</TableHead>
-                  <TableHead className="hidden md:table-cell">{t("Description", "説明")}</TableHead>
-                  <TableHead className="w-[80px] text-center">{t("Uses", "使用数")}</TableHead>
-                  <TableHead className="w-[110px]">{t("Created", "作成日")}</TableHead>
-                  <TableHead className="w-[90px]" />
+        ) : filteredTags.length === 0 ? (
+          <div className="flex items-center justify-center py-12 text-muted-foreground text-sm">
+            {t("No matching tags", "一致するタグがありません")}
+          </div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[140px] pl-4">{t("Tag", "タグ")}</TableHead>
+                <TableHead>{t("Name", "タグ名")}</TableHead>
+                <TableHead className="hidden md:table-cell">{t("Description", "説明")}</TableHead>
+                <TableHead className="w-[80px] text-center">{t("Uses", "使用数")}</TableHead>
+                <TableHead className="w-[110px]">{t("Created", "作成日")}</TableHead>
+                <TableHead className="w-[90px]" />
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredTags.map((tag) => (
+                <TableRow key={tag.id}>
+                  <TableCell className="pl-4">
+                    <TagBadge
+                      name={language === "ja" && tag.nameJa ? tag.nameJa : tag.name}
+                      color={tag.color}
+                      size="md"
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <div className="text-sm font-medium">{tag.name}</div>
+                    {tag.nameJa && (
+                      <div className="text-xs text-muted-foreground">{tag.nameJa}</div>
+                    )}
+                  </TableCell>
+                  <TableCell className="hidden md:table-cell">
+                    <span className="text-sm text-muted-foreground truncate block max-w-[300px]">
+                      {tag.description || "—"}
+                    </span>
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <Badge variant="secondary" className="text-xs">
+                      {tag._count?.assignments ?? 0}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-sm text-muted-foreground">
+                    {formatDate(tag.createdAt)}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-1 justify-end">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => openEditModal(tag)}
+                        title={t("Edit", "編集")}
+                      >
+                        <Edit3 className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                        onClick={() => setDeleteTarget(tag)}
+                        title={t("Delete", "削除")}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredTags.map((tag) => (
-                  <TableRow key={tag.id}>
-                    <TableCell className="pl-4">
-                      <TagBadge
-                        name={language === "ja" && tag.nameJa ? tag.nameJa : tag.name}
-                        color={tag.color}
-                        size="md"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-sm font-medium">{tag.name}</div>
-                      {tag.nameJa && (
-                        <div className="text-xs text-muted-foreground">{tag.nameJa}</div>
-                      )}
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell">
-                      <span className="text-sm text-muted-foreground truncate block max-w-[300px]">
-                        {tag.description || "—"}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <Badge variant="secondary" className="text-xs">
-                        {tag._count?.assignments ?? 0}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {formatDate(tag.createdAt)}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1 justify-end">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() => openEditModal(tag)}
-                          title={t("Edit", "編集")}
-                        >
-                          <Edit3 className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                          onClick={() => setDeleteTarget(tag)}
-                          title={t("Delete", "削除")}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </div>
-      </CardContent>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </div>
 
       {/* 作成/編集ダイアログ */}
       <Dialog open={showModal} onOpenChange={setShowModal}>
@@ -421,7 +435,7 @@ export function TagsTab({ language }: TagsTabProps) {
         deleteLabel={t("Delete", "削除")}
         onDelete={handleDelete}
       />
-    </Card>
+    </>
   );
 }
 

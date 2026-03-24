@@ -3,16 +3,14 @@
 import type { AccessKey } from "@prisma/client";
 import { useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
-import { Card, CardContent } from "@/components/ui/card";
 import { useIsMobile } from "@/lib/hooks/use-mobile";
 import { useSidebar } from "@/components/ui/sidebar";
 import { useSidebarStore } from "@/lib/stores/sidebar-store";
 import {
-  AccessKeyManagerSkeleton,
   AnnouncementsTabSkeleton,
   ModulesTabSkeleton,
+  SettingsTabSkeleton,
   SystemTabSkeleton,
-  TagsTabSkeleton,
   UsersTabSkeleton,
 } from "./components/skeletons";
 import type { AppMenu, AppModule } from "@/types/module";
@@ -24,17 +22,14 @@ const SystemTab = dynamic(() => import("./components/SystemTab").then((m) => ({ 
 const UsersTab = dynamic(() => import("./components/UsersTab").then((m) => ({ default: m.UsersTab })), {
   loading: () => <UsersTabSkeleton />,
 });
-const AccessKeyManager = dynamic(() => import("@/components/AccessKeyManager").then((m) => ({ default: m.AccessKeyManager })), {
-  loading: () => <AccessKeyManagerSkeleton />,
-});
 const ModulesTab = dynamic(() => import("./components/ModulesTab").then((m) => ({ default: m.ModulesTab })), {
   loading: () => <ModulesTabSkeleton />,
 });
 const AnnouncementsTab = dynamic(() => import("./components/AnnouncementsTab").then((m) => ({ default: m.AnnouncementsTab })), {
   loading: () => <AnnouncementsTabSkeleton />,
 });
-const TagsTab = dynamic(() => import("./components/TagsTab").then((m) => ({ default: m.TagsTab })), {
-  loading: () => <TagsTabSkeleton />,
+const SettingsTab = dynamic(() => import("./components/SettingsTab").then((m) => ({ default: m.SettingsTab })), {
+  loading: () => <SettingsTabSkeleton />,
 });
 
 type AccessKeyWithTargetUser = AccessKey & {
@@ -65,10 +60,9 @@ interface AdminClientProps {
 type TabType =
   | "system"
   | "users"
-  | "access-keys"
+  | "settings"
   | "modules"
-  | "announcements"
-  | "tags";
+  | "announcements";
 
 export function AdminClient({
   language,
@@ -82,7 +76,11 @@ export function AdminClient({
   const isMobile = useIsMobile();
   const { open } = useSidebar();
   const { width } = useSidebarStore();
-  const activeTab = (searchParams.get("tab") as TabType) || "users";
+  // 旧タブIDの後方互換: access-keys, tags → settings に統合
+  const rawTab = searchParams.get("tab") || "users";
+  const activeTab = (
+    rawTab === "access-keys" || rawTab === "tags" ? "settings" : rawTab
+  ) as TabType;
 
   const headerHeight = "7.25rem";
   const sidebarLeft = isMobile ? "0" : open ? `${width}px` : "4rem";
@@ -95,8 +93,8 @@ export function AdminClient({
         left: sidebarLeft,
       }}
     >
-      <div className={`flex-1 ${["users", "access-keys", "announcements", "tags"].includes(activeTab) ? "overflow-hidden" : "overflow-y-auto"}`}>
-        <div className={`max-w-7xl mx-auto p-6 ${["users", "access-keys", "announcements", "tags"].includes(activeTab) ? "h-full flex flex-col" : "space-y-6"}`}>
+      <div className={`flex-1 ${["users", "settings", "announcements"].includes(activeTab) ? "overflow-hidden" : "overflow-y-auto"}`}>
+        <div className={`max-w-7xl mx-auto p-6 ${["users", "settings", "announcements"].includes(activeTab) ? "h-full flex flex-col" : "space-y-6"}`}>
           {/* システム情報タブ */}
           {activeTab === "system" && (
             <SystemTab language={language} />
@@ -107,20 +105,16 @@ export function AdminClient({
             <UsersTab language={language} currentUserId={currentUserId} />
           )}
 
-          {/* アクセスキー管理タブ */}
-          {activeTab === "access-keys" && (
-            <Card className="flex-1 flex flex-col min-h-0">
-              <CardContent className="p-8 flex-1 flex flex-col min-h-0">
-                <AccessKeyManager
-                  accessKeys={accessKeys}
-                  users={users}
-                  menus={menus}
-                  modules={modules}
-                  adminId={currentUserId}
-                  language={language}
-                />
-              </CardContent>
-            </Card>
+          {/* 詳細設定タブ（アクセスキー・タグ・バッジ） */}
+          {activeTab === "settings" && (
+            <SettingsTab
+              language={language}
+              currentUserId={currentUserId}
+              accessKeys={accessKeys}
+              users={users}
+              menus={menus}
+              modules={modules}
+            />
           )}
 
           {/* モジュール管理タブ */}
@@ -131,11 +125,6 @@ export function AdminClient({
           {/* アナウンスタブ */}
           {activeTab === "announcements" && (
             <AnnouncementsTab language={language} />
-          )}
-
-          {/* タグ管理タブ */}
-          {activeTab === "tags" && (
-            <TagsTab language={language} />
           )}
         </div>
       </div>
