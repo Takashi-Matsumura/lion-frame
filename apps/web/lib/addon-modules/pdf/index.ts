@@ -1,2 +1,2 @@
 export { pdfModule } from "./module";
-export { exportMarkdownToPdf, exportExcalidrawToPdf } from "./pdf-export-service";
+export { exportMarkdownToPdfHQ, exportExcalidrawToPdf } from "./pdf-export-service";

@@ -2,8 +2,9 @@
 
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { toast } from "sonner";
-import { Plus, Trash2, FileText, ExternalLink, Pencil, Check, X, PenTool, ChevronDown, Download, Loader2, Hash, Search } from "lucide-react";
+import { Plus, Trash2, FileText, ExternalLink, Pencil, Check, X, PenTool, ChevronDown, Printer, Loader2, Hash, Search } from "lucide-react";
 import { Button } from "@/components/ui";
+import { Skeleton } from "@/components/ui/skeleton";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import { Input } from "@/components/ui/input";
 import {
@@ -53,6 +54,12 @@ interface DocItem {
   tags?: DocTags;
 }
 
+interface PdfTemplateInfo {
+  id: string;
+  name: string;
+  isDefault: boolean;
+}
+
 const DOC_TYPE_ICON: Record<DocType, typeof FileText> = {
   markdown: FileText,
   excalidraw: PenTool,
@@ -77,6 +84,7 @@ export function EditorClient({ language, pdfEnabled }: { language: Language; pdf
   const [filterTagId, setFilterTagId] = useState<string | null>(null);
   const [allSystemTags, setAllSystemTags] = useState<SystemTagInfo[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [pdfTemplates, setPdfTemplates] = useState<PdfTemplateInfo[]>([]);
 
   const loadDocuments = useCallback(async (tagId?: string | null) => {
     try {
@@ -102,9 +110,19 @@ export function EditorClient({ language, pdfEnabled }: { language: Language; pdf
     } catch { /* ignore */ }
   }, []);
 
+  const loadPdfTemplates = useCallback(async () => {
+    if (!pdfEnabled) return;
+    try {
+      const res = await fetch("/api/pdf/templates");
+      if (!res.ok) return;
+      const data = await res.json();
+      setPdfTemplates(data.templates ?? []);
+    } catch { /* ignore */ }
+  }, [pdfEnabled]);
+
   useEffect(() => {
     (async () => {
-      await Promise.all([loadDocuments(), loadSystemTags()]);
+      await Promise.all([loadDocuments(), loadSystemTags(), loadPdfTemplates()]);
       setMounted(true);
     })();
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -212,29 +230,31 @@ export function EditorClient({ language, pdfEnabled }: { language: Language; pdf
     }
   }, [t.untitled, t.loadError, openInFloatingWindow]);
 
-  const handleExportPdf = useCallback(async (doc: DocItem) => {
-    setExportingId(doc.id);
+  // templateId: undefined=デフォルト使用, "none"=テンプレートなし, その他=指定ID
+  const handleExportPdf = useCallback(async (doc: DocItem, templateId?: string) => {
     try {
       const res = await fetch(`/api/editor/${doc.id}`);
       if (!res.ok) throw new Error();
       const data = await res.json();
       const content = data.document.content as string;
       const docType = (doc.type ?? "markdown") as DocType;
+      const tid = templateId === "none" ? "__none__" : templateId;
 
       if (docType === "markdown") {
-        const { exportMarkdownToPdf } = await import(
+        const { exportMarkdownToPdfHQ } = await import(
           "@/lib/addon-modules/pdf/pdf-export-service"
         );
-        await exportMarkdownToPdf(content, doc.title);
+        await exportMarkdownToPdfHQ(content, doc.title, tid);
       } else if (docType === "excalidraw") {
         const { exportExcalidrawToPdf } = await import(
           "@/lib/addon-modules/pdf/pdf-export-service"
         );
-        await exportExcalidrawToPdf(content, doc.title);
+        setExportingId(doc.id);
+        await exportExcalidrawToPdf(content, doc.title, tid);
+        toast.success("PDFをダウンロードしました");
       }
-      toast.success("PDFをダウンロードしました");
-    } catch {
-      toast.error("PDF生成に失敗しました");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "PDF生成に失敗しました");
     } finally {
       setExportingId(null);
     }
@@ -256,8 +276,45 @@ export function EditorClient({ language, pdfEnabled }: { language: Language; pdf
 
   if (!mounted) {
     return (
-      <div className="flex items-center justify-center h-[calc(100vh-200px)] text-muted-foreground text-sm">
-        読み込み中...
+      <div className="max-w-5xl mx-auto">
+        {/* ヘッダー */}
+        <div className="flex items-center justify-between mb-4">
+          <Skeleton className="h-5 w-28" />
+          <Skeleton className="h-9 w-28 rounded-md" />
+        </div>
+        {/* 検索 */}
+        <div className="flex items-center gap-4 mb-3">
+          <Skeleton className="h-9 max-w-sm flex-1 rounded-md" />
+          <Skeleton className="h-5 w-20" />
+        </div>
+        {/* タグフィルタ */}
+        <div className="flex items-center gap-2 mb-4">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton key={i} className="h-5 w-14 rounded" />
+          ))}
+        </div>
+        {/* テーブル */}
+        <div className="rounded-lg border">
+          <div className="grid grid-cols-[40px_1fr_1fr_160px_130px] gap-2 px-4 py-3 border-b">
+            <Skeleton className="h-4 w-4" />
+            <Skeleton className="h-4 w-16" />
+            <Skeleton className="h-4 w-8" />
+            <Skeleton className="h-4 w-16" />
+            <div />
+          </div>
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="grid grid-cols-[40px_1fr_1fr_160px_130px] gap-2 px-4 py-3 border-b last:border-b-0">
+              <Skeleton className="h-4 w-4" />
+              <Skeleton className="h-4 w-48" />
+              <div className="flex gap-1">
+                <Skeleton className="h-5 w-12 rounded" />
+                <Skeleton className="h-5 w-14 rounded" />
+              </div>
+              <Skeleton className="h-4 w-32" />
+              <div />
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
@@ -474,23 +531,51 @@ export function EditorClient({ language, pdfEnabled }: { language: Language; pdf
                           <Pencil className="h-3.5 w-3.5" />
                         </Button>
                         {pdfEnabled && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7"
-                            disabled={exportingId === doc.id}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleExportPdf(doc);
-                            }}
-                            title="PDF"
-                          >
-                            {exportingId === doc.id ? (
+                          exportingId === doc.id ? (
+                            <Button variant="ghost" size="icon" className="h-7 w-7" disabled>
                               <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                            ) : (
-                              <Download className="h-3.5 w-3.5" />
-                            )}
-                          </Button>
+                            </Button>
+                          ) : pdfTemplates.length === 0 ? (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleExportPdf(doc, "none");
+                              }}
+                              title="PDF"
+                            >
+                              <Printer className="h-3.5 w-3.5" />
+                            </Button>
+                          ) : (
+                            <div onClick={(e) => e.stopPropagation()}>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-7 w-7" title="PDF">
+                                    <Printer className="h-3.5 w-3.5" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="min-w-[160px]">
+                                  {pdfTemplates.map((tmpl) => (
+                                    <DropdownMenuItem
+                                      key={tmpl.id}
+                                      onClick={() => handleExportPdf(doc, tmpl.id)}
+                                    >
+                                      <Printer className={`h-3 w-3 mr-1.5 shrink-0 ${tmpl.isDefault ? "text-primary" : ""}`} />
+                                      <span className="truncate">{tmpl.name}</span>
+                                      <span className="text-[10px] ml-auto pl-2 text-muted-foreground">HQ</span>
+                                    </DropdownMenuItem>
+                                  ))}
+                                  <DropdownMenuItem onClick={() => handleExportPdf(doc, "none")}>
+                                    <Printer className="h-3 w-3 mr-1.5 shrink-0" />
+                                    <span className="text-muted-foreground">{language === "ja" ? "テンプレートなし" : "No template"}</span>
+                                    <span className="text-[10px] ml-auto pl-2 text-muted-foreground">HQ</span>
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
+                          )
                         )}
                         <Button
                           variant="ghost"

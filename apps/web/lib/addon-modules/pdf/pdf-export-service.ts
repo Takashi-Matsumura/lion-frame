@@ -1,222 +1,15 @@
 import { jsPDF } from "jspdf";
 
-// ── Markdown → PDF ──
-
-const MD_STYLES = `
-  body {
-    margin: 0; padding: 40px;
-    background: #ffffff;
-    font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Noto Sans JP', sans-serif;
-    font-size: 14px; line-height: 1.7; color: #1a1a1a;
-  }
-  h1 { font-size: 24px; font-weight: 700; margin: 16px 0 8px; border-bottom: 1px solid #e0e0e0; padding-bottom: 6px; }
-  h2 { font-size: 20px; font-weight: 700; margin: 14px 0 6px; border-bottom: 1px solid #e0e0e0; padding-bottom: 4px; }
-  h3 { font-size: 17px; font-weight: 600; margin: 12px 0 4px; }
-  p { margin: 8px 0; }
-  code { background: #f0f0f0; padding: 1px 4px; border-radius: 3px; font-size: 0.9em; font-family: 'SF Mono', 'Fira Code', monospace; }
-  pre { background: #f5f5f5; padding: 12px; border-radius: 6px; overflow-x: auto; margin: 10px 0; }
-  pre code { background: none; padding: 0; }
-  blockquote { border-left: 3px solid #ccc; padding-left: 12px; color: #555; margin: 10px 0; font-style: italic; }
-  ul, ol { padding-left: 24px; margin: 8px 0; }
-  li { margin: 3px 0; }
-  hr { border: none; border-top: 1px solid #ddd; margin: 16px 0; }
-  table { border-collapse: collapse; width: 100%; margin: 10px 0; }
-  th, td { border: 1px solid #ddd; padding: 6px 10px; text-align: left; }
-  th { background: #f5f5f5; font-weight: 600; }
-  strong { font-weight: 700; }
-  em { font-style: italic; }
-  a { color: #2563eb; text-decoration: underline; }
-`;
-
-// 改ページ不可の要素セレクタ
-const AVOID_BREAK_SELECTORS = "h1, h2, h3, h4, h5, h6, table, blockquote, pre, li";
-// 見出し要素（直後での改ページを避ける）
-const HEADING_TAGS = new Set(["H1", "H2", "H3", "H4", "H5", "H6"]);
-
-interface BreakPoint {
-  top: number;    // canvas px (scaled)
-  bottom: number; // canvas px (scaled)
-  isHeading: boolean;
-}
-
-/** iframe内のブロック要素の位置を収集（canvas座標系） */
-function collectBreakPoints(body: HTMLElement, scale: number): BreakPoint[] {
-  const points: BreakPoint[] = [];
-  const elements = body.querySelectorAll(AVOID_BREAK_SELECTORS);
-
-  for (const el of elements) {
-    const htmlEl = el as HTMLElement;
-    const top = htmlEl.offsetTop * scale;
-    const bottom = (htmlEl.offsetTop + htmlEl.offsetHeight) * scale;
-    points.push({ top, bottom, isHeading: HEADING_TAGS.has(el.tagName) });
-  }
-
-  // topでソート
-  points.sort((a, b) => a.top - b.top);
-  return points;
-}
-
-/**
- * 安全な改ページ位置を見つける
- * - スライス末尾が要素の途中に来る場合、その要素の前（top）で切る
- * - 見出しがスライス末尾付近にある場合、見出しの前で切る
- * - 安全な位置が見つからない場合（巨大な要素）はそのまま切る
- */
-function findSafeBreak(
-  srcY: number,
-  defaultSliceH: number,
-  breakPoints: BreakPoint[],
-  pageSlicePx: number,
-): number {
-  const sliceBottom = srcY + defaultSliceH;
-  const minSlice = pageSlicePx * 0.4; // 最低40%は使う
-
-  let bestBreak = defaultSliceH;
-
-  for (const bp of breakPoints) {
-    // この要素がスライス範囲外なら無視
-    if (bp.bottom <= srcY) continue;
-    if (bp.top >= sliceBottom) break;
-
-    // 要素がスライス末尾をまたぐ場合 → 要素の前で切る
-    if (bp.top > srcY && bp.top < sliceBottom && bp.bottom > sliceBottom) {
-      const candidate = bp.top - srcY;
-      if (candidate >= minSlice) {
-        bestBreak = candidate;
-        break;
-      }
-    }
-
-    // 見出しがスライス末尾の近く(下20%)にある場合 → 見出しの前で切る
-    if (bp.isHeading && bp.top > srcY) {
-      const threshold = srcY + defaultSliceH * 0.8;
-      if (bp.top >= threshold && bp.top < sliceBottom) {
-        const candidate = bp.top - srcY;
-        if (candidate >= minSlice) {
-          bestBreak = candidate;
-          break;
-        }
-      }
-    }
-  }
-
-  return bestBreak;
-}
-
-/**
- * マークダウンをPDFとしてエクスポート
- * iframe で完全分離 → html2canvas でキャプチャ → jsPDF
- */
-export async function exportMarkdownToPdf(
-  content: string,
-  title: string
-): Promise<void> {
-  const [{ marked }, html2canvasModule] = await Promise.all([
-    import("marked"),
-    import("html2canvas"),
-  ]);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const html2canvas = ((html2canvasModule as any).default ?? html2canvasModule) as (
-    element: HTMLElement,
-    options?: Record<string, unknown>
-  ) => Promise<HTMLCanvasElement>;
-
-  const html = await marked.parse(content);
-
-  // iframe でアプリのCSS（oklch等）から完全に分離
-  const iframe = document.createElement("iframe");
-  iframe.style.cssText = "position:fixed;left:0;top:0;width:760px;height:1px;border:none;z-index:99999;opacity:0;pointer-events:none;";
-  document.body.appendChild(iframe);
-
-  const iframeDoc = iframe.contentDocument!;
-  iframeDoc.open();
-  iframeDoc.write(`<!DOCTYPE html><html><head><style>${MD_STYLES}</style></head><body>${html}</body></html>`);
-  iframeDoc.close();
-
-  // iframeのレイアウト確定を待つ
-  await new Promise((r) => setTimeout(r, 100));
-
-  // iframe内のbodyの実際の高さに合わせてリサイズ
-  const bodyHeight = iframeDoc.body.scrollHeight;
-  iframe.style.height = `${bodyHeight}px`;
-  await new Promise((r) => setTimeout(r, 50));
-
-  try {
-    const scale = 1.5;
-    const canvas = await html2canvas(iframeDoc.body, {
-      scale,
-      useCORS: true,
-      backgroundColor: "#ffffff",
-      width: 680,
-      windowWidth: 760,
-    });
-
-    const imgW = canvas.width;
-    const imgH = canvas.height;
-
-    const doc = new jsPDF({ unit: "mm", format: "a4" });
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
-    const margin = 10;
-    const contentWidth = pageWidth - margin * 2;
-    const contentHeight = pageHeight - margin * 2;
-
-    // CSS px → canvas px の比率
-    const ratio = contentWidth / imgW;
-    const totalHeight = imgH * ratio;
-
-    if (totalHeight <= contentHeight) {
-      const imgData = canvas.toDataURL("image/jpeg", 0.85);
-      doc.addImage(imgData, "JPEG", margin, margin, contentWidth, totalHeight);
-    } else {
-      // スマートスライス: 要素境界を考慮した改ページ
-      const pageSlicePx = contentHeight / ratio;
-      const breakPoints = collectBreakPoints(iframeDoc.body, scale);
-
-      let srcY = 0;
-      let page = 0;
-
-      while (srcY < imgH) {
-        if (page > 0) doc.addPage();
-
-        let sliceH = Math.min(pageSlicePx, imgH - srcY);
-
-        // ページ末尾が要素の途中に来る場合、手前の安全な位置で切る
-        if (srcY + sliceH < imgH) {
-          sliceH = findSafeBreak(srcY, sliceH, breakPoints, pageSlicePx);
-        }
-
-        const sliceCanvas = document.createElement("canvas");
-        sliceCanvas.width = imgW;
-        sliceCanvas.height = sliceH;
-        const ctx = sliceCanvas.getContext("2d")!;
-        ctx.drawImage(canvas, 0, srcY, imgW, sliceH, 0, 0, imgW, sliceH);
-
-        const sliceData = sliceCanvas.toDataURL("image/jpeg", 0.85);
-        const sliceScaledH = sliceH * ratio;
-        doc.addImage(sliceData, "JPEG", margin, margin, contentWidth, sliceScaledH);
-
-        srcY += sliceH;
-        page++;
-      }
-    }
-
-    // テンプレート（ヘッダー/フッター）を適用
-    await applyDefaultTemplate(doc, title);
-
-    doc.save(`${title}.pdf`);
-  } finally {
-    document.body.removeChild(iframe);
-  }
-}
-
-// ── Excalidraw → PDF ──
+// ── Excalidraw → PDF（Canvas方式: Excalidrawのみ使用） ──
 
 export async function exportExcalidrawToPdf(
   content: string,
-  title: string
+  title: string,
+  templateId?: string,
 ): Promise<void> {
   if (!content) return;
+
+  const template = templateId === "__none__" ? null : await fetchTemplate(templateId);
 
   const { exportToBlob } = await import("@excalidraw/excalidraw");
 
@@ -259,20 +52,26 @@ export async function exportExcalidrawToPdf(
 
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
-  const margin = 10;
-  const maxW = pageWidth - margin * 2;
-  const maxH = pageHeight - margin * 2;
+
+  // テンプレートのマージン設定を適用
+  const mL = template?.marginLeft ?? 10;
+  const mR = template?.marginRight ?? 10;
+  const mT = template?.marginTop ?? 10;
+  const mB = template?.marginBottom ?? 10;
+  const hasHeader = template && (template.headerLeft || template.headerCenter || template.headerRight);
+  const hasFooter = template && (template.footerLeft || template.footerCenter || template.footerRight);
+  const contentTop = mT + (hasHeader ? 6 : 0);
+  const contentBottom = pageHeight - mB - (hasFooter ? 5 : 0);
+  const maxW = pageWidth - mL - mR;
+  const maxH = contentBottom - contentTop;
 
   const ratio = Math.min(maxW / img.width, maxH / img.height);
   const w = img.width * ratio;
   const h = img.height * ratio;
-  const x = (pageWidth - w) / 2;
-  const y = (pageHeight - h) / 2;
+  const x = mL + (maxW - w) / 2;
+  const y = contentTop + (maxH - h) / 2;
 
   doc.addImage(imgUrl, "PNG", x, y, w, h);
-
-  await applyDefaultTemplate(doc, title);
-
   doc.save(`${title}.pdf`);
 
   URL.revokeObjectURL(imgUrl);
@@ -281,6 +80,8 @@ export async function exportExcalidrawToPdf(
 // ── テンプレート適用 ──
 
 interface PdfTemplateData {
+  id?: string;
+  name?: string;
   headerLeft?: string | null;
   headerCenter?: string | null;
   headerRight?: string | null;
@@ -295,111 +96,240 @@ interface PdfTemplateData {
   marginRight: number;
 }
 
-function replacePlaceholders(text: string, page: number, total: number, title: string): string {
-  const today = new Date().toLocaleDateString("ja-JP", { year: "numeric", month: "2-digit", day: "2-digit" });
-  return text
-    .replace(/%page/g, String(page))
-    .replace(/%total/g, String(total))
-    .replace(/%title/g, title)
-    .replace(/%date/g, today);
+export type { PdfTemplateData };
+
+export async function fetchTemplate(templateId?: string): Promise<PdfTemplateData | null> {
+  try {
+    const url = templateId
+      ? `/api/pdf/templates/${templateId}`
+      : "/api/pdf/templates/default";
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.template ?? null;
+  } catch {
+    return null;
+  }
 }
 
-async function applyDefaultTemplate(doc: jsPDF, title: string): Promise<void> {
-  let template: PdfTemplateData | null = null;
+// ── マークダウン → PDF（ブラウザ印刷エンジン方式）: ブラウザ印刷エンジン方式 ──
 
-  try {
-    const res = await fetch("/api/pdf/templates/default");
-    if (res.ok) {
-      const data = await res.json();
-      template = data.template;
-    }
-  } catch {
-    // テンプレートなしで続行
+/**
+ * CSS @page + break-inside: avoid を使ったブラウザネイティブ印刷方式
+ * ブラウザの印刷レイアウトエンジンが改ページを自動処理するため、
+ * テーブル行の途中での切断や見出しの孤立が発生しない
+ *
+ * レイアウト:
+ * - @page margin でヘッダー/フッター領域を確保
+ * - コンテンツは @page margin の内側に自動配置（ブラウザが管理）
+ * - ヘッダー/フッターは position: fixed でページ端基準で配置
+ */
+function buildPrintStyles(mT: number, mB: number, mL: number, mR: number, hasHeader: boolean, hasFooter: boolean): string {
+  // ヘッダー/フッター領域の高さ
+  const headerHeight = hasHeader ? 12 : 0;  // mm（テキスト + 区切り線 + 余白）
+  const footerHeight = hasFooter ? 10 : 0;  // mm
+
+  return `
+  @page {
+    size: A4;
+    margin: ${mT}mm ${mR}mm ${mB}mm ${mL}mm;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 0;
+    background: #ffffff;
+    font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Noto Sans JP', sans-serif;
+    font-size: 13px; line-height: 1.7; color: #1a1a1a;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
 
-  if (!template) return;
+  /* ── レイアウト用テーブル（thead/tfoot がページ毎に自動繰り返し） ── */
+  .layout-table { width: 100%; border-collapse: collapse; }
+  .layout-table td, .layout-table th { border: none; padding: 0; vertical-align: top; }
+  .layout-table thead { display: table-header-group; }
+  .layout-table tfoot { display: table-footer-group; }
+  .header-spacer { height: ${headerHeight}mm; }
+  .footer-spacer { height: ${footerHeight}mm; }
 
-  const totalPages = doc.getNumberOfPages();
-  const pageWidth = doc.internal.pageSize.getWidth();
-
-  for (let i = 1; i <= totalPages; i++) {
-    doc.setPage(i);
-    const pageHeight = doc.internal.pageSize.getHeight();
-
-    // ヘッダー描画
-    if (template.headerLeft || template.headerCenter || template.headerRight) {
-      doc.setFontSize(template.headerFontSize);
-      doc.setTextColor(100, 100, 100);
-
-      const headerY = template.marginTop * 0.6;
-
-      if (template.headerLeft) {
-        doc.text(
-          replacePlaceholders(template.headerLeft, i, totalPages, title),
-          template.marginLeft,
-          headerY,
-        );
-      }
-      if (template.headerCenter) {
-        doc.text(
-          replacePlaceholders(template.headerCenter, i, totalPages, title),
-          pageWidth / 2,
-          headerY,
-          { align: "center" },
-        );
-      }
-      if (template.headerRight) {
-        doc.text(
-          replacePlaceholders(template.headerRight, i, totalPages, title),
-          pageWidth - template.marginRight,
-          headerY,
-          { align: "right" },
-        );
-      }
-
-      // ヘッダー区切り線
-      doc.setDrawColor(200, 200, 200);
-      doc.setLineWidth(0.3);
-      doc.line(template.marginLeft, headerY + 1.5, pageWidth - template.marginRight, headerY + 1.5);
-    }
-
-    // フッター描画
-    if (template.footerLeft || template.footerCenter || template.footerRight) {
-      doc.setFontSize(template.footerFontSize);
-      doc.setTextColor(100, 100, 100);
-
-      const footerY = pageHeight - template.marginBottom * 0.4;
-
-      // フッター区切り線
-      doc.setDrawColor(200, 200, 200);
-      doc.setLineWidth(0.3);
-      doc.line(template.marginLeft, footerY - 2, pageWidth - template.marginRight, footerY - 2);
-
-      if (template.footerLeft) {
-        doc.text(
-          replacePlaceholders(template.footerLeft, i, totalPages, title),
-          template.marginLeft,
-          footerY,
-        );
-      }
-      if (template.footerCenter) {
-        doc.text(
-          replacePlaceholders(template.footerCenter, i, totalPages, title),
-          pageWidth / 2,
-          footerY,
-          { align: "center" },
-        );
-      }
-      if (template.footerRight) {
-        doc.text(
-          replacePlaceholders(template.footerRight, i, totalPages, title),
-          pageWidth - template.marginRight,
-          footerY,
-          { align: "right" },
-        );
-      }
-    }
-
-    doc.setTextColor(0, 0, 0); // テキスト色をリセット
+  /* ── ヘッダー/フッター（position: fixed で各ページに表示） ── */
+  .pdf-header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: ${headerHeight - 2}mm;
+    padding: 1mm 0 1mm 0;
+    display: flex;
+    align-items: center;
+    color: #646464;
+    border-bottom: 0.5px solid #c8c8c8;
   }
+  .pdf-header-left { flex: 1; text-align: left; }
+  .pdf-header-center { flex: 1; text-align: center; }
+  .pdf-header-right { flex: 1; text-align: right; }
+  .pdf-footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: ${footerHeight - 2}mm;
+    padding: 1mm 0 1mm 0;
+    display: flex;
+    align-items: center;
+    color: #646464;
+    border-top: 0.5px solid #c8c8c8;
+  }
+  .pdf-footer-left { flex: 1; text-align: left; }
+  .pdf-footer-center { flex: 1; text-align: center; }
+  .pdf-footer-right { flex: 1; text-align: right; }
+
+  /* ── コンテンツスタイル ── */
+  h1 { font-size: 22px; font-weight: 700; margin: 16px 0 8px; border-bottom: 1px solid #e0e0e0; padding-bottom: 6px; }
+  h2 { font-size: 18px; font-weight: 700; margin: 14px 0 6px; border-bottom: 1px solid #e0e0e0; padding-bottom: 4px; }
+  h3 { font-size: 16px; font-weight: 600; margin: 12px 0 4px; }
+  h4 { font-size: 14px; font-weight: 600; margin: 10px 0 4px; }
+  p { margin: 8px 0; }
+  code { background: #f0f0f0; padding: 1px 4px; border-radius: 3px; font-size: 0.9em; font-family: 'SF Mono', 'Fira Code', monospace; }
+  pre { background: #f5f5f5; padding: 12px; border-radius: 6px; overflow-x: auto; margin: 10px 0; }
+  pre code { background: none; padding: 0; }
+  blockquote { border-left: 3px solid #ccc; padding-left: 12px; color: #555; margin: 10px 0; font-style: italic; }
+  ul, ol { padding-left: 24px; margin: 8px 0; }
+  li { margin: 3px 0; }
+  hr { border: none; border-top: 1px solid #ddd; margin: 16px 0; }
+
+  /* コンテンツ内のテーブル（レイアウトテーブルと区別） */
+  .content-area table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+  .content-area th, .content-area td { border: 1px solid #ddd; padding: 6px 10px; text-align: left; }
+  .content-area th { background: #f5f5f5; font-weight: 600; }
+  strong { font-weight: 700; }
+  em { font-style: italic; }
+  a { color: #2563eb; text-decoration: underline; }
+
+  /* ── 改ページ制御 ── */
+  h1, h2, h3, h4, h5, h6 {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+  h1, h2, h3, h4, h5, h6, .content-area tr, blockquote, pre, li, p {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .content-area table {
+    break-inside: auto;
+    page-break-inside: auto;
+  }
+  .content-area thead { display: table-header-group; }
+  `;
+}
+
+function buildPrintPlaceholder(text: string, title: string): string {
+  const today = new Date().toLocaleDateString("ja-JP", {
+    year: "numeric", month: "2-digit", day: "2-digit",
+  });
+  // HQモードではページ番号のCSS counterは使えないため、
+  // %page / %total はブラウザ印刷設定のヘッダー/フッターに委ねる
+  return text
+    .replace(/%page/g, "")
+    .replace(/%total/g, "")
+    .replace(/%title/g, title)
+    .replace(/%date/g, today)
+    .replace(/\s*\/\s*$/g, "")   // 末尾の " / " を除去
+    .replace(/^\s*\/\s*/g, "")   // 先頭の " / " を除去
+    .replace(/\|\s*\|\s*/g, "|") // 空の区切りを整理
+    .trim();
+}
+
+function buildPrintHeaderFooterHtml(template: PdfTemplateData, title: string): string {
+  let html = "";
+
+  const hasHeader = template.headerLeft || template.headerCenter || template.headerRight;
+  const hasFooter = template.footerLeft || template.footerCenter || template.footerRight;
+
+  if (hasHeader) {
+    const hFont = `font-size: ${template.headerFontSize}pt;`;
+    html += `<div class="pdf-header" style="${hFont}">`;
+    html += `<div class="pdf-header-left">${template.headerLeft ? buildPrintPlaceholder(template.headerLeft, title) : ""}</div>`;
+    html += `<div class="pdf-header-center">${template.headerCenter ? buildPrintPlaceholder(template.headerCenter, title) : ""}</div>`;
+    html += `<div class="pdf-header-right">${template.headerRight ? buildPrintPlaceholder(template.headerRight, title) : ""}</div>`;
+    html += `</div>`;
+  }
+
+  if (hasFooter) {
+    const fFont = `font-size: ${template.footerFontSize}pt;`;
+    html += `<div class="pdf-footer" style="${fFont}">`;
+    html += `<div class="pdf-footer-left">${template.footerLeft ? buildPrintPlaceholder(template.footerLeft, title) : ""}</div>`;
+    html += `<div class="pdf-footer-center">${template.footerCenter ? buildPrintPlaceholder(template.footerCenter, title) : ""}</div>`;
+    html += `<div class="pdf-footer-right">${template.footerRight ? buildPrintPlaceholder(template.footerRight, title) : ""}</div>`;
+    html += `</div>`;
+  }
+
+  return html;
+}
+
+/**
+ * 高品質マークダウン→PDF エクスポート
+ * ブラウザの印刷ダイアログ（PDF保存）を利用
+ */
+export async function exportMarkdownToPdfHQ(
+  content: string,
+  title: string,
+  templateId?: string,
+): Promise<void> {
+  const template = templateId === "__none__" ? null : await fetchTemplate(templateId);
+
+  const { marked } = await import("marked");
+  const html = await marked.parse(content);
+
+  // テンプレートのマージン
+  const mT = template?.marginTop ?? 15;
+  const mB = template?.marginBottom ?? 15;
+  const mL = template?.marginLeft ?? 10;
+  const mR = template?.marginRight ?? 10;
+
+  const hasHeader = !!(template && (template.headerLeft || template.headerCenter || template.headerRight));
+  const hasFooter = !!(template && (template.footerLeft || template.footerCenter || template.footerRight));
+
+  const styles = buildPrintStyles(mT, mB, mL, mR, hasHeader, hasFooter);
+  const headerFooterHtml = template ? buildPrintHeaderFooterHtml(template, title) : "";
+
+  // 印刷用ウィンドウを開く
+  const printWindow = window.open("", "_blank");
+  if (!printWindow) {
+    throw new Error("ポップアップがブロックされました。ポップアップを許可してください。");
+  }
+
+  // thead/tfoot がブラウザによって各ページに自動繰り返しされる
+  // → ヘッダー/フッター分のスペースが各ページで確保される
+  // position: fixed のヘッダー/フッターがそのスペース上に表示される
+  const headerSpacerHtml = hasHeader ? `<thead><tr><td class="header-spacer"></td></tr></thead>` : "";
+  const footerSpacerHtml = hasFooter ? `<tfoot><tr><td class="footer-spacer"></td></tr></tfoot>` : "";
+
+  printWindow.document.open();
+  printWindow.document.write(`<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>${title}</title>
+  <style>${styles}</style>
+</head>
+<body>
+  ${headerFooterHtml}
+  <table class="layout-table">
+    ${headerSpacerHtml}
+    ${footerSpacerHtml}
+    <tbody><tr><td class="content-area">${html}</td></tr></tbody>
+  </table>
+</body>
+</html>`);
+  printWindow.document.close();
+
+  // レンダリング完了を待つ
+  await new Promise<void>((resolve) => {
+    printWindow.onload = () => resolve();
+    setTimeout(resolve, 500);
+  });
+
+  // 印刷ダイアログを開く（ユーザが「PDFとして保存」を選択）
+  printWindow.print();
 }
