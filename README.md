@@ -3,6 +3,8 @@
 組織管理システムの最小構成フレームワーク。
 認証・通知・監査ログなどの基盤の上に、モジュール形式で業務機能を追加できます。
 
+![LionFrame - カレンダー](docs/images/calendar.png)
+
 ## 技術スタック
 
 Next.js 15 (App Router) / React 19 / TypeScript / Tailwind CSS 4 / Prisma 6 (PostgreSQL) / NextAuth.js v5 / Zustand / Biome 2 / Jest 30
