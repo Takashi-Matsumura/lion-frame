@@ -1,6 +1,6 @@
 "use client";
 
-import { Shield } from "lucide-react";
+import { CircleDot } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { StatusBadge } from "@/components/ui/status-badge";
 
@@ -27,7 +27,7 @@ export function BadgesTab({ language }: BadgesTabProps) {
     <>
       {/* ヘッダー */}
       <div className="flex items-center gap-3 mb-6">
-        <Shield className="w-5 h-5 text-primary" />
+        <CircleDot className="w-5 h-5 text-primary" />
         <h3 className="text-lg font-semibold">
           {t("Badge Management", "バッジ管理")}
         </h3>
@@ -93,7 +93,7 @@ export function BadgesTab({ language }: BadgesTabProps) {
 
         {/* 将来の拡張エリア */}
         <section className="rounded-lg border border-dashed border-muted-foreground/30 p-6 text-center">
-          <Shield className="h-8 w-8 text-muted-foreground/40 mx-auto mb-2" />
+          <CircleDot className="h-8 w-8 text-muted-foreground/40 mx-auto mb-2" />
           <p className="text-sm text-muted-foreground">
             {t(
               "Custom badge definitions will be available here in a future update.",

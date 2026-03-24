@@ -2,7 +2,7 @@
 
 import type { AccessKey } from "@prisma/client";
 import { useState } from "react";
-import { Hash, Key, Shield } from "lucide-react";
+import { Hash, Key, CircleDot } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { AccessKeyManager } from "@/components/AccessKeyManager";
@@ -45,7 +45,7 @@ const subTabs: {
 }[] = [
   { id: "access-keys", name: "Access Keys", nameJa: "アクセスキー", icon: Key },
   { id: "tags", name: "Tags", nameJa: "タグ", icon: Hash },
-  { id: "badges", name: "Badges", nameJa: "バッジ", icon: Shield },
+  { id: "badges", name: "Badges", nameJa: "バッジ", icon: CircleDot },
 ];
 
 export function SettingsTab({

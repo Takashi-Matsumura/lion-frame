@@ -2,8 +2,9 @@
 
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { toast } from "sonner";
-import { Plus, Trash2, FileText, ExternalLink, Pencil, Check, X, PenTool, ChevronDown, Printer, Loader2, Hash, Search, Settings2 } from "lucide-react";
+import { Plus, Trash2, FileText, ExternalLink, Pencil, Check, X, PenTool, ChevronDown, Printer, Loader2, Hash, Search, Settings2, CircleDot, Users } from "lucide-react";
 import { Button } from "@/components/ui";
+import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import { Input } from "@/components/ui/input";
@@ -100,7 +101,8 @@ export function EditorClient({ language, pdfEnabled }: { language: Language; pdf
   const [allSystemTags, setAllSystemTags] = useState<SystemTagInfo[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [pdfTemplates, setPdfTemplates] = useState<PdfTemplateInfo[]>([]);
-  const [scope, setScope] = useState<"all" | "mine" | "shared">("all");
+  const [scope, setScope] = useState<"mine" | "shared">("mine");
+  const [filterBadge, setFilterBadge] = useState<string | null>(null);
   const [publishTarget, setPublishTarget] = useState<DocItem | null>(null);
   const [publishStatus, setPublishStatus] = useState<DocStatus>("DRAFT");
   const [publishVisibility, setPublishVisibility] = useState<DocVisibility>("PRIVATE");
@@ -149,24 +151,40 @@ export function EditorClient({ language, pdfEnabled }: { language: Language; pdf
   }, []);
 
   const filteredDocuments = useMemo(() => {
-    if (!searchQuery.trim()) return documents;
-    const q = searchQuery.toLowerCase();
-    return documents.filter((doc) => {
-      if (doc.title.toLowerCase().includes(q)) return true;
-      const tagNames = [
-        ...(doc.tags?.systemTags.map((t) => t.nameJa ?? t.name) ?? []),
-        ...(doc.tags?.userTags ?? []),
-      ];
-      return tagNames.some((name) => name.toLowerCase().includes(q));
-    });
-  }, [documents, searchQuery]);
+    let result = documents;
+
+    // バッジ（ステータス）フィルタ
+    if (filterBadge) {
+      result = result.filter((doc) => {
+        if (filterBadge === "DRAFT") return doc.status === "DRAFT";
+        if (filterBadge === "PUBLISHED") return doc.status === "PUBLISHED";
+        if (filterBadge === "ARCHIVED") return doc.status === "ARCHIVED";
+        return true;
+      });
+    }
+
+    // テキスト検索
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter((doc) => {
+        if (doc.title.toLowerCase().includes(q)) return true;
+        const tagNames = [
+          ...(doc.tags?.systemTags.map((t) => t.nameJa ?? t.name) ?? []),
+          ...(doc.tags?.userTags ?? []),
+        ];
+        return tagNames.some((name) => name.toLowerCase().includes(q));
+      });
+    }
+
+    return result;
+  }, [documents, searchQuery, filterBadge]);
 
   const handleFilterByTag = useCallback((tagId: string | null) => {
     setFilterTagId(tagId);
     loadDocuments(tagId);
   }, [loadDocuments]);
 
-  const handleScopeChange = useCallback((newScope: "all" | "mine" | "shared") => {
+  const handleScopeChange = useCallback((newScope: "mine" | "shared") => {
     setScope(newScope);
     loadDocuments(filterTagId, newScope);
   }, [loadDocuments, filterTagId]);
@@ -334,44 +352,59 @@ export function EditorClient({ language, pdfEnabled }: { language: Language; pdf
   if (!mounted) {
     return (
       <div className="max-w-5xl mx-auto">
-        {/* ヘッダー */}
-        <div className="flex items-center justify-between mb-4">
-          <Skeleton className="h-5 w-28" />
-          <Skeleton className="h-9 w-28 rounded-md" />
-        </div>
-        {/* 検索 */}
-        <div className="flex items-center gap-4 mb-3">
-          <Skeleton className="h-9 max-w-sm flex-1 rounded-md" />
-          <Skeleton className="h-5 w-20" />
-        </div>
-        {/* タグフィルタ */}
-        <div className="flex items-center gap-2 mb-4">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} className="h-5 w-14 rounded" />
-          ))}
-        </div>
-        {/* テーブル */}
-        <div className="rounded-lg border">
-          <div className="grid grid-cols-[40px_1fr_1fr_160px_130px] gap-2 px-4 py-3 border-b">
-            <Skeleton className="h-4 w-4" />
-            <Skeleton className="h-4 w-16" />
-            <Skeleton className="h-4 w-8" />
-            <Skeleton className="h-4 w-16" />
-            <div />
-          </div>
-          {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="grid grid-cols-[40px_1fr_1fr_160px_130px] gap-2 px-4 py-3 border-b last:border-b-0">
-              <Skeleton className="h-4 w-4" />
-              <Skeleton className="h-4 w-48" />
-              <div className="flex gap-1">
-                <Skeleton className="h-5 w-12 rounded" />
-                <Skeleton className="h-5 w-14 rounded" />
-              </div>
-              <Skeleton className="h-4 w-32" />
-              <div />
+        <Card>
+          <CardContent className="p-6">
+            {/* ヘッダー */}
+            <div className="flex items-center justify-between mb-4">
+              <Skeleton className="h-5 w-28" />
+              <Skeleton className="h-9 w-28 rounded-md" />
             </div>
-          ))}
-        </div>
+            {/* 検索 + スコープトグル */}
+            <div className="flex items-center gap-4 mb-3">
+              <Skeleton className="h-9 max-w-sm flex-1 rounded-md" />
+              <div className="ml-auto">
+                <Skeleton className="h-7 w-32 rounded-md" />
+              </div>
+            </div>
+            {/* タグ & バッジ フィルタ */}
+            <div className="flex items-center gap-6 mb-4">
+              <div className="flex items-center gap-2">
+                <Skeleton className="h-3.5 w-3.5 rounded-full" />
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <Skeleton key={`tag-${i}`} className="h-5 w-14 rounded" />
+                ))}
+              </div>
+              <div className="flex items-center gap-2">
+                <Skeleton className="h-3.5 w-3.5 rounded-full" />
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <Skeleton key={`badge-${i}`} className="h-5 w-12 rounded" />
+                ))}
+              </div>
+            </div>
+            {/* テーブル */}
+            <div className="rounded-lg border">
+              <div className="grid grid-cols-[40px_1fr_1fr_160px_130px] gap-2 px-4 py-3 border-b">
+                <Skeleton className="h-4 w-4" />
+                <Skeleton className="h-4 w-16" />
+                <Skeleton className="h-4 w-8" />
+                <Skeleton className="h-4 w-16" />
+                <div />
+              </div>
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="grid grid-cols-[40px_1fr_1fr_160px_130px] gap-2 px-4 py-3 border-b last:border-b-0">
+                  <Skeleton className="h-4 w-4" />
+                  <Skeleton className="h-4 w-48" />
+                  <div className="flex gap-1">
+                    <Skeleton className="h-5 w-12 rounded" />
+                    <Skeleton className="h-5 w-14 rounded" />
+                  </div>
+                  <Skeleton className="h-4 w-32" />
+                  <div />
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -387,103 +420,138 @@ export function EditorClient({ language, pdfEnabled }: { language: Language; pdf
     });
   };
 
+  const badgeFilters: { id: string | null; label: string; labelEn: string }[] = [
+    { id: null, label: "すべて", labelEn: "All" },
+    { id: "DRAFT", label: "下書き", labelEn: "Draft" },
+    { id: "PUBLISHED", label: "公開", labelEn: "Published" },
+    { id: "ARCHIVED", label: "アーカイブ", labelEn: "Archived" },
+  ];
+
   return (
     <div className="max-w-5xl mx-auto">
-      {/* ヘッダー */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <span className="text-sm text-muted-foreground">
-            {documents.length}{t.documentCount}
-          </span>
-        </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              {t.newDocument}
-              <ChevronDown className="h-3.5 w-3.5 ml-1.5 opacity-60" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => handleCreate("markdown")}>
-              <FileText className="h-4 w-4 mr-2" />
-              {t.newMarkdown}
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleCreate("excalidraw")}>
-              <PenTool className="h-4 w-4 mr-2" />
-              {t.newWhiteboard}
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
+      <Card>
+        <CardContent className="p-6">
+          {/* ヘッダー */}
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-muted-foreground">
+                {searchQuery || filterBadge || filterTagId
+                  ? `${filteredDocuments.length} / ${documents.length}${t.documentCount}`
+                  : `${documents.length}${t.documentCount}`}
+              </span>
+            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button>
+                  <Plus className="h-4 w-4 mr-2" />
+                  {t.newDocument}
+                  <ChevronDown className="h-3.5 w-3.5 ml-1.5 opacity-60" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => handleCreate("markdown")}>
+                  <FileText className="h-4 w-4 mr-2" />
+                  {t.newMarkdown}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleCreate("excalidraw")}>
+                  <PenTool className="h-4 w-4 mr-2" />
+                  {t.newWhiteboard}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
 
-      {/* 検索 + タグフィルタ */}
-      <div className="flex items-center gap-4 mb-3">
-        <div className="relative max-w-sm flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={t.searchDocuments}
-            className="pl-9"
-          />
-        </div>
-        <span className="text-sm text-muted-foreground">
-          {searchQuery
-            ? `${filteredDocuments.length} / ${documents.length}`
-            : `${documents.length}${t.documentCount}`}
-        </span>
-      </div>
+          {/* 検索 + スコープトグル */}
+          <div className="flex items-center gap-4 mb-3">
+            <div className="relative max-w-sm flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder={t.searchDocuments}
+                className="pl-9"
+              />
+            </div>
+            {/* スコープトグル */}
+            <div className="flex items-center rounded-md border overflow-hidden shrink-0 ml-auto">
+              <button
+                type="button"
+                className={`text-xs px-3 py-1.5 transition-colors flex items-center gap-1.5 ${
+                  scope === "mine"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-background text-muted-foreground hover:bg-muted"
+                }`}
+                onClick={() => handleScopeChange("mine")}
+              >
+                <FileText className="h-3 w-3" />
+                {language === "ja" ? "自分の" : "Mine"}
+              </button>
+              <button
+                type="button"
+                className={`text-xs px-3 py-1.5 transition-colors flex items-center gap-1.5 border-l ${
+                  scope === "shared"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-background text-muted-foreground hover:bg-muted"
+                }`}
+                onClick={() => handleScopeChange("shared")}
+              >
+                <Users className="h-3 w-3" />
+                {language === "ja" ? "共有" : "Shared"}
+              </button>
+            </div>
+          </div>
 
-      {/* スコープフィルタ */}
-      <div className="flex items-center gap-2 mb-3">
-        {(["all", "mine", "shared"] as const).map((s) => {
-          const labels = { all: language === "ja" ? "すべて" : "All", mine: language === "ja" ? "自分の" : "Mine", shared: language === "ja" ? "共有" : "Shared" };
-          return (
-            <button
-              key={s}
-              type="button"
-              className={`text-xs px-3 py-1 rounded-full transition-colors ${
-                scope === s
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted text-muted-foreground hover:bg-muted/80"
-              }`}
-              onClick={() => handleScopeChange(s)}
-            >
-              {labels[s]}
-            </button>
-          );
-        })}
-      </div>
+          {/* タグ & バッジ フィルタ（横並び） */}
+          <div className="flex items-center gap-6 mb-4 flex-wrap">
+            {/* タグフィルタ */}
+            {allSystemTags.length > 0 && (
+              <div className="flex items-center gap-2 flex-wrap">
+                <Hash className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                <button
+                  type="button"
+                  className={`text-xs px-2 py-0.5 rounded transition-colors ${
+                    filterTagId === null
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted text-muted-foreground hover:bg-muted/80"
+                  }`}
+                  onClick={() => handleFilterByTag(null)}
+                >
+                  {t.allDocuments}
+                </button>
+                {allSystemTags.map((tag) => (
+                  <TagBadge
+                    key={tag.id}
+                    name={language === "ja" && tag.nameJa ? tag.nameJa : tag.name}
+                    color={tag.color}
+                    onClick={() => handleFilterByTag(filterTagId === tag.id ? null : tag.id)}
+                    className={filterTagId === tag.id ? "ring-2 ring-primary ring-offset-1" : "opacity-70 hover:opacity-100"}
+                  />
+                ))}
+              </div>
+            )}
 
-      {allSystemTags.length > 0 && (
-        <div className="flex items-center gap-2 mb-4 flex-wrap">
-          <Hash className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-          <button
-            type="button"
-            className={`text-xs px-2 py-0.5 rounded transition-colors ${
-              filterTagId === null
-                ? "bg-primary text-primary-foreground"
-                : "bg-muted text-muted-foreground hover:bg-muted/80"
-            }`}
-            onClick={() => handleFilterByTag(null)}
-          >
-            {t.allDocuments}
-          </button>
-          {allSystemTags.map((tag) => (
-            <TagBadge
-              key={tag.id}
-              name={language === "ja" && tag.nameJa ? tag.nameJa : tag.name}
-              color={tag.color}
-              onClick={() => handleFilterByTag(filterTagId === tag.id ? null : tag.id)}
-              className={filterTagId === tag.id ? "ring-2 ring-primary ring-offset-1" : "opacity-70 hover:opacity-100"}
-            />
-          ))}
-        </div>
-      )}
+            {/* バッジ（ステータス）フィルタ */}
+            <div className="flex items-center gap-2">
+              <CircleDot className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+              {badgeFilters.map((bf) => (
+                <button
+                  key={bf.id ?? "all"}
+                  type="button"
+                  className={`text-xs px-2 py-0.5 rounded transition-colors ${
+                    filterBadge === bf.id
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted text-muted-foreground hover:bg-muted/80"
+                  }`}
+                  onClick={() => setFilterBadge(bf.id)}
+                >
+                  {language === "ja" ? bf.label : bf.labelEn}
+                </button>
+              ))}
+            </div>
+          </div>
 
-      {/* ドキュメントテーブル */}
-      <div className="rounded-lg border">
+          {/* ドキュメントテーブル */}
+          <div className="rounded-lg border">
         {documents.length === 0 && !searchQuery ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
             <FileText className="h-12 w-12 text-muted-foreground/30 mb-4" />
@@ -788,6 +856,8 @@ export function EditorClient({ language, pdfEnabled }: { language: Language; pdf
           </DialogFooter>
         </DialogContent>
       </Dialog>
+        </CardContent>
+      </Card>
     </div>
   );
 }
