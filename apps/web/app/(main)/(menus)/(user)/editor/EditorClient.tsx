@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { toast } from "sonner";
-import { Plus, Trash2, FileText, ExternalLink, Pencil, Check, X, PenTool, ChevronDown, Printer, Loader2, Hash, Search, Settings2, CircleDot, Users } from "lucide-react";
+import { Plus, Trash2, FileText, ExternalLink, Check, X, PenTool, ChevronDown, Printer, Loader2, Hash, Search, Settings2, CircleDot, Users } from "lucide-react";
 import { Button } from "@/components/ui";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -637,7 +637,16 @@ export function EditorClient({ language, pdfEnabled }: { language: Language; pdf
                           </Button>
                         </div>
                       ) : (
-                        <span className="text-sm font-medium">{doc.title}</span>
+                        <span
+                          className="text-sm font-medium hover:underline hover:text-primary cursor-text"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            startRename(doc);
+                          }}
+                          title={t.rename}
+                        >
+                          {doc.title}
+                        </span>
                       )}
                     </TableCell>
                     <TableCell>
@@ -686,18 +695,6 @@ export function EditorClient({ language, pdfEnabled }: { language: Language; pdf
                             language={language}
                           />
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            startRename(doc);
-                          }}
-                          title={t.rename}
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                        </Button>
                         {pdfEnabled && (
                           exportingId === doc.id ? (
                             <Button variant="ghost" size="icon" className="h-7 w-7" disabled>
