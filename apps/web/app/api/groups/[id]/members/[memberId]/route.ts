@@ -45,11 +45,20 @@ export const PATCH = apiHandler(async (request, session) => {
   );
 
   const body = await request.json();
-  const memberRole = body.role === "LEADER" ? "LEADER" : "MEMBER";
+
+  const data: Record<string, unknown> = {};
+  if ("role" in body) {
+    data.role = body.role === "LEADER" ? "LEADER" : "MEMBER";
+  }
+  if ("title" in body) {
+    data.title = typeof body.title === "string" && body.title.trim()
+      ? body.title.trim()
+      : null;
+  }
 
   const member = await prisma.groupMember.update({
     where: { id: memberId },
-    data: { role: memberRole },
+    data,
   });
 
   return { member };

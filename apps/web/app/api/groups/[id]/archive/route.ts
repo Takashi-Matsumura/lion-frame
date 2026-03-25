@@ -26,7 +26,7 @@ export const POST = apiHandler(async (request, session) => {
 
   const group = await prisma.group.findUnique({
     where: { id },
-    include: { members: { select: { employeeId: true, role: true } } },
+    include: { members: { select: { employeeId: true, role: true, title: true } } },
   });
   if (!group) throw ApiError.notFound("Group not found", "グループが見つかりません");
 
@@ -59,6 +59,7 @@ export const POST = apiHandler(async (request, session) => {
             create: group.members.map((m) => ({
               employeeId: m.employeeId,
               role: m.role,
+              title: m.title,
             })),
           },
         },

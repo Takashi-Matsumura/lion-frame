@@ -21,12 +21,14 @@ import {
   FiArchive,
   FiCopy,
   FiCamera,
+  FiPlus,
 } from "react-icons/fi";
 import { MemberPickerDialog } from "./MemberPickerDialog";
 
 interface MemberData {
   id: string;
   role: "LEADER" | "MEMBER";
+  title?: string | null;
   employeeId: string;
   employee: {
     id: string;
@@ -159,6 +161,22 @@ export function GroupDetailDialog({ group, onClose, canEdit, userRole, t }: Prop
     if (res.ok) {
       setConfirmSnapshot(false);
       onClose();
+    }
+  };
+
+  const handleTitleUpdate = async (memberId: string, currentTitle: string | null | undefined, newTitle: string) => {
+    const title = newTitle.trim() || null;
+    if (title === (currentTitle || null)) return;
+    const res = await fetch(`/api/groups/${group.id}/members/${memberId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title }),
+    });
+    if (res.ok) {
+      // ローカルstateを直接更新（refreshGroupの代わりに即反映）
+      setMembers((prev) =>
+        prev.map((m) => m.id === memberId ? { ...m, title } : m),
+      );
     }
   };
 
@@ -326,11 +344,20 @@ export function GroupDetailDialog({ group, onClose, canEdit, userRole, t }: Prop
                             {t.leader}
                           </Badge>
                         )}
+                        <MemberTitleBadge
+                          memberId={member.id}
+                          currentTitle={member.title}
+                          canEdit={canModify}
+                          placeholder={t.memberTitlePlaceholder}
+                          onSave={handleTitleUpdate}
+                        />
                       </div>
-                      <div className="text-xs text-muted-foreground truncate">
-                        {member.employee.position}
-                        {unitName(member.employee) &&
-                          ` | ${unitName(member.employee)}`}
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <span className="truncate">
+                          {member.employee.position}
+                          {unitName(member.employee) &&
+                            ` | ${unitName(member.employee)}`}
+                        </span>
                       </div>
                     </div>
                     {canModify && (
@@ -450,8 +477,8 @@ export function GroupDetailDialog({ group, onClose, canEdit, userRole, t }: Prop
               </div>
             )}
 
-            {/* 確認モード: 削除 */}
-            {confirmDelete && (
+            {/* 確認モード: 削除（アーカイブ済みでは非表示） */}
+            {confirmDelete && !isArchived && (
               <div className="flex items-center gap-2 rounded-md bg-destructive/10 px-3 py-2">
                 <span className="flex-1 text-sm text-destructive">
                   {t.confirmDeleteDesc}
@@ -511,7 +538,7 @@ export function GroupDetailDialog({ group, onClose, canEdit, userRole, t }: Prop
                   </Button>
                 )}
                 <div className="flex-1" />
-                {canEdit && (
+                {canEdit && !isArchived && (
                   <Button
                     variant="outline"
                     size="sm"
@@ -541,4 +568,86 @@ export function GroupDetailDialog({ group, onClose, canEdit, userRole, t }: Prop
       />
     </>
   );
+}
+
+function MemberTitleBadge({
+  memberId,
+  currentTitle,
+  canEdit,
+  placeholder,
+  onSave,
+}: {
+  memberId: string;
+  currentTitle: string | null | undefined;
+  canEdit: boolean;
+  placeholder: string;
+  onSave: (memberId: string, currentTitle: string | null | undefined, newTitle: string) => Promise<void>;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(currentTitle || "");
+  const [saving, setSaving] = useState(false);
+
+  const save = async () => {
+    if (saving) return;
+    const trimmed = value.trim();
+    if (trimmed === (currentTitle || "")) {
+      setEditing(false);
+      return;
+    }
+    setSaving(true);
+    await onSave(memberId, currentTitle, trimmed);
+    setSaving(false);
+    setEditing(false);
+  };
+
+  if (editing) {
+    return (
+      <input
+        type="text"
+        autoFocus
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        placeholder={placeholder}
+        className="shrink-0 rounded border border-primary bg-transparent px-1.5 py-0 text-xs outline-none w-28"
+        onBlur={save}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            save();
+          }
+          if (e.key === "Escape") {
+            setValue(currentTitle || "");
+            setEditing(false);
+          }
+        }}
+      />
+    );
+  }
+
+  if (currentTitle) {
+    return (
+      <Badge
+        variant="outline"
+        className={`shrink-0 text-xs ${canEdit ? "cursor-pointer hover:bg-accent" : ""}`}
+        onClick={canEdit ? (e) => { e.stopPropagation(); setEditing(true); } : undefined}
+      >
+        {currentTitle}
+      </Badge>
+    );
+  }
+
+  if (canEdit) {
+    return (
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); setEditing(true); }}
+        className="shrink-0 flex items-center justify-center h-5 w-5 rounded-full border border-dashed border-muted-foreground/40 text-muted-foreground/40 hover:border-primary hover:text-primary transition-colors"
+        title={placeholder}
+      >
+        <FiPlus className="h-3 w-3" />
+      </button>
+    );
+  }
+
+  return null;
 }

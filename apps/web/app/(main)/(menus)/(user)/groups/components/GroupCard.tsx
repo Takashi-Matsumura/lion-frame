@@ -8,7 +8,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { FiUsers, FiUser, FiArchive } from "react-icons/fi";
+import { FiUsers, FiUser } from "react-icons/fi";
 
 interface GroupCardProps {
   group: {
@@ -27,13 +27,30 @@ interface GroupCardProps {
 }
 
 export function GroupCard({ group, onClick, t }: GroupCardProps) {
-  const isArchived = !!group.archivedAt;
+  const isStanding = group.type === "OFFICIAL" && group.fiscalYear == null;
+  const categoryLabel = isStanding
+    ? t.ongoing
+    : group.fiscalYear != null
+      ? `${group.fiscalYear}${t.fiscalYearSuffix}`
+      : null;
 
   return (
     <Card
-      className={`cursor-pointer transition-colors hover:bg-accent/50 ${isArchived ? "opacity-60" : ""}`}
+      className="cursor-pointer transition-colors hover:bg-accent/50 overflow-hidden"
       onClick={onClick}
     >
+      {/* カテゴリバー: 常設=青系、年度=アクセント系 */}
+      {group.type === "OFFICIAL" && categoryLabel && (
+        <div
+          className={`px-3 py-1 text-xs font-medium ${
+            isStanding
+              ? "bg-blue-600/10 text-blue-700 dark:bg-blue-500/15 dark:text-blue-400"
+              : "bg-primary/10 text-primary"
+          }`}
+        >
+          {categoryLabel}
+        </div>
+      )}
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-2">
           <CardTitle className="text-base leading-snug truncate">{group.name}</CardTitle>
@@ -43,19 +60,6 @@ export function GroupCard({ group, onClick, t }: GroupCardProps) {
             {t.memberCount}
           </Badge>
         </div>
-        {group.type === "OFFICIAL" && (
-          <div className="flex items-center gap-1.5">
-            <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-              {group.fiscalYear != null ? `${group.fiscalYear}${t.fiscalYearSuffix}` : t.ongoing}
-            </Badge>
-            {isArchived && (
-              <Badge variant="secondary" className="text-[10px] px-1.5 py-0 text-muted-foreground">
-                <FiArchive className="mr-0.5 h-2.5 w-2.5" />
-                {t.archived}
-              </Badge>
-            )}
-          </div>
-        )}
         {group.description && (
           <CardDescription className="line-clamp-2 text-sm">
             {group.description}

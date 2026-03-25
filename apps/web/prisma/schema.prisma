@@ -1306,6 +1306,7 @@ model GroupMember {
   groupId    String
   employeeId String
   role       GroupMemberRole  @default(MEMBER)
+  title      String?         // グループ内の役割名（自由入力: 委員長、書記、会計など）
   joinedAt   DateTime        @default(now())
 
   group      Group           @relation(fields: [groupId], references: [id], onDelete: Cascade)
