@@ -9,6 +9,7 @@ import { nfcCardModule } from "@/lib/addon-modules/nfc-card";
 import { editorModule } from "@/lib/addon-modules/editor";
 import { pdfModule } from "@/lib/addon-modules/pdf";
 import { healthCheckupModule } from "@/lib/addon-modules/health-checkup";
+import { groupsModule } from "@/lib/addon-modules/groups";
 import { workflowModule } from "@/lib/addon-modules/workflow";
 // キオスクモジュール
 import { eventAttendanceModule } from "@/lib/kiosk-modules/event-attendance";
@@ -139,6 +140,7 @@ export const moduleRegistry: ModuleRegistry = {
   schedule: scheduleModule,
   // アドオンモジュール（内部）
   forms: formsModule,
+  groups: groupsModule,
   workflow: workflowModule,
   editor: editorModule,
   "health-checkup": healthCheckupModule,

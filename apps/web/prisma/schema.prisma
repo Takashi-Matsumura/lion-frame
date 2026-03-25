@@ -434,6 +434,9 @@ model Employee {
   // === 健康管理 ===
   healthCheckupRecords HealthCheckupRecord[]
 
+  // === グループ ===
+  groupMemberships    GroupMember[]
+
   @@index([positionCode])
   @@index([supervisorId])
   @@index([deputyId])
@@ -1263,4 +1266,49 @@ model PdfTemplate {
   createdBy        String
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
+}
+
+// ========================================
+// グループ管理
+// ========================================
+
+enum GroupType {
+  OFFICIAL  // 公式グループ（委員会、タスクフォース等）
+  PERSONAL  // 個人グループ（プライベート）
+}
+
+enum GroupMemberRole {
+  LEADER  // リーダー / 委員長
+  MEMBER  // メンバー
+}
+
+model Group {
+  id          String    @id @default(cuid())
+  name        String
+  description String?
+  type        GroupType
+  createdBy   String
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  members     GroupMember[]
+
+  @@index([type, isActive])
+  @@index([createdBy])
+}
+
+model GroupMember {
+  id         String          @id @default(cuid())
+  groupId    String
+  employeeId String
+  role       GroupMemberRole  @default(MEMBER)
+  joinedAt   DateTime        @default(now())
+
+  group      Group           @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  employee   Employee        @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, employeeId])
+  @@index([groupId])
+  @@index([employeeId])
 }
