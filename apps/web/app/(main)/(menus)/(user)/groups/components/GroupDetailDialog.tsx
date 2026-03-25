@@ -43,6 +43,7 @@ interface GroupData {
   description: string | null;
   type: "OFFICIAL" | "PERSONAL";
   createdBy: string;
+  ownerName: string | null;
   memberCount: number;
   members: MemberData[];
 }
@@ -187,11 +188,18 @@ export function GroupDetailDialog({ group, onClose, canEdit, t }: Props) {
               </div>
             </div>
           ) : (
-            group.description && (
-              <p className="text-sm text-muted-foreground">
-                {group.description}
-              </p>
-            )
+            <div className="space-y-1">
+              {group.description && (
+                <p className="text-sm text-muted-foreground">
+                  {group.description}
+                </p>
+              )}
+              {group.type === "OFFICIAL" && group.ownerName && (
+                <p className="text-xs text-muted-foreground">
+                  {t.owner}: {group.ownerName}
+                </p>
+              )}
+            </div>
           )}
 
           <div className="space-y-3">

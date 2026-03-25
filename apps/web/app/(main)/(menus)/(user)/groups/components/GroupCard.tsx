@@ -16,6 +16,7 @@ interface GroupCardProps {
     name: string;
     description: string | null;
     type: "OFFICIAL" | "PERSONAL";
+    ownerName?: string | null;
     memberCount: number;
     leader: { id: string; name: string; position: string } | null;
   };
@@ -44,7 +45,7 @@ export function GroupCard({ group, onClick, t }: GroupCardProps) {
           </CardDescription>
         )}
       </CardHeader>
-      <CardContent className="pt-0">
+      <CardContent className="pt-0 space-y-1">
         {group.leader && (
           <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
             <FiUser className="h-3.5 w-3.5" />
@@ -52,6 +53,11 @@ export function GroupCard({ group, onClick, t }: GroupCardProps) {
               {group.leader.name}
             </span>
             <span>({t.leader})</span>
+          </div>
+        )}
+        {group.type === "OFFICIAL" && group.ownerName && (
+          <div className="text-xs text-muted-foreground">
+            {t.owner}: {group.ownerName}
           </div>
         )}
       </CardContent>

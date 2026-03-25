@@ -46,8 +46,17 @@ export const GET = apiHandler(async (request, session) => {
     orderBy: [{ type: "asc" }, { name: "asc" }],
   });
 
+  // オーナー（作成者）のUser名を一括取得
+  const creatorIds = [...new Set(groups.map((g) => g.createdBy))];
+  const creators = await prisma.user.findMany({
+    where: { id: { in: creatorIds } },
+    select: { id: true, name: true },
+  });
+  const creatorMap = new Map(creators.map((u) => [u.id, u.name]));
+
   const result = groups.map((g) => ({
     ...g,
+    ownerName: creatorMap.get(g.createdBy) || null,
     memberCount: g.members.length,
     leader: g.members.find((m) => m.role === "LEADER")?.employee || null,
   }));

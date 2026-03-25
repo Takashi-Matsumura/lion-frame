@@ -20,6 +20,7 @@ interface GroupData {
   description: string | null;
   type: "OFFICIAL" | "PERSONAL";
   createdBy: string;
+  ownerName: string | null;
   memberCount: number;
   leader: { id: string; name: string; position: string } | null;
   members: {

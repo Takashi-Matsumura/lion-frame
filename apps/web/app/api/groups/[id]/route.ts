@@ -70,9 +70,15 @@ export const GET = apiHandler(async (request, session) => {
   const group = await getGroupOrThrow(id);
   checkAccess(group, userId, role);
 
+  const owner = await prisma.user.findUnique({
+    where: { id: group.createdBy },
+    select: { name: true },
+  });
+
   return {
     group: {
       ...group,
+      ownerName: owner?.name || null,
       memberCount: group.members.length,
       leader: group.members.find((m) => m.role === "LEADER")?.employee || null,
     },

@@ -138,6 +138,7 @@ cd apps/web && npx prisma db push && pnpm db:seed
 | PDF | PdfTemplate |
 | タグ | Tag, TagAssignment |
 | NFCカード | NfcCard |
+| グループ | Group, GroupMember |
 | システム | SystemSetting |
 
 > **エディタモジュール:** 複合型エディタ。`EditorDocument.type`でドキュメント種別を管理。`"markdown"`（マークダウン）と`"excalidraw"`（ホワイトボード）をサポート。マークダウンはCodeMirror 6のLive Preview、ExcalidrawはフローティングウィンドウでExcalidrawキャンバスを全面表示。自動保存: マークダウン500ms、Excalidraw 1000msデバウンス。Excalidrawデータは`JSON.stringify({ elements, appState })`で`content`フィールドに格納。タイトルはコンテンツとは独立（管理画面でリネーム）。
@@ -147,6 +148,7 @@ cd apps/web && npx prisma db push && pnpm db:seed
 > **フローティングウィンドウのテーマ反転:** `.floating-window-inverted` クラスでアプリと逆のテーマを適用（ダーク時→ライト、ライト時→ダーク）。`noPadding` オプションでエディタ等の全面コンテンツ対応。ESCキーは `noPadding` 時に無効。
 > **エディタCSS変数:** テーマ変数との衝突を避けるため `--editor-` プレフィックスを使用（例: `--editor-bg-primary`, `--editor-accent`）。
 > **タグシステム:** フレーム横断のメタデータ基盤。2種類のタグ: **システムタグ**（ADMINが管理画面で作成・全社共有、色・説明付き）と**ユーザタグ**（ユーザがデータごとに自由入力、マスタ管理なし）。`TagAssignment`はポリモーフィック（`entityType` + `entityId`）で任意モデルに紐づけ可能。サービス: `TagService`（`lib/services/tag-service.ts`）。API: `/api/tags/`（CRUD・割り当て・統計）。UIコンポーネント: `TagBadge`（スクエア角丸、`#`付き表示）、`TagPicker`（Popover型選択）。管理画面: システム環境→タグ管理タブ。エディタモジュールが初の統合先。将来LLM/RAG連携のメタデータとして活用予定。
+> **グループモジュール:** 組織図を補完するアドオンモジュール（`lib/addon-modules/groups/`）。2種類のグループ: **公式グループ**（MANAGER以上が作成、全社員閲覧可、例: 委員会・タスクフォース）と**マイグループ**（全ユーザが作成、作成者のみ閲覧のプライベートグループ）。メンバーにはリーダー/メンバーの役割を設定可能。`Group.createdBy`でオーナー（作成者）を記録し、公式グループではオーナー名を表示。編集権限は作成者またはADMINのみ。API: `/api/groups`（一覧・作成）、`/api/groups/[id]`（詳細・更新・削除）、`/api/groups/[id]/members`（メンバー管理）。ページ: `/groups`（Radix UI Tabsで公式/マイを切替）。
 
 ## 重要なルール
 
