@@ -29,6 +29,9 @@ interface MemberData {
   id: string;
   role: "LEADER" | "MEMBER";
   title?: string | null;
+  snapshotPosition?: string | null;
+  snapshotDepartment?: string | null;
+  snapshotSection?: string | null;
   employeeId: string;
   employee: {
     id: string;
@@ -202,11 +205,17 @@ export function GroupDetailDialog({ group, onClose, canEdit, userRole, t }: Prop
     await refreshGroup();
   };
 
-  const unitName = (m: MemberData["employee"]) => {
-    const parts = [m.department?.name, m.section?.name, m.course?.name].filter(
-      Boolean,
-    );
-    return parts.join(" > ") || "";
+  const memberInfo = (member: MemberData) => {
+    // スナップショットデータがあればそちらを優先（アーカイブ時の状態）
+    if (member.snapshotPosition || member.snapshotDepartment) {
+      const position = member.snapshotPosition || "";
+      const unit = [member.snapshotDepartment, member.snapshotSection].filter(Boolean).join(" > ");
+      return unit ? `${position} | ${unit}` : position;
+    }
+    const position = member.employee.position;
+    const parts = [member.employee.department?.name, member.employee.section?.name, member.employee.course?.name].filter(Boolean);
+    const unit = parts.join(" > ");
+    return unit ? `${position} | ${unit}` : position;
   };
 
   return (
@@ -352,12 +361,8 @@ export function GroupDetailDialog({ group, onClose, canEdit, userRole, t }: Prop
                           onSave={handleTitleUpdate}
                         />
                       </div>
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <span className="truncate">
-                          {member.employee.position}
-                          {unitName(member.employee) &&
-                            ` | ${unitName(member.employee)}`}
-                        </span>
+                      <div className="text-xs text-muted-foreground truncate">
+                        {memberInfo(member)}
                       </div>
                     </div>
                     {canModify && (

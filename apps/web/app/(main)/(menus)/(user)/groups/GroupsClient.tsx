@@ -44,6 +44,9 @@ interface GroupData {
     id: string;
     role: "LEADER" | "MEMBER";
     title?: string | null;
+    snapshotPosition?: string | null;
+    snapshotDepartment?: string | null;
+    snapshotSection?: string | null;
     employeeId: string;
     employee: {
       id: string;

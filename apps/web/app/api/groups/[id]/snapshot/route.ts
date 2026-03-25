@@ -13,7 +13,17 @@ export const POST = apiHandler(async (request, session) => {
   const source = await prisma.group.findUnique({
     where: { id },
     include: {
-      members: { select: { employeeId: true, role: true, title: true } },
+      members: {
+        include: {
+          employee: {
+            select: {
+              position: true,
+              department: { select: { name: true } },
+              section: { select: { name: true } },
+            },
+          },
+        },
+      },
     },
   });
   if (!source) throw ApiError.notFound("Group not found", "グループが見つかりません");
@@ -75,6 +85,9 @@ export const POST = apiHandler(async (request, session) => {
           employeeId: m.employeeId,
           role: m.role,
           title: m.title,
+          snapshotPosition: m.employee.position,
+          snapshotDepartment: m.employee.department?.name || null,
+          snapshotSection: m.employee.section?.name || null,
         })),
       },
     },

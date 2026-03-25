@@ -1302,12 +1302,15 @@ model Group {
 }
 
 model GroupMember {
-  id         String          @id @default(cuid())
-  groupId    String
-  employeeId String
-  role       GroupMemberRole  @default(MEMBER)
-  title      String?         // グループ内の役割名（自由入力: 委員長、書記、会計など）
-  joinedAt   DateTime        @default(now())
+  id                  String          @id @default(cuid())
+  groupId             String
+  employeeId          String
+  role                GroupMemberRole  @default(MEMBER)
+  title               String?         // グループ内の役割名（自由入力: 委員長、書記、会計など）
+  snapshotPosition    String?         // アーカイブ時の役職
+  snapshotDepartment  String?         // アーカイブ時の部署名
+  snapshotSection     String?         // アーカイブ時の課名
+  joinedAt            DateTime        @default(now())
 
   group      Group           @relation(fields: [groupId], references: [id], onDelete: Cascade)
   employee   Employee        @relation(fields: [employeeId], references: [id], onDelete: Cascade)
