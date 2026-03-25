@@ -101,6 +101,7 @@ export default function ExcalidrawEditor({
   return (
     <div style={{ width: "100%", height: "100%" }}>
       <ExcalidrawComp
+        langCode="ja-JP"
         initialData={{
           elements: initialRef.current.elements,
           appState: {

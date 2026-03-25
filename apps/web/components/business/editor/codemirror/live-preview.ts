@@ -161,7 +161,10 @@ export const focusTracker = ViewPlugin.fromClass(
     }
     update(update: ViewUpdate) {
       if (update.focusChanged) {
-        this.view.dispatch({ effects: setFocused.of(this.view.hasFocus) });
+        // update中にdispatchするとエラーになるため、次フレームに遅延
+        requestAnimationFrame(() => {
+          this.view.dispatch({ effects: setFocused.of(this.view.hasFocus) });
+        });
       }
     }
   },

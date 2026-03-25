@@ -199,6 +199,8 @@ export function FloatingWindow({ language = "en" }: FloatingWindowProps) {
         width: isMaximized ? "100vw" : size.width,
         height: isMaximized ? "100vh" : size.height,
       }}
+      onMouseDown={(e) => e.stopPropagation()}
+      onClick={(e) => e.stopPropagation()}
     >
       {/* タイトルバー */}
       <div

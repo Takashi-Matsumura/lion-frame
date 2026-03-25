@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { toast } from "sonner";
-import { Plus, Trash2, FileText, ExternalLink, Check, X, PenTool, ChevronDown, Printer, Loader2, Hash, Search, Settings2, CircleDot, Users } from "lucide-react";
+import { Plus, Trash2, FileText, ExternalLink, Check, X, PenTool, ChevronDown, Printer, Loader2, Hash, Search, Settings2, CircleDot, Users, Upload } from "lucide-react";
 import { Button } from "@/components/ui";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -97,6 +97,7 @@ export function EditorClient({ language, pdfEnabled }: { language: Language; pdf
   const [exportingId, setExportingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const renameInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [filterTagId, setFilterTagId] = useState<string | null>(null);
   const [allSystemTags, setAllSystemTags] = useState<SystemTagInfo[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -305,6 +306,48 @@ export function EditorClient({ language, pdfEnabled }: { language: Language; pdf
     }
   }, [t.untitled, t.loadError, openInFloatingWindow]);
 
+  const handleImportExcalidraw = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    // input をリセット（同じファイルの再選択を可能に）
+    e.target.value = "";
+
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text);
+      const elements = parsed.elements ?? [];
+      if (elements.length === 0) {
+        toast.error(language === "ja" ? "ファイルに要素が含まれていません" : "File contains no elements");
+        return;
+      }
+      const content = JSON.stringify({ elements, appState: parsed.appState ?? {} });
+      const title = file.name.replace(/\.excalidraw$/i, "") || t.untitled;
+
+      const res = await fetch("/api/editor", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, type: "excalidraw", content }),
+      });
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      const newDoc: DocItem = {
+        id: data.document.id,
+        title: data.document.title,
+        type: "excalidraw",
+        status: data.document.status ?? "DRAFT",
+        visibility: data.document.visibility ?? "PRIVATE",
+        updatedAt: data.document.updatedAt,
+        createdAt: data.document.createdAt ?? data.document.updatedAt,
+        tags: { systemTags: [], userTags: [] },
+      };
+      setDocuments((prev) => [newDoc, ...prev]);
+      openInFloatingWindow(newDoc);
+      toast.success(language === "ja" ? "ホワイトボードをインポートしました" : "Whiteboard imported");
+    } catch {
+      toast.error(language === "ja" ? "ファイルの読み込みに失敗しました" : "Failed to import file");
+    }
+  }, [t.untitled, language, openInFloatingWindow]);
+
   // templateId: undefined=デフォルト使用, "none"=テンプレートなし, その他=指定ID
   const handleExportPdf = useCallback(async (doc: DocItem, templateId?: string) => {
     try {
@@ -455,8 +498,19 @@ export function EditorClient({ language, pdfEnabled }: { language: Language; pdf
                   <PenTool className="h-4 w-4 mr-2" />
                   {t.newWhiteboard}
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
+                  <Upload className="h-4 w-4 mr-2" />
+                  {language === "ja" ? "ホワイトボードをインポート" : "Import Whiteboard"}
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".excalidraw"
+              className="hidden"
+              onChange={handleImportExcalidraw}
+            />
           </div>
 
           {/* 検索 + スコープトグル */}
