@@ -75,6 +75,13 @@ interface EmployeeDetail {
   joinDate: string | null;
   birthDate: string | null;
   isActive: boolean;
+  officialGroups?: {
+    id: string;
+    name: string;
+    fiscalYear: number | null;
+    role: string;
+    title: string | null;
+  }[];
 }
 
 interface HistoryChange {
@@ -571,6 +578,39 @@ export function EmployeeDetailDialog({
                         )}
                       </dl>
                     </div>
+
+                    {/* 公式グループ */}
+                    {employee.officialGroups && employee.officialGroups.length > 0 && (
+                      <>
+                        <Separator />
+                        <div>
+                          <h3 className="text-sm font-semibold text-foreground mb-3">
+                            {t.officialGroups}
+                          </h3>
+                          <div className="flex flex-wrap gap-2">
+                            {employee.officialGroups.map((g) => (
+                              <Badge
+                                key={g.id}
+                                variant="outline"
+                                className="text-xs px-2 py-1"
+                              >
+                                {g.name}
+                                {g.title && (
+                                  <span className="ml-1 text-muted-foreground">
+                                    ({g.title})
+                                  </span>
+                                )}
+                                {g.role === "LEADER" && (
+                                  <span className="ml-1 text-yellow-600 dark:text-yellow-400">
+                                    ★
+                                  </span>
+                                )}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      </>
+                    )}
 
                     {/* レポートライン */}
                     {(isAdmin || employee.supervisor || employee.deputy || employee.department?.executive) && (

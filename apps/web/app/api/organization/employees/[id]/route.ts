@@ -67,6 +67,32 @@ export async function GET(
       throw ApiError.notFound("Employee not found");
     }
 
+    // 公式グループ（アクティブ）の所属情報を取得
+    const groupMenuEnabled = await prisma.systemSetting.findUnique({
+      where: { key: "menu_enabled_groups" },
+    });
+    const showGroups = groupMenuEnabled ? groupMenuEnabled.value === "true" : true;
+
+    let officialGroups: { id: string; name: string; fiscalYear: number | null; role: string; title: string | null }[] = [];
+    if (showGroups) {
+      const memberships = await prisma.groupMember.findMany({
+        where: {
+          employeeId: employee.id,
+          group: { type: "OFFICIAL", isActive: true, archivedAt: null },
+        },
+        include: {
+          group: { select: { id: true, name: true, fiscalYear: true } },
+        },
+      });
+      officialGroups = memberships.map((m) => ({
+        id: m.group.id,
+        name: m.group.name,
+        fiscalYear: m.group.fiscalYear,
+        role: m.role,
+        title: m.title,
+      }));
+    }
+
     // PositionMasterからcolorを取得
     let positionColor: string | null = null;
     if (employee.positionCode) {
@@ -101,6 +127,7 @@ export async function GET(
         joinDate: employee.joinDate,
         birthDate: employee.birthDate,
         isActive: employee.isActive,
+        officialGroups,
         createdAt: employee.createdAt,
         updatedAt: employee.updatedAt,
       },

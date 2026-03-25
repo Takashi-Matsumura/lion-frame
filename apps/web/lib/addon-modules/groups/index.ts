@@ -1,1 +1,0 @@
-export { groupsModule } from "./module";
