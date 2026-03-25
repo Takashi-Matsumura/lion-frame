@@ -15,6 +15,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/ui/empty-state";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -72,7 +73,7 @@ export function PdfManagementClient({ language }: { language: Language }) {
   const t = pdfManagementTranslations[language];
 
   const [templates, setTemplates] = useState<TemplateItem[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<TemplateItem | null>(null);
   const [saving, setSaving] = useState(false);
@@ -197,9 +198,40 @@ export function PdfManagementClient({ language }: { language: Language }) {
           {/* テーブル */}
           <div className="rounded-lg border">
             {loading ? (
-              <div className="flex items-center justify-center py-12 text-muted-foreground text-sm">
-                読み込み中...
-              </div>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[200px] pl-4"><Skeleton className="h-4 w-24" /></TableHead>
+                    <TableHead><Skeleton className="h-4 w-20" /></TableHead>
+                    <TableHead><Skeleton className="h-4 w-20" /></TableHead>
+                    <TableHead className="w-[80px] text-center"><Skeleton className="h-4 w-12 mx-auto" /></TableHead>
+                    <TableHead className="w-[90px]" />
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <TableRow key={i}>
+                      <TableCell className="pl-4">
+                        <div className="flex items-center gap-2">
+                          <Skeleton className="h-4 w-32" />
+                          {i === 0 && <Skeleton className="h-3.5 w-3.5 rounded-full" />}
+                        </div>
+                      </TableCell>
+                      <TableCell><Skeleton className="h-4 w-36" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-40" /></TableCell>
+                      <TableCell className="text-center">
+                        {i === 0 && <Skeleton className="h-5 w-8 rounded-full mx-auto" />}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1 justify-end">
+                          <Skeleton className="h-8 w-8" />
+                          <Skeleton className="h-8 w-8" />
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             ) : templates.length === 0 ? (
               <div className="py-12">
                 <EmptyState

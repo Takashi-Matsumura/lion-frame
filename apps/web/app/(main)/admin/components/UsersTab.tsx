@@ -26,6 +26,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/ui/empty-state";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -72,7 +73,7 @@ export function UsersTab({ language, currentUserId }: UsersTabProps) {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [pageSize, setPageSize] = useState(25);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("ALL");
   const [passwordStatusFilter, setPasswordStatusFilter] =
@@ -551,13 +552,61 @@ export function UsersTab({ language, currentUserId }: UsersTabProps) {
             </div>
           </div>
 
-          {/* ローディング */}
+          {/* ローディングスケルトン */}
           {loading && (
-            <div className="text-center py-12">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto" />
-              <p className="mt-4 text-muted-foreground">
-                {t("Loading...", "読み込み中...")}
-              </p>
+            <div className="flex-1 flex flex-col min-h-0">
+              {/* ページネーション スケルトン */}
+              <div className="flex items-center justify-between mb-4">
+                <Skeleton className="h-4 w-20" />
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-8 w-16" />
+                  <Skeleton className="h-4 w-12" />
+                  <Skeleton className="h-8 w-16" />
+                </div>
+              </div>
+              {/* テーブル スケルトン */}
+              <div className="rounded-lg border overflow-hidden flex-1 flex flex-col min-h-0">
+                <div className="overflow-y-auto flex-1">
+                  <Table>
+                    <TableHeader className="sticky top-0 bg-muted/50 z-10">
+                      <TableRow>
+                        <TableHead><Skeleton className="h-4 w-12" /></TableHead>
+                        <TableHead><Skeleton className="h-4 w-10" /></TableHead>
+                        <TableHead><Skeleton className="h-4 w-24" /></TableHead>
+                        <TableHead><Skeleton className="h-4 w-8" /></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {Array.from({ length: 8 }).map((_, i) => (
+                        <TableRow key={i}>
+                          <TableCell>
+                            <div className="flex items-center gap-3">
+                              <Skeleton className="h-8 w-8 rounded-full" />
+                              <div className="space-y-1">
+                                <Skeleton className="h-4 w-28" />
+                                <Skeleton className="h-3 w-40" />
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell><Skeleton className="h-5 w-16 rounded-full" /></TableCell>
+                          <TableCell>
+                            <div className="space-y-1">
+                              <Skeleton className="h-4 w-20" />
+                              <Skeleton className="h-3 w-28" />
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-1 justify-end">
+                              <Skeleton className="h-8 w-8" />
+                              <Skeleton className="h-8 w-8" />
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
             </div>
           )}
 
