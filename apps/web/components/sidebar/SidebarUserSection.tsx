@@ -12,7 +12,7 @@ import Link from "next/link";
 import type { Session } from "next-auth";
 import { signOut } from "next-auth/react";
 import { useTheme } from "next-themes";
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { RoleBadge } from "@/components/RoleBadge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -43,6 +43,7 @@ export function SidebarUserSection({
   mustChangePassword,
 }: SidebarUserSectionProps) {
   const { theme, setTheme } = useTheme();
+  const [signingOut, setSigningOut] = useState(false);
 
   const t = (en: string, ja: string) => (language === "ja" ? ja : en);
 
@@ -51,12 +52,22 @@ export function SidebarUserSection({
   }, [theme, setTheme]);
 
   const handleSignOut = useCallback(async () => {
+    setSigningOut(true);
     // Clear 2FA verification cookie before signing out
     await fetch("/api/auth/signout-2fa", { method: "POST" });
     signOut({ redirectTo: "/login" });
   }, []);
 
   return (
+    <>
+    {signingOut && (
+      <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        <p className="mt-4 text-sm text-muted-foreground">
+          {t("Signing out...", "サインアウト中...")}
+        </p>
+      </div>
+    )}
     <SidebarFooter className="p-2 border-t border-sidebar-border">
       <SidebarMenu>
         <SidebarMenuItem>
@@ -147,5 +158,6 @@ export function SidebarUserSection({
         </SidebarMenuItem>
       </SidebarMenu>
     </SidebarFooter>
+    </>
   );
 }
