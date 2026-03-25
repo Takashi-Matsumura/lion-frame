@@ -23,6 +23,13 @@ async function getGroupAndCheckAccess(
     );
   }
 
+  if (group.archivedAt) {
+    throw ApiError.badRequest(
+      "Cannot modify members of an archived group",
+      "アーカイブ済みグループのメンバーは変更できません",
+    );
+  }
+
   return { group, groupId, memberId };
 }
 

@@ -94,17 +94,31 @@ export const PUT = apiHandler(async (request, session) => {
   const existing = await getGroupOrThrow(id);
   checkEditAccess(existing, userId, role);
 
+  if (existing.archivedAt) {
+    throw ApiError.badRequest(
+      "Archived groups cannot be edited",
+      "アーカイブ済みのグループは編集できません",
+    );
+  }
+
   const body = await request.json();
   if (!body.name?.trim()) {
     throw ApiError.badRequest("Name is required", "グループ名は必須です");
   }
 
+  const data: Record<string, unknown> = {
+    name: body.name.trim(),
+    description: body.description?.trim() || null,
+  };
+
+  // 公式グループの年度変更
+  if (existing.type === "OFFICIAL" && "fiscalYear" in body) {
+    data.fiscalYear = body.fiscalYear === null ? null : (typeof body.fiscalYear === "number" ? body.fiscalYear : existing.fiscalYear);
+  }
+
   const group = await prisma.group.update({
     where: { id },
-    data: {
-      name: body.name.trim(),
-      description: body.description?.trim() || null,
-    },
+    data,
   });
 
   return { group };

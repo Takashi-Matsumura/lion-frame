@@ -1289,6 +1289,8 @@ model Group {
   type        GroupType
   createdBy   String
   isActive    Boolean   @default(true)
+  fiscalYear  Int?      // 年度（例: 2025 = 2025年度）。公式グループ用。nullは「通年」
+  archivedAt  DateTime? // アーカイブ日時。nullはアクティブ
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
@@ -1296,6 +1298,7 @@ model Group {
 
   @@index([type, isActive])
   @@index([createdBy])
+  @@index([fiscalYear])
 }
 
 model GroupMember {

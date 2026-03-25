@@ -12,11 +12,31 @@ export const GET = apiHandler(async (request, session) => {
   const url = new URL(request.url);
   const type = url.searchParams.get("type");
   const search = url.searchParams.get("search") || "";
+  const fiscalYearParam = url.searchParams.get("fiscalYear");
+  const archivedParam = url.searchParams.get("archived") || "false";
 
   const where: Record<string, unknown> = { isActive: true };
 
   if (type === "OFFICIAL") {
     where.type = "OFFICIAL";
+
+    // アーカイブフィルタ（公式グループのみ）
+    if (archivedParam === "false") {
+      where.archivedAt = null;
+    } else if (archivedParam === "true") {
+      where.archivedAt = { not: null };
+    }
+    // "all" の場合はフィルタなし
+
+    // 年度フィルタ
+    if (fiscalYearParam === "ongoing") {
+      where.fiscalYear = null;
+    } else if (fiscalYearParam && fiscalYearParam !== "all") {
+      const fy = parseInt(fiscalYearParam, 10);
+      if (!isNaN(fy)) {
+        where.fiscalYear = fy;
+      }
+    }
   } else if (type === "PERSONAL") {
     where.type = "PERSONAL";
     where.createdBy = userId;
@@ -84,12 +104,29 @@ export const POST = apiHandler(async (request, session) => {
     );
   }
 
+  // 公式グループの場合、年度を設定（デフォルト: 当年度）
+  let fiscalYear: number | null = null;
+  if (groupType === "OFFICIAL") {
+    if (body.fiscalYear === null) {
+      fiscalYear = null; // 通年グループ
+    } else if (typeof body.fiscalYear === "number") {
+      fiscalYear = body.fiscalYear;
+    } else {
+      // デフォルト: 当年度（4月始まり）
+      const now = new Date();
+      const jstMonth = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Tokyo" })).getMonth() + 1;
+      const jstYear = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Tokyo" })).getFullYear();
+      fiscalYear = jstMonth >= 4 ? jstYear : jstYear - 1;
+    }
+  }
+
   const group = await prisma.group.create({
     data: {
       name: body.name.trim(),
       description: body.description?.trim() || null,
       type: groupType,
       createdBy: userId,
+      fiscalYear,
     },
   });
 

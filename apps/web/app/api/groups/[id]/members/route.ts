@@ -22,6 +22,13 @@ export const POST = apiHandler(async (request, session) => {
     );
   }
 
+  if (group.archivedAt) {
+    throw ApiError.badRequest(
+      "Cannot modify members of an archived group",
+      "アーカイブ済みグループのメンバーは変更できません",
+    );
+  }
+
   const body = await request.json();
   const employeeIds: string[] = Array.isArray(body.employeeIds)
     ? body.employeeIds

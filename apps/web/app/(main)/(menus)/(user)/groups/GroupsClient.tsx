@@ -4,7 +4,14 @@ import { useCallback, useEffect, useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { FiPlus, FiSearch } from "react-icons/fi";
+import { FiPlus, FiSearch, FiArchive } from "react-icons/fi";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { translations, type Language } from "./translations";
 import { GroupCard } from "./components/GroupCard";
 import { GroupCreateDialog } from "./components/GroupCreateDialog";
@@ -14,11 +21,19 @@ type Role = "GUEST" | "USER" | "MANAGER" | "EXECUTIVE" | "ADMIN";
 
 const MANAGER_ROLES: Role[] = ["MANAGER", "EXECUTIVE", "ADMIN"];
 
+function getCurrentFiscalYear(): number {
+  const now = new Date();
+  const jst = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Tokyo" }));
+  return jst.getMonth() + 1 >= 4 ? jst.getFullYear() : jst.getFullYear() - 1;
+}
+
 interface GroupData {
   id: string;
   name: string;
   description: string | null;
   type: "OFFICIAL" | "PERSONAL";
+  fiscalYear?: number | null;
+  archivedAt?: string | null;
   createdBy: string;
   ownerName: string | null;
   memberCount: number;
@@ -58,6 +73,21 @@ export function GroupsClient({ language, userRole, userId }: Props) {
   const [createOpen, setCreateOpen] = useState(false);
   const [createType, setCreateType] = useState<"OFFICIAL" | "PERSONAL">("OFFICIAL");
   const [selectedGroup, setSelectedGroup] = useState<GroupData | null>(null);
+  // 年度フィルタ（公式グループ用）
+  const [fiscalYearFilter, setFiscalYearFilter] = useState<string>("all");
+  const [showArchived, setShowArchived] = useState(false);
+  const [availableYears, setAvailableYears] = useState<number[]>([]);
+
+  // 年度一覧を取得
+  useEffect(() => {
+    fetch("/api/groups/fiscal-years")
+      .then((res) => res.ok ? res.json() : { years: [] })
+      .then((data) => {
+        const years: number[] = data.years || [];
+        setAvailableYears(years);
+        // 当年度がリストにない場合も選択肢に含めるためフィルタはそのまま
+      });
+  }, [groups]); // グループ変更時に再取得
 
   const fetchGroups = useCallback(async () => {
     setLoading(true);
@@ -65,6 +95,10 @@ export function GroupsClient({ language, userRole, userId }: Props) {
       const type = tab === "official" ? "OFFICIAL" : "PERSONAL";
       const params = new URLSearchParams({ type });
       if (search) params.set("search", search);
+      if (tab === "official") {
+        params.set("fiscalYear", fiscalYearFilter);
+        params.set("archived", showArchived ? "all" : "false");
+      }
       const res = await fetch(`/api/groups?${params}`);
       if (res.ok) {
         const data = await res.json();
@@ -73,7 +107,7 @@ export function GroupsClient({ language, userRole, userId }: Props) {
     } finally {
       setLoading(false);
     }
-  }, [tab, search]);
+  }, [tab, search, fiscalYearFilter, showArchived]);
 
   useEffect(() => {
     fetchGroups();
@@ -129,7 +163,27 @@ export function GroupsClient({ language, userRole, userId }: Props) {
           )}
         </div>
 
-        <div className="mt-4 flex items-center gap-2">
+        <div className="mt-4 flex items-center gap-2 flex-wrap">
+          {tab === "official" && (
+            <Select value={fiscalYearFilter} onValueChange={setFiscalYearFilter}>
+              <SelectTrigger className="w-36">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t.allYears}</SelectItem>
+                <SelectItem value="ongoing">{t.ongoing}</SelectItem>
+                {(() => {
+                  const currentFY = getCurrentFiscalYear();
+                  const allYears = [...new Set([currentFY, ...availableYears])].sort((a, b) => b - a);
+                  return allYears.map((y) => (
+                    <SelectItem key={y} value={String(y)}>
+                      {y}{t.fiscalYearSuffix}
+                    </SelectItem>
+                  ));
+                })()}
+              </SelectContent>
+            </Select>
+          )}
           <div className="relative max-w-sm flex-1">
             <FiSearch className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -139,6 +193,20 @@ export function GroupsClient({ language, userRole, userId }: Props) {
               className="pl-9"
             />
           </div>
+          {tab === "official" && (
+            <button
+              type="button"
+              onClick={() => setShowArchived(!showArchived)}
+              className={`flex items-center gap-1.5 rounded-md border px-3 py-2 text-sm transition-colors ${
+                showArchived
+                  ? "border-primary bg-primary/10 text-primary"
+                  : "border-input text-muted-foreground hover:bg-accent"
+              }`}
+            >
+              <FiArchive className="h-3.5 w-3.5" />
+              {t.showArchived}
+            </button>
+          )}
         </div>
 
         <p className="mt-2 text-sm text-muted-foreground">
@@ -183,6 +251,7 @@ export function GroupsClient({ language, userRole, userId }: Props) {
           group={selectedGroup}
           onClose={handleDetailClose}
           canEdit={role === "ADMIN" || selectedGroup.createdBy === userId}
+          userRole={role}
           t={t}
         />
       )}
