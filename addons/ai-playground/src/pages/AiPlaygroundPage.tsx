@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect } from "react";
-import { ChatInput, type ChatInputRef } from "./components/ChatInput";
+import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { ChatOutput } from "./components/ChatOutput";
 import { MetricsDisplay } from "./components/MetricsDisplay";
+import { ModeIcon } from "./components/Icons";
 import type {
   LLMConfig,
   ChatMode,
@@ -17,6 +17,7 @@ import type {
 } from "../types";
 import {
   PROVIDER_PRESETS,
+  CHAT_MODES,
   DEFAULT_SEARCH_CONFIG,
   DEFAULT_RAG_CONFIG,
 } from "../types";
@@ -24,6 +25,21 @@ import { DEFAULT_SYSTEM_PROMPTS } from "../prompts";
 import { estimateTokenCount } from "../lib/token-utils";
 
 const DEFAULT_CONTEXT_WINDOW = 4096;
+
+const SUGGESTIONS = {
+  ja: {
+    explain: ["プログラミングの「変数」って何？", "AIと機械学習の違いを教えて", "インターネットの仕組み"],
+    idea: ["高校生向けの学習アプリ", "社内コミュニケーション改善", "新入社員研修プログラム"],
+    search: ["2024年のAI技術トレンド", "リモートワークのベストプラクティス"],
+    rag: ["ナレッジベースの内容を教えて"],
+  },
+  en: {
+    explain: ["What is a 'variable' in programming?", "Difference between AI and ML", "How does the internet work?"],
+    idea: ["Learning app for students", "Improving team communication", "New employee training program"],
+    search: ["AI technology trends 2024", "Remote work best practices"],
+    rag: ["Tell me about the knowledge base"],
+  },
+};
 
 export function AiPlaygroundPage({ language }: { language: "en" | "ja" }) {
   const llamaCppPreset = PROVIDER_PRESETS.find((p) => p.provider === "llama-cpp")!;
@@ -39,6 +55,8 @@ export function AiPlaygroundPage({ language }: { language: "en" | "ja" }) {
   const [isLoading, setIsLoading] = useState(false);
   const [configLoaded, setConfigLoaded] = useState(false);
   const [streamingContent, setStreamingContent] = useState("");
+  const [mode, setMode] = useState<ChatMode>("explain");
+  const [inputValue, setInputValue] = useState("");
   const [metrics, setMetrics] = useState<GenerationMetrics>({
     contextWindowSize: DEFAULT_CONTEXT_WINDOW,
     inputTokens: 0,
@@ -49,11 +67,17 @@ export function AiPlaygroundPage({ language }: { language: "en" | "ja" }) {
     isGenerating: false,
   });
 
-  const chatInputRef = useRef<ChatInputRef>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const generationStartTimeRef = useRef<number>(0);
   const lastTokenCountRef = useRef<number>(0);
   const lastTokenTimeRef = useRef<number>(0);
+
+  const ragEnabled = ragConfig.baseUrl !== "";
+
+  const availableModes = useMemo(() => {
+    return CHAT_MODES.filter((m) => m.id !== "rag" || ragEnabled);
+  }, [ragEnabled]);
 
   // サーバーから設定を読み込み
   useEffect(() => {
@@ -78,7 +102,7 @@ export function AiPlaygroundPage({ language }: { language: "en" | "ja" }) {
   }, [llmConfig.contextSize]);
 
   const focusInput = useCallback(() => {
-    setTimeout(() => chatInputRef.current?.focus(), 100);
+    setTimeout(() => textareaRef.current?.focus(), 100);
   }, []);
 
   const handleCancel = useCallback(() => {
@@ -94,12 +118,13 @@ export function AiPlaygroundPage({ language }: { language: "en" | "ja" }) {
     focusInput();
   }, [streamingContent, focusInput]);
 
-  const ragEnabled = ragConfig.baseUrl !== "";
-
   const handleSubmit = useCallback(
-    async (message: string, mode: ChatMode | null) => {
+    async (message: string, selectedMode: ChatMode) => {
+      if (!message.trim() || isLoading) return;
+
       setIsLoading(true);
       setStreamingContent("");
+      setInputValue("");
 
       const historyTokens = messages.reduce((sum: number, msg: Message) => sum + estimateTokenCount(msg.content), 0);
       const inputTokens = estimateTokenCount(message) + historyTokens;
@@ -126,8 +151,8 @@ export function AiPlaygroundPage({ language }: { language: "en" | "ja" }) {
       let ragContext: RAGContext[] = [];
 
       try {
-        if (mode === "search") {
-          setStreamingContent("[検索中...]");
+        if (selectedMode === "search") {
+          setStreamingContent(language === "ja" ? "[検索中...]" : "[Searching...]");
           const searchResponse = await fetch("/api/ai-playground/search", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -137,12 +162,12 @@ export function AiPlaygroundPage({ language }: { language: "en" | "ja" }) {
           const searchData = await searchResponse.json();
           if (searchData.error) throw new Error(searchData.error);
           searchResults = searchData.results;
-          if (searchResults.length === 0) throw new Error("検索結果が見つかりませんでした");
-          setStreamingContent("[要約を作成中...]");
+          if (searchResults.length === 0) throw new Error(language === "ja" ? "検索結果が見つかりませんでした" : "No search results found");
+          setStreamingContent(language === "ja" ? "[要約を作成中...]" : "[Summarizing...]");
         }
 
-        if (ragEnabled && mode === "rag") {
-          setStreamingContent("[ナレッジベース検索中...]");
+        if (ragEnabled && selectedMode === "rag") {
+          setStreamingContent(language === "ja" ? "[ナレッジベース検索中...]" : "[Searching knowledge base...]");
           const ragResponse = await fetch("/api/ai-playground/rag", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -152,7 +177,7 @@ export function AiPlaygroundPage({ language }: { language: "en" | "ja" }) {
           const ragData = await ragResponse.json();
           if (ragData.error) throw new Error(ragData.error);
           ragContext = ragData.context || [];
-          setStreamingContent("[回答を生成中...]");
+          setStreamingContent(language === "ja" ? "[回答を生成中...]" : "[Generating response...]");
         }
 
         const response = await fetch("/api/ai-playground/chat", {
@@ -160,9 +185,9 @@ export function AiPlaygroundPage({ language }: { language: "en" | "ja" }) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             message,
-            mode,
+            mode: selectedMode,
             llmConfig,
-            searchResults: mode === "search" ? searchResults : undefined,
+            searchResults: selectedMode === "search" ? searchResults : undefined,
             ragContext: ragContext.length > 0 ? ragContext : undefined,
             history: messages,
             systemPrompts,
@@ -221,7 +246,7 @@ export function AiPlaygroundPage({ language }: { language: "en" | "ja" }) {
             {
               role: "assistant",
               content,
-              sources: mode === "search" ? searchResults : undefined,
+              sources: selectedMode === "search" ? searchResults : undefined,
               ragSources: ragContext.length > 0 ? ragContext : undefined,
             },
           ]);
@@ -234,8 +259,8 @@ export function AiPlaygroundPage({ language }: { language: "en" | "ja" }) {
           {
             role: "assistant",
             content: language === "ja"
-              ? `[エラー] エラーが発生しました\n\n**原因**: ${errorMessage}\n\n**解決方法**:\n- LLMが起動しているか確認してください\n- 管理者に接続設定を確認してください`
-              : `[Error] An error occurred\n\n**Cause**: ${errorMessage}\n\n**Solution**:\n- Check if the LLM server is running\n- Ask your administrator to verify the connection settings`,
+              ? `**エラーが発生しました**\n\n${errorMessage}\n\n- LLMが起動しているか確認してください\n- 管理者に接続設定を確認してください`
+              : `**An error occurred**\n\n${errorMessage}\n\n- Check if the LLM server is running\n- Ask your administrator to verify settings`,
           },
         ]);
       } finally {
@@ -252,7 +277,7 @@ export function AiPlaygroundPage({ language }: { language: "en" | "ja" }) {
         focusInput();
       }
     },
-    [llmConfig, focusInput, messages, ragConfig, ragEnabled, systemPrompts, searchConfig, language],
+    [llmConfig, focusInput, messages, ragConfig, ragEnabled, systemPrompts, searchConfig, language, isLoading],
   );
 
   const clearMessages = useCallback(() => {
@@ -268,53 +293,162 @@ export function AiPlaygroundPage({ language }: { language: "en" | "ja" }) {
     });
   }, [llmConfig.contextSize]);
 
+  const handleSuggestionClick = useCallback((text: string) => {
+    handleSubmit(text, mode);
+  }, [handleSubmit, mode]);
+
+  const handleFormSubmit = useCallback((e: React.FormEvent) => {
+    e.preventDefault();
+    handleSubmit(inputValue, mode);
+  }, [handleSubmit, inputValue, mode]);
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmit(inputValue, mode);
+    }
+  }, [handleSubmit, inputValue, mode]);
+
   if (!configLoaded) {
     return (
-      <div className="flex items-center justify-center" style={{ height: "calc(100vh - 160px)" }}>
+      <div className="flex-1 flex items-center justify-center" style={{ height: "calc(100vh - 160px)" }}>
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
       </div>
     );
   }
 
+  const hasMessages = messages.length > 0 || isLoading;
+  const currentSuggestions = SUGGESTIONS[language][mode] || [];
+  const currentModeInfo = CHAT_MODES.find((m) => m.id === mode);
+
   return (
-    <div className="flex flex-col" style={{ height: "calc(100vh - 160px)" }}>
-      {/* ツールバー */}
-      {messages.length > 0 && (
-        <div className="flex items-center justify-end gap-2 mb-3">
-          <button
-            onClick={clearMessages}
-            className="text-xs px-3 py-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors flex items-center gap-1"
-          >
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-            </svg>
-            {language === "ja" ? "クリア" : "Clear"}
-          </button>
+    <div className="flex-1 flex overflow-hidden min-h-0 w-full" style={{ height: "calc(100vh - 160px)" }}>
+      <div className="flex flex-col overflow-hidden min-h-0 max-w-4xl mx-auto w-full">
+        {/* ヘッダーバー */}
+        <div className="flex-shrink-0 flex items-center justify-between px-4 py-3 border-b border-border">
+          <div className="flex items-center gap-1.5">
+            {availableModes.map((m) => (
+              <button
+                key={m.id}
+                onClick={() => setMode(m.id)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                  mode === m.id
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/80"
+                }`}
+              >
+                <ModeIcon icon={m.icon} />
+                {m.name}
+              </button>
+            ))}
+          </div>
+          <div className="flex items-center gap-2">
+            {messages.length > 0 && (
+              <button
+                onClick={clearMessages}
+                className="text-xs px-3 py-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors flex items-center gap-1"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                {language === "ja" ? "クリア" : "Clear"}
+              </button>
+            )}
+          </div>
         </div>
-      )}
 
-      {/* メインコンテンツ */}
-      <div className="flex-1 flex overflow-hidden rounded-lg border border-border">
-        {/* 左側：入力 */}
-        <div className="w-[360px] border-r border-border bg-card p-4 flex flex-col">
-          <ChatInput
-            ref={chatInputRef}
-            onSubmit={handleSubmit}
-            isLoading={isLoading}
-            onCancel={handleCancel}
-            ragEnabled={ragEnabled}
-            searchConfig={searchConfig}
-          />
-        </div>
-
-        {/* 右側：出力 */}
-        <div className="flex-1 bg-card overflow-hidden flex flex-col">
-          <div className="flex-1 overflow-hidden">
+        {/* メッセージエリア / ウェルカム */}
+        {hasMessages ? (
+          <div className="flex-1 overflow-hidden min-h-0">
             <ChatOutput messages={messages} isLoading={isLoading} streamingContent={streamingContent} />
           </div>
-          <div className="border-t border-border px-4 py-2 bg-muted/30 flex justify-center">
+        ) : (
+          <div className="flex-1 overflow-y-auto px-4 py-6 min-h-0">
+            <div className="h-full flex flex-col items-center justify-center">
+              <div className="w-16 h-16 mb-6 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center">
+                <svg className="w-8 h-8 text-primary" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456z" />
+                </svg>
+              </div>
+              <h2 className="text-lg font-semibold text-foreground mb-1">AI Playground</h2>
+              <p className="text-sm text-muted-foreground mb-6">
+                {currentModeInfo && (
+                  <span className="inline-flex items-center gap-1">
+                    <span className="text-primary"><ModeIcon icon={currentModeInfo.icon} /></span>
+                    {currentModeInfo.name}
+                  </span>
+                )}
+                {" "}{language === "ja" ? "モードで質問してみましょう" : "mode — try asking a question"}
+              </p>
+              <div className="flex flex-wrap gap-2 justify-center max-w-lg">
+                {currentSuggestions.map((suggestion) => (
+                  <button
+                    key={suggestion}
+                    onClick={() => handleSuggestionClick(suggestion)}
+                    className="px-4 py-2 text-sm border border-border rounded-full hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                  >
+                    {suggestion}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* メトリクスバー */}
+        {(metrics.inputTokens > 0 || metrics.isGenerating) && (
+          <div className="flex-shrink-0 px-4 py-2 border-t border-border bg-muted/30">
             <MetricsDisplay metrics={metrics} />
           </div>
+        )}
+
+        {/* 入力エリア */}
+        <div className="flex-shrink-0 border-t border-border px-4 py-4">
+          <form onSubmit={handleFormSubmit} className="flex gap-2 items-end">
+            {isLoading ? (
+              <button
+                type="button"
+                onClick={handleCancel}
+                className="h-12 w-12 rounded-xl flex-shrink-0 flex items-center justify-center border border-border hover:bg-muted transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
+                </svg>
+              </button>
+            ) : null}
+            <textarea
+              ref={textareaRef}
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder={
+                language === "ja"
+                  ? (mode === "explain" ? "何について知りたいですか？"
+                    : mode === "idea" ? "企画のテーマや条件を入力..."
+                    : mode === "search" ? "何を調べますか？"
+                    : mode === "rag" ? "ナレッジベースに質問..."
+                    : "メッセージを入力...")
+                  : "Type your message..."
+              }
+              className="w-full resize-none rounded-xl border border-input px-4 py-[14px] text-sm max-h-[200px] bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              rows={1}
+              disabled={isLoading}
+              style={{ minHeight: "48px" }}
+            />
+            <button
+              type="submit"
+              disabled={!inputValue.trim() || isLoading}
+              className="h-12 w-12 rounded-xl flex-shrink-0 flex items-center justify-center bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19V5m0 0l-7 7m7-7l7 7" />
+              </svg>
+            </button>
+          </form>
+          <p className="mt-2 text-xs text-muted-foreground text-center">
+            {language === "ja" ? "学習支援ツールです。最終判断は人が行ってください" : "This is a learning tool. Final decisions should be made by humans"}
+          </p>
         </div>
       </div>
     </div>
