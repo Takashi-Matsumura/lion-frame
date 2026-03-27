@@ -141,8 +141,8 @@ function HeaderInner({
   const isEvaluationRag = pathname === "/admin/evaluation-rag";
   const isCalendarManagement = pathname === "/admin/calendar-management";
   const isKioskManager = pathname === "/kiosk-manager";
-  const isAiPlaygroundSettings =
-    pathname === "/admin/ai-playground-settings";
+  const isAiSettings =
+    pathname === "/admin/ai-settings";
 
   // 組織分析タブ
   const analyticsTab = searchParams.get("tab") || "overview";
@@ -321,48 +321,39 @@ function HeaderInner({
       active: kioskManagerTab === tab.id,
     })) || [];
 
-  // AI体験設定タブ
-  const aiPlaygroundSettingsTab = searchParams.get("tab") || "llm";
-  const aiPlaygroundSettingsTabs: TabItem[] = [
+  // AI設定タブ
+  const aiSettingsTab = searchParams.get("tab") || "general";
+  const aiSettingsTabs: TabItem[] = [
     {
-      name: language === "ja" ? "LLM設定" : "LLM Settings",
+      name: language === "ja" ? "全般" : "General",
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
         </svg>
       ),
-      path: "/admin/ai-playground-settings?tab=llm",
-      active: aiPlaygroundSettingsTab === "llm",
+      path: "/admin/ai-settings?tab=general",
+      active: aiSettingsTab === "general",
     },
     {
-      name: language === "ja" ? "プロンプト設定" : "Prompt Settings",
+      name: language === "ja" ? "AI体験" : "AI Playground",
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
+        </svg>
+      ),
+      path: "/admin/ai-settings?tab=playground",
+      active: aiSettingsTab === "playground",
+    },
+    {
+      name: language === "ja" ? "プロンプト" : "Prompts",
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
         </svg>
       ),
-      path: "/admin/ai-playground-settings?tab=prompts",
-      active: aiPlaygroundSettingsTab === "prompts",
-    },
-    {
-      name: language === "ja" ? "検索設定" : "Search Settings",
-      icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-        </svg>
-      ),
-      path: "/admin/ai-playground-settings?tab=search",
-      active: aiPlaygroundSettingsTab === "search",
-    },
-    {
-      name: language === "ja" ? "RAG設定" : "RAG Settings",
-      icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" />
-        </svg>
-      ),
-      path: "/admin/ai-playground-settings?tab=rag",
-      active: aiPlaygroundSettingsTab === "rag",
+      path: "/admin/ai-settings?tab=prompts",
+      active: aiSettingsTab === "prompts",
     },
   ];
 
@@ -483,8 +474,8 @@ function HeaderInner({
           "Calendar Management Tabs",
         )}
       {isKioskManager && renderTabs(kioskManagerTabs, "Kiosk Manager Tabs")}
-      {isAiPlaygroundSettings &&
-        renderTabs(aiPlaygroundSettingsTabs, "AI Playground Settings Tabs")}
+      {isAiSettings &&
+        renderTabs(aiSettingsTabs, "AI Settings Tabs")}
       <PageGuideSheet
         open={pageGuideOpen}
         onOpenChange={setPageGuideOpen}

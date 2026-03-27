@@ -2,14 +2,14 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { getLanguage } from "@/lib/i18n/get-language";
-import { AiPlaygroundSettingsClient } from "./AiPlaygroundSettingsClient";
+import { AiSettingsClient } from "./AiSettingsClient";
 
 export const metadata: Metadata = {
-  title: "AI Playground Settings",
+  title: "AI Settings",
 };
 
-type TabId = "llm" | "prompts" | "search" | "rag";
-const VALID_TABS: TabId[] = ["llm", "prompts", "search", "rag"];
+type TabId = "general" | "playground" | "prompts";
+const VALID_TABS: TabId[] = ["general", "playground", "prompts"];
 
 export default async function Page({
   searchParams,
@@ -27,7 +27,7 @@ export default async function Page({
   const params = await searchParams;
   const tab = VALID_TABS.includes(params.tab as TabId)
     ? (params.tab as TabId)
-    : "llm";
+    : "general";
 
-  return <AiPlaygroundSettingsClient language={language as "en" | "ja"} tab={tab} />;
+  return <AiSettingsClient language={language as "en" | "ja"} tab={tab} />;
 }

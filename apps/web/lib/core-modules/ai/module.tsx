@@ -103,11 +103,11 @@ export const aiModule: AppModule = {
       isImplemented: true,
     },
     {
-      id: "ai-playground-settings",
+      id: "ai-settings",
       moduleId: "ai",
-      name: "AI Playground Settings",
-      nameJa: "AI体験設定",
-      path: "/admin/ai-playground-settings",
+      name: "AI Settings",
+      nameJa: "AI設定",
+      path: "/admin/ai-settings",
       requiredRoles: ["ADMIN"],
       icon: (
         <svg
