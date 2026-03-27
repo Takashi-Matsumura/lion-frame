@@ -142,7 +142,7 @@ function HeaderInner({
   const isCalendarManagement = pathname === "/admin/calendar-management";
   const isKioskManager = pathname === "/kiosk-manager";
   const isAiPlaygroundSettings =
-    pathname === "/manager/ai-playground-settings";
+    pathname === "/admin/ai-playground-settings";
 
   // 組織分析タブ
   const analyticsTab = searchParams.get("tab") || "overview";
@@ -331,7 +331,7 @@ function HeaderInner({
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
         </svg>
       ),
-      path: "/manager/ai-playground-settings?tab=llm",
+      path: "/admin/ai-playground-settings?tab=llm",
       active: aiPlaygroundSettingsTab === "llm",
     },
     {
@@ -341,7 +341,7 @@ function HeaderInner({
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
         </svg>
       ),
-      path: "/manager/ai-playground-settings?tab=prompts",
+      path: "/admin/ai-playground-settings?tab=prompts",
       active: aiPlaygroundSettingsTab === "prompts",
     },
     {
@@ -351,7 +351,7 @@ function HeaderInner({
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
         </svg>
       ),
-      path: "/manager/ai-playground-settings?tab=search",
+      path: "/admin/ai-playground-settings?tab=search",
       active: aiPlaygroundSettingsTab === "search",
     },
     {
@@ -361,7 +361,7 @@ function HeaderInner({
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" />
         </svg>
       ),
-      path: "/manager/ai-playground-settings?tab=rag",
+      path: "/admin/ai-playground-settings?tab=rag",
       active: aiPlaygroundSettingsTab === "rag",
     },
   ];

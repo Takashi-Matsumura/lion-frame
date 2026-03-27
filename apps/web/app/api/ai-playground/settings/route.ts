@@ -45,9 +45,8 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // MANAGER以上のみ設定変更可能
-    const allowedRoles = ["MANAGER", "EXECUTIVE", "ADMIN"];
-    if (!allowedRoles.includes(session.user.role)) {
+    // ADMINのみ設定変更可能
+    if (session.user.role !== "ADMIN") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

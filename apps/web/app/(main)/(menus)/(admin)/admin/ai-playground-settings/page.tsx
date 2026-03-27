@@ -19,8 +19,7 @@ export default async function Page({
   const session = await auth();
   if (!session?.user) redirect("/login");
 
-  const allowedRoles = ["MANAGER", "EXECUTIVE", "ADMIN"];
-  if (!allowedRoles.includes(session.user.role)) {
+  if (session.user.role !== "ADMIN") {
     redirect("/dashboard");
   }
 
