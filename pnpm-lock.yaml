@@ -12,6 +12,28 @@ importers:
         specifier: ^2
         version: 2.8.10
 
+  addons/ai-playground:
+    dependencies:
+      '@lionframe/module-types':
+        specifier: workspace:*
+        version: link:../../packages/module-types
+      katex:
+        specifier: ^0.16.0
+        version: 0.16.40
+      react:
+        specifier: ^19.0.0
+        version: 19.2.4
+      react-dom:
+        specifier: ^19.0.0
+        version: 19.2.4(react@19.2.4)
+    devDependencies:
+      '@types/react':
+        specifier: ^19.0.0
+        version: 19.2.14
+      '@types/react-dom':
+        specifier: ^19.0.0
+        version: 19.2.3(@types/react@19.2.14)
+
   apps/web:
     dependencies:
       '@auth/prisma-adapter':
@@ -53,6 +75,9 @@ importers:
       '@lezer/markdown':
         specifier: ^1.6.3
         version: 1.6.3
+      '@lionframe/addon-ai-playground':
+        specifier: workspace:*
+        version: link:../../addons/ai-playground
       '@lionframe/module-types':
         specifier: workspace:*
         version: link:../../packages/module-types
@@ -137,6 +162,9 @@ importers:
       jspdf:
         specifier: ^4.2.1
         version: 4.2.1
+      katex:
+        specifier: ^0.16.28
+        version: 0.16.40
       lucide-react:
         specifier: ^0.575.0
         version: 0.575.0(react@19.2.4)
@@ -225,6 +253,9 @@ importers:
       '@types/jest':
         specifier: ^30.0.0
         version: 30.0.0
+      '@types/katex':
+        specifier: ^0.16.8
+        version: 0.16.8
       '@types/node':
         specifier: ^20.19.33
         version: 20.19.33
@@ -2413,6 +2444,9 @@ packages:
 
   '@types/jsdom@21.1.7':
     resolution: {integrity: sha512-yOriVnggzrnQ3a9OKOCxaVuSug3w3/SbOj5i7VwXWZEyUNl3bLF9V3MfxGbZKuwqJOQyRfqXyROBB1CoZLFWzA==}
+
+  '@types/katex@0.16.8':
+    resolution: {integrity: sha512-trgaNyfU+Xh2Tc+ABIb44a5AYUpicB3uwirOioeOkNPPbmgRNtcWyDeeFRzjPZENO9Vq8gvVqfhaaXWLlevVwg==}
 
   '@types/mdast@3.0.15':
     resolution: {integrity: sha512-LnwD+mUEfxWMa1QpDraczIn6k0Ee3SMicuYSSzS6ZYl2gKS09EClnJYGd8Du6rfc5r/GZEk5o1mRb8TaTj03sQ==}
@@ -7910,6 +7944,8 @@ snapshots:
       '@types/node': 20.19.33
       '@types/tough-cookie': 4.0.5
       parse5: 7.3.0
+
+  '@types/katex@0.16.8': {}
 
   '@types/mdast@3.0.15':
     dependencies:

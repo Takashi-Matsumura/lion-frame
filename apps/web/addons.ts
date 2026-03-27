@@ -10,8 +10,8 @@
  */
 
 import type { AddonModuleDefinition } from "@lionframe/module-types";
+import { aiPlaygroundModule } from "@lionframe/addon-ai-playground";
 
 export const externalAddons: AddonModuleDefinition[] = [
-  // 外部アドオンをここに登録
-  // 例: sampleHelloModule,
+  aiPlaygroundModule,
 ];

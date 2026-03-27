@@ -1,0 +1,26 @@
+{
+  "name": "@lionframe/addon-ai-playground",
+  "version": "0.1.0",
+  "private": true,
+  "description": "LionFrame addon: AI Playground - AI learning tool for guests",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./pages/AiPlaygroundPage": "./src/pages/AiPlaygroundPage.tsx",
+    "./src/prompts": "./src/prompts.ts",
+    "./src/types": "./src/types.ts"
+  },
+  "dependencies": {
+    "@lionframe/module-types": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0"
+  },
+  "peerDependencies": {
+    "katex": "^0.16.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  }
+}

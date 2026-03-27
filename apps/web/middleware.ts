@@ -133,7 +133,7 @@ export default auth(async (req) => {
 
   // GUEST users: redirect to /welcome except for allowed paths
   if (session.user.role === "GUEST") {
-    const guestAllowedPaths = ["/welcome", "/guest-profile"];
+    const guestAllowedPaths = ["/welcome", "/guest-profile", "/ai-playground"];
     const isAllowed = guestAllowedPaths.some((p) => pathname.startsWith(p));
     if (!isAllowed) {
       return NextResponse.redirect(redirectUrl("/welcome"));

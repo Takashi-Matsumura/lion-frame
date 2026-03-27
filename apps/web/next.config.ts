@@ -14,6 +14,7 @@ const nextConfig: NextConfig = {
   // 外部アドオンパッケージのTypeScriptをトランスパイル
   transpilePackages: [
     "@lionframe/module-types",
+    "@lionframe/addon-ai-playground",
   ],
   env: {
     NEXT_BUILD_ID: buildId,
