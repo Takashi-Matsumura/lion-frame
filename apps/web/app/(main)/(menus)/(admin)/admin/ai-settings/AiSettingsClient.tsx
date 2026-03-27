@@ -20,7 +20,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { PageSkeleton } from "@/components/ui/page-skeleton";
+import { Skeleton } from "@/components/ui/skeleton";
+import { DEFAULT_SYSTEM_PROMPTS } from "@lionframe/addon-ai-playground/src/prompts";
 
 // --- Types ---
 
@@ -37,14 +38,6 @@ interface AIConfig {
 
 interface LocalLLMDefaults {
   [key: string]: { endpoint: string; model: string };
-}
-
-interface PlaygroundLLMConfig {
-  provider: string;
-  baseUrl: string;
-  model: string;
-  apiKey?: string;
-  contextSize?: number;
 }
 
 interface SystemPrompts {
@@ -65,12 +58,6 @@ interface RAGConfig {
   category: string;
 }
 
-const DEFAULT_PLAYGROUND_LLM: PlaygroundLLMConfig = {
-  provider: "llama-cpp",
-  baseUrl: "http://localhost:8080/v1",
-  model: "gemma3",
-};
-
 const DEFAULT_RAG_CONFIG: RAGConfig = {
   baseUrl: "http://localhost:8000",
   category: "ai-playground",
@@ -80,12 +67,6 @@ const DEFAULT_SEARCH_CONFIG: SearchConfig = {
   provider: "duckduckgo",
   braveApiKey: "",
 };
-
-const PLAYGROUND_PROVIDERS = [
-  { id: "lm-studio", name: "LM Studio", defaultUrl: "http://localhost:1234/v1", defaultModel: "local-model" },
-  { id: "ollama", name: "Ollama", defaultUrl: "http://localhost:11434/v1", defaultModel: "llama3.2" },
-  { id: "llama-cpp", name: "llama.cpp", defaultUrl: "http://localhost:8080/v1", defaultModel: "gemma3" },
-];
 
 const translations = {
   en: {
@@ -108,16 +89,7 @@ const translations = {
     setKey: "Set",
     aiAvailable: "AI features are available",
     aiDisabled: "AI features are disabled",
-    playgroundTitle: "AI Playground Settings",
-    playgroundDescription: "Configure LLM, search, and RAG for AI Playground",
-    provider: "Provider",
-    connectionUrl: "Connection URL",
-    apiKey: "API Key (Optional)",
-    apiKeyPlaceholder: "Enter if authentication is required",
-    connected: "Connected",
     connectionFailed: "Connection Failed",
-    models: "models",
-    contextWindow: "Context window",
     searchSettings: "Search Settings",
     searchProvider: "Search Provider",
     braveApiKey: "Brave API Key",
@@ -133,6 +105,8 @@ const translations = {
     searchPrompt: "Search Mode",
     ragPrompt: "RAG Mode",
     resetDefaults: "Reset to Defaults",
+    defaultPrompt: "Default",
+    customPrompt: "Custom",
     save: "Save",
     saving: "Saving...",
     saved: "Saved",
@@ -157,16 +131,7 @@ const translations = {
     setKey: "設定",
     aiAvailable: "AI機能が利用可能です",
     aiDisabled: "AI機能は無効です",
-    playgroundTitle: "AI体験設定",
-    playgroundDescription: "AI体験のLLM・検索・RAG設定を管理します",
-    provider: "プロバイダー",
-    connectionUrl: "接続URL",
-    apiKey: "APIキー（オプション）",
-    apiKeyPlaceholder: "認証が必要な場合のみ入力",
-    connected: "接続成功",
     connectionFailed: "接続失敗",
-    models: "モデル",
-    contextWindow: "コンテキストウィンドウ",
     searchSettings: "検索設定",
     searchProvider: "検索プロバイダー",
     braveApiKey: "Brave APIキー",
@@ -182,13 +147,15 @@ const translations = {
     searchPrompt: "検索して要約モード",
     ragPrompt: "ナレッジ検索モード",
     resetDefaults: "デフォルトに戻す",
+    defaultPrompt: "デフォルト",
+    customPrompt: "カスタム",
     save: "保存",
     saving: "保存中...",
     saved: "保存しました",
   },
 };
 
-type TabId = "general" | "playground" | "prompts";
+type TabId = "general" | "playground";
 
 export function AiSettingsClient({ language, tab }: { language: "en" | "ja"; tab: TabId }) {
   const t = translations[language];
@@ -204,12 +171,9 @@ export function AiSettingsClient({ language, tab }: { language: "en" | "ja"; tab
   const [generalTesting, setGeneralTesting] = useState(false);
 
   // Playground
-  const [playgroundLlm, setPlaygroundLlm] = useState<PlaygroundLLMConfig>(DEFAULT_PLAYGROUND_LLM);
   const [searchConfig, setSearchConfig] = useState<SearchConfig>(DEFAULT_SEARCH_CONFIG);
   const [ragConfig, setRagConfig] = useState<RAGConfig>(DEFAULT_RAG_CONFIG);
   const [systemPrompts, setSystemPrompts] = useState<SystemPrompts | null>(null);
-  const [playgroundTestResult, setPlaygroundTestResult] = useState<{ success: boolean; message: string; contextSize?: number } | null>(null);
-  const [playgroundTesting, setPlaygroundTesting] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -219,7 +183,6 @@ export function AiSettingsClient({ language, tab }: { language: "en" | "ja"; tab
       .then(([aiData, pgData]) => {
         if (aiData.config) setAiConfig(aiData.config);
         if (aiData.localLLMDefaults) setLocalLLMDefaults(aiData.localLLMDefaults);
-        if (pgData.ai_playground_llm_config) setPlaygroundLlm(pgData.ai_playground_llm_config);
         if (pgData.ai_playground_search_config) setSearchConfig(pgData.ai_playground_search_config);
         if (pgData.ai_playground_rag_config) setRagConfig(pgData.ai_playground_rag_config);
         if (pgData.ai_playground_system_prompts) setSystemPrompts(pgData.ai_playground_system_prompts);
@@ -238,7 +201,7 @@ export function AiSettingsClient({ language, tab }: { language: "en" | "ja"; tab
   const handleTestGeneral = useCallback(async () => {
     setGeneralTesting(true); setGeneralTestResult(null);
     try {
-      const res = await fetch("/api/admin/ai/test", { method: "POST" });
+      const res = await fetch("/api/admin/ai", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "test-connection" }) });
       const data = await res.json();
       setGeneralTestResult({ success: data.success, message: data.success ? (language === "ja" ? "接続成功" : "Connected") : (data.error || t.connectionFailed) });
     } catch { setGeneralTestResult({ success: false, message: t.connectionFailed }); }
@@ -248,28 +211,102 @@ export function AiSettingsClient({ language, tab }: { language: "en" | "ja"; tab
   const handleSavePlayground = useCallback(async () => {
     setSaving(true); setSaved(false);
     try {
-      const body: Record<string, unknown> = { ai_playground_llm_config: playgroundLlm, ai_playground_search_config: searchConfig, ai_playground_rag_config: ragConfig };
+      const body: Record<string, unknown> = { ai_playground_search_config: searchConfig, ai_playground_rag_config: ragConfig };
       if (systemPrompts) body.ai_playground_system_prompts = systemPrompts;
       await fetch("/api/ai-playground/settings", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       setSaved(true); setTimeout(() => setSaved(false), 2000);
     } finally { setSaving(false); }
-  }, [playgroundLlm, searchConfig, ragConfig, systemPrompts]);
+  }, [searchConfig, ragConfig, systemPrompts]);
 
-  const handleTestPlayground = useCallback(async () => {
-    setPlaygroundTesting(true); setPlaygroundTestResult(null);
-    try {
-      const res = await fetch("/api/ai-playground/llm/test", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ baseUrl: playgroundLlm.baseUrl, apiKey: playgroundLlm.apiKey, model: playgroundLlm.model, provider: playgroundLlm.provider }) });
-      const data = await res.json();
-      if (data.success) { setPlaygroundTestResult({ success: true, message: `${data.modelCount} ${t.models}`, contextSize: data.contextSize }); if (data.contextSize) setPlaygroundLlm((prev) => ({ ...prev, contextSize: data.contextSize })); }
-      else { setPlaygroundTestResult({ success: false, message: data.error || t.connectionFailed }); }
-    } catch { setPlaygroundTestResult({ success: false, message: t.connectionFailed }); }
-    finally { setPlaygroundTesting(false); }
-  }, [playgroundLlm, t]);
-
-  if (loading) return <PageSkeleton />;
+  if (loading) return (
+    <div className={`${tab === "playground" ? "max-w-6xl" : "max-w-4xl"} mx-auto mt-8 space-y-6`}>
+      {tab === "general" && (
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-6 w-40" />
+            <Skeleton className="h-4 w-72 mt-1" />
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="p-6 bg-muted rounded-lg">
+              <div className="flex items-center justify-between">
+                <div className="space-y-2">
+                  <Skeleton className="h-5 w-36" />
+                  <Skeleton className="h-4 w-56" />
+                </div>
+                <Skeleton className="h-6 w-11 rounded-full" />
+              </div>
+            </div>
+            {[1, 2].map((i) => (
+              <div key={i} className="space-y-2">
+                <Skeleton className="h-4 w-28" />
+                <Skeleton className="h-9 w-full md:w-[300px]" />
+              </div>
+            ))}
+            {[1, 2].map((i) => (
+              <div key={i} className="space-y-2">
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-9 w-full" />
+              </div>
+            ))}
+            <Skeleton className="h-9 w-28" />
+            <Skeleton className="h-12 w-full rounded-lg" />
+          </CardContent>
+        </Card>
+      )}
+      {tab === "playground" && (
+        <>
+          <Card>
+            <CardHeader><Skeleton className="h-6 w-24" /></CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-28" />
+                <div className="flex gap-2">
+                  {[1, 2].map((i) => <Skeleton key={i} className="h-8 w-28" />)}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader><Skeleton className="h-6 w-24" /></CardHeader>
+            <CardContent className="space-y-4">
+              {[1, 2].map((i) => (
+                <div key={i} className="space-y-2">
+                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="h-9 w-full" />
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <Skeleton className="h-6 w-36" />
+                  <Skeleton className="h-4 w-72" />
+                </div>
+                <Skeleton className="h-8 w-32" />
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-8">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="space-y-2">
+                  <Skeleton className="h-4 w-36" />
+                  <div className="grid grid-cols-2 gap-4">
+                    <Skeleton className="h-[120px] w-full" />
+                    <Skeleton className="h-[120px] w-full" />
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+          <div className="flex justify-end"><Skeleton className="h-9 w-16" /></div>
+        </>
+      )}
+    </div>
+  );
 
   return (
-    <div className="max-w-4xl mx-auto mt-8 space-y-6">
+    <div className={`${tab === "playground" ? "max-w-6xl" : "max-w-4xl"} mx-auto mt-8 space-y-6`}>
 
       {/* ===== 全般タブ ===== */}
       {tab === "general" && aiConfig && (
@@ -375,33 +412,6 @@ export function AiSettingsClient({ language, tab }: { language: "en" | "ja"; tab
       {tab === "playground" && (
         <>
           <Card>
-            <CardHeader><CardTitle>{t.playgroundTitle}</CardTitle><CardDescription>{t.playgroundDescription}</CardDescription></CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-2">
-                <Label>{t.provider}</Label>
-                <div className="flex gap-2">
-                  {PLAYGROUND_PROVIDERS.map((p) => (
-                    <Button key={p.id} variant={playgroundLlm.provider === p.id ? "default" : "outline"} size="sm" onClick={() => { setPlaygroundLlm({ provider: p.id, baseUrl: p.defaultUrl, model: p.defaultModel }); setPlaygroundTestResult(null); }}>{p.name}</Button>
-                  ))}
-                </div>
-              </div>
-              <div className="space-y-2"><Label>{t.connectionUrl}</Label><Input value={playgroundLlm.baseUrl} onChange={(e) => setPlaygroundLlm((prev) => ({ ...prev, baseUrl: e.target.value }))} /></div>
-              <div className="space-y-2"><Label>{t.modelName}</Label><Input value={playgroundLlm.model} onChange={(e) => setPlaygroundLlm((prev) => ({ ...prev, model: e.target.value }))} /></div>
-              <div className="space-y-2"><Label>{t.apiKey}</Label><Input type="password" value={playgroundLlm.apiKey || ""} onChange={(e) => setPlaygroundLlm((prev) => ({ ...prev, apiKey: e.target.value || undefined }))} placeholder={t.apiKeyPlaceholder} /></div>
-              <div className="flex items-center gap-3">
-                <Button variant="outline" onClick={handleTestPlayground} disabled={playgroundTesting}>{playgroundTesting ? t.testing : t.testConnection}</Button>
-                {playgroundTestResult && (
-                  <div className="flex items-center gap-2">
-                    <Badge className={playgroundTestResult.success ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"}>
-                      {playgroundTestResult.success ? t.connected : t.connectionFailed}
-                    </Badge>
-                    <span className="text-sm text-muted-foreground">{playgroundTestResult.message}</span>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
             <CardHeader><CardTitle>{t.searchSettings}</CardTitle></CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
@@ -423,13 +433,6 @@ export function AiSettingsClient({ language, tab }: { language: "en" | "ja"; tab
               <div className="space-y-2"><Label>{t.ragCategory}</Label><Input value={ragConfig.category} onChange={(e) => setRagConfig((prev) => ({ ...prev, category: e.target.value }))} /></div>
             </CardContent>
           </Card>
-          <div className="flex justify-end"><Button onClick={handleSavePlayground} disabled={saving}>{saving ? t.saving : saved ? t.saved : t.save}</Button></div>
-        </>
-      )}
-
-      {/* ===== プロンプトタブ ===== */}
-      {tab === "prompts" && (
-        <>
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -437,16 +440,29 @@ export function AiSettingsClient({ language, tab }: { language: "en" | "ja"; tab
                 <Button variant="outline" size="sm" onClick={() => setSystemPrompts(null)}>{t.resetDefaults}</Button>
               </div>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-8">
               {(["common", "explain", "idea", "search", "rag"] as const).map((key) => (
                 <div key={key} className="space-y-2">
                   <Label>{key === "common" ? t.commonPrompt : key === "explain" ? t.explainPrompt : key === "idea" ? t.ideaPrompt : key === "search" ? t.searchPrompt : t.ragPrompt}</Label>
-                  <textarea
-                    className="w-full min-h-[120px] p-3 text-sm border border-input rounded-lg bg-background text-foreground resize-y focus:outline-none focus:ring-2 focus:ring-ring font-mono"
-                    value={systemPrompts?.[key] || ""}
-                    onChange={(e) => setSystemPrompts((prev) => ({ common: prev?.common || "", explain: prev?.explain || "", idea: prev?.idea || "", search: prev?.search || "", rag: prev?.rag || "", [key]: e.target.value }))}
-                    placeholder={language === "ja" ? "未設定（デフォルトを使用）" : "Not set (using defaults)"}
-                  />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <span className="text-xs text-muted-foreground">{t.defaultPrompt}</span>
+                      <textarea
+                        className="w-full min-h-[120px] p-3 text-sm border border-input rounded-lg bg-muted text-muted-foreground resize-y font-mono"
+                        value={DEFAULT_SYSTEM_PROMPTS[key]}
+                        readOnly
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <span className="text-xs text-muted-foreground">{t.customPrompt}</span>
+                      <textarea
+                        className="w-full min-h-[120px] p-3 text-sm border border-input rounded-lg bg-background text-foreground resize-y focus:outline-none focus:ring-2 focus:ring-ring font-mono"
+                        value={systemPrompts?.[key] || ""}
+                        onChange={(e) => setSystemPrompts((prev) => ({ common: prev?.common || "", explain: prev?.explain || "", idea: prev?.idea || "", search: prev?.search || "", rag: prev?.rag || "", [key]: e.target.value }))}
+                        placeholder={language === "ja" ? "未設定（デフォルトを使用）" : "Not set (using defaults)"}
+                      />
+                    </div>
+                  </div>
                 </div>
               ))}
             </CardContent>

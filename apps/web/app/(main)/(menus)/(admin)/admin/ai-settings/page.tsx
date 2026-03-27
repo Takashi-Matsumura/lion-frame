@@ -8,8 +8,8 @@ export const metadata: Metadata = {
   title: "AI Settings",
 };
 
-type TabId = "general" | "playground" | "prompts";
-const VALID_TABS: TabId[] = ["general", "playground", "prompts"];
+type TabId = "general" | "playground";
+const VALID_TABS: TabId[] = ["general", "playground"];
 
 export default async function Page({
   searchParams,
