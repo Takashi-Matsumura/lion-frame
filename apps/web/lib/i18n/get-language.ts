@@ -12,6 +12,16 @@ export const LANGUAGE_COOKIE_NAME = "lionframe-language";
 export async function getLanguage(): Promise<"en" | "ja"> {
   const session = await auth();
 
+  // GUESTユーザーはDBではなくCookieから言語設定を取得
+  if (session?.user?.role === "GUEST") {
+    const cookieStore = await cookies();
+    const languageCookie = cookieStore.get(LANGUAGE_COOKIE_NAME);
+    if (languageCookie?.value === "en" || languageCookie?.value === "ja") {
+      return languageCookie.value;
+    }
+    return "ja";
+  }
+
   // ログイン中はDBから言語設定を取得
   if (session?.user?.email) {
     const user = await prisma.user.findUnique({

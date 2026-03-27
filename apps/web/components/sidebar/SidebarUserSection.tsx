@@ -37,6 +37,8 @@ interface SidebarUserSectionProps {
   mustChangePassword: boolean;
 }
 
+const isGuest = (session: Session) => session.user.role === "GUEST";
+
 export function SidebarUserSection({
   session,
   language,
@@ -117,7 +119,7 @@ export function SidebarUserSection({
               <DropdownMenuSeparator />
               <DropdownMenuGroup>
                 <DropdownMenuItem asChild>
-                  <Link href="/profile" className="cursor-pointer">
+                  <Link href={isGuest(session) ? "/guest-profile" : "/profile"} className="cursor-pointer">
                     <User className="mr-2 size-4" />
                     {t("Profile", "プロフィール")}
                   </Link>
@@ -135,15 +137,17 @@ export function SidebarUserSection({
                     ? t("Light Mode", "ライトモード")
                     : t("Dark Mode", "ダークモード")}
                 </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="/settings" className="cursor-pointer relative">
-                    <Settings className="mr-2 size-4" />
-                    {t("Settings", "設定")}
-                    {mustChangePassword && (
-                      <span className="absolute right-2 top-1/2 -translate-y-1/2 size-2 bg-destructive rounded-full" />
-                    )}
-                  </Link>
-                </DropdownMenuItem>
+                {!isGuest(session) && (
+                  <DropdownMenuItem asChild>
+                    <Link href="/settings" className="cursor-pointer relative">
+                      <Settings className="mr-2 size-4" />
+                      {t("Settings", "設定")}
+                      {mustChangePassword && (
+                        <span className="absolute right-2 top-1/2 -translate-y-1/2 size-2 bg-destructive rounded-full" />
+                      )}
+                    </Link>
+                  </DropdownMenuItem>
+                )}
               </DropdownMenuGroup>
               <DropdownMenuSeparator />
               <DropdownMenuItem

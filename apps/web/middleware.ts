@@ -73,6 +73,10 @@ export default auth(async (req) => {
           redirectUrl("/settings?passwordReset=true"),
         );
       }
+      // GUEST users go to welcome page instead of dashboard
+      if (session.user.role === "GUEST") {
+        return NextResponse.redirect(redirectUrl("/welcome"));
+      }
       return NextResponse.redirect(redirectUrl("/dashboard"));
     }
     return NextResponse.next();
@@ -125,6 +129,15 @@ export default auth(async (req) => {
   // Allow access to /settings for password change
   if (session.user.mustChangePassword && !pathname.startsWith("/settings")) {
     return NextResponse.redirect(redirectUrl("/settings?passwordReset=true"));
+  }
+
+  // GUEST users: redirect to /welcome except for allowed paths
+  if (session.user.role === "GUEST") {
+    const guestAllowedPaths = ["/welcome", "/guest-profile"];
+    const isAllowed = guestAllowedPaths.some((p) => pathname.startsWith(p));
+    if (!isAllowed) {
+      return NextResponse.redirect(redirectUrl("/welcome"));
+    }
   }
 
   // Admin-only routes

@@ -13,6 +13,7 @@ import {
 import { getAllModules, menuGroups } from "@/lib/modules/registry";
 import { getUserPermissions } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
+import { getLanguage } from "@/lib/i18n/get-language";
 import type { AppMenu, MenuGroup } from "@/types/module";
 
 export const dynamic = "force-dynamic";
@@ -56,7 +57,10 @@ export default async function MainLayout({
     ]);
 
     userPermissions = permissions;
-    language = user?.language || "en";
+    // GUESTユーザーはCookieから言語取得、それ以外はDB値
+    language = session.user.role === "GUEST"
+      ? await getLanguage()
+      : (user?.language || "en");
     accessKeyPermissions = fetchedAccessKeyPermissions;
     mustChangePassword = false;
 

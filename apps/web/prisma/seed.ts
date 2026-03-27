@@ -61,6 +61,20 @@ async function main() {
     },
   });
 
+  // Create guest user
+  const guestPassword = await bcrypt.hash("guest", 10);
+  await prisma.user.upsert({
+    where: { email: "guest@lionframe.local" },
+    update: { password: guestPassword },
+    create: {
+      email: "guest@lionframe.local",
+      name: "Guest User",
+      role: "GUEST",
+      emailVerified: new Date(),
+      password: guestPassword,
+    },
+  });
+
   // Seed default position master data
   const defaultPositions = [
     { code: "001", name: "President", nameJa: "社長", level: "EXECUTIVE", isManager: true, color: "purple", displayOrder: 10, approvalLevel: 100 },

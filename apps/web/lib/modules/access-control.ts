@@ -67,6 +67,11 @@ export function canAccessMenu(
     return false;
   }
 
+  // メニューグループがユーザのロール階層でアクセス可能かチェック
+  if (!canAccessMenuGroup(menu.menuGroup, userRole)) {
+    return false;
+  }
+
   // 人事評価関連メニューの動的制御
   if (menu.moduleId === "hrEvaluation") {
     // 評価期間が「実施中」でない場合は、人事評価関連メニューを非表示

@@ -5,6 +5,9 @@ export default async function Home() {
   const session = await auth();
 
   if (session) {
+    if (session.user.role === "GUEST") {
+      redirect("/welcome");
+    }
     redirect("/dashboard");
   } else {
     redirect("/login");

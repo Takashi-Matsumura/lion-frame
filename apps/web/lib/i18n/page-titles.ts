@@ -9,8 +9,10 @@ export const pageTitles = {
   en: {
     "/": "Home",
     "/login": "Login",
+    "/welcome": "Home",
     "/dashboard": "Dashboard",
     "/profile": "Profile",
+    "/guest-profile": "Guest Profile",
     "/settings": "Settings",
     "/access-keys": "Access Key Management",
     "/reports": "Reports",
@@ -56,8 +58,10 @@ export const pageTitles = {
   ja: {
     "/": "ホーム",
     "/login": "ログイン",
+    "/welcome": "ホーム",
     "/dashboard": "ダッシュボード",
     "/profile": "プロフィール",
+    "/guest-profile": "ゲストプロフィール",
     "/settings": "設定",
     "/access-keys": "アクセスキー管理",
     "/reports": "レポート",

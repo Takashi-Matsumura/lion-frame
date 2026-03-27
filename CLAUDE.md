@@ -65,6 +65,7 @@ lionframe/
 ```
 app/
   ├── (menus)/              # メニューページ実装
+  │   ├── (guest)/          # ゲスト向け（Welcome画面）
   │   ├── (user)/           # 全社員向け（組織図、AIチャット）
   │   ├── (manager)/        # 管理職向け
   │   └── (admin)/          # システム管理者向け
@@ -151,6 +152,7 @@ cd apps/web && npx prisma db push && pnpm db:seed
 > **グループモジュール:** 会社組織モジュールに統合（メニュー・サービスとも`organization`モジュールで定義）。2種類のグループ: **公式グループ**（MANAGER以上が作成、全社員閲覧可、例: 委員会・タスクフォース）と**マイグループ**（全ユーザが作成、作成者のみ閲覧のプライベートグループ）。メンバーにはリーダー/メンバーの役割と自由入力の役割名（`title`: 書記、会計など）を設定可能。`Group.createdBy`でオーナー（作成者）を記録し、公式グループではオーナー名を表示。編集権限は作成者またはADMINのみ。API: `/api/groups`（一覧・作成）、`/api/groups/[id]`（詳細・更新・削除）、`/api/groups/[id]/members`（メンバー管理、PATCH で role/title 更新）。ページ: `/groups`（公式/マイ切替、公式タブ内に「今年度」パネル表示と「アーカイブ」テーブル表示の切替）。
 > **グループ年度管理・アーカイブ:** 公式グループに`fiscalYear`（Int?、年度）と`archivedAt`（DateTime?、アーカイブ日時）を追加。3パターン: **年度限定**（fiscalYear設定、年度末にアーカイブ）、**常設**（fiscalYear=null、期限なく継続）、**毎年度**（「次年度へ引継ぎ」でメンバーごとコピー後、旧年度をアーカイブ）。アーカイブ済みグループは読み取り専用（編集・メンバー操作・削除不可）。常設グループの「グループ解散」はスナップショット自動保存+アーカイブ。API: `/api/groups/fiscal-years`（年度一覧）、`/api/groups/[id]/archive`（POST=アーカイブ/解散、DELETE=解除）、`/api/groups/[id]/carryover`（次年度引継ぎ）、`/api/groups/[id]/snapshot`（常設グループの年度スナップショット保存）。
 > **グループメンバー所属スナップショット:** `GroupMember`に`snapshotPosition`/`snapshotDepartment`/`snapshotSection`を追加。アーカイブ・スナップショット実行時にメンバーの当時の所属情報を文字列として保存。表示時はスナップショットデータがあれば優先表示（異動後も当時の所属が正しく表示される）。
+> **GUESTロール:** 一時的なゲストアカウント。ログイン可能だが、`menuGroup: "guest"` のメニューのみアクセス可。ダッシュボードではなく `/welcome` にリダイレクト。`/settings` と `/profile` は利用不可、代わりに `/guest-profile` でゲスト専用プロフィール（言語設定のみ）を提供。言語設定はDBではなくCookie（`lionframe-language`）に保存（ブラウザごとに独立）。middlewareで `/welcome` と `/guest-profile` 以外の全ルートをブロック。`canAccessMenu` は `ROLE_HIERARCHY` に基づき `menuGroup` をチェックするため、`requiredRoles` 未指定のメニューもGUESTには表示されない。シードユーザー: `guest@lionframe.local` / `guest`。
 
 ## 重要なルール
 
