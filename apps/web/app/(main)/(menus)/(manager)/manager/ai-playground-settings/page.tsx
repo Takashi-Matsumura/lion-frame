@@ -8,7 +8,14 @@ export const metadata: Metadata = {
   title: "AI Playground Settings",
 };
 
-export default async function Page() {
+type TabId = "llm" | "prompts" | "search" | "rag";
+const VALID_TABS: TabId[] = ["llm", "prompts", "search", "rag"];
+
+export default async function Page({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string }>;
+}) {
   const session = await auth();
   if (!session?.user) redirect("/login");
 
@@ -18,5 +25,10 @@ export default async function Page() {
   }
 
   const language = await getLanguage();
-  return <AiPlaygroundSettingsClient language={language as "en" | "ja"} />;
+  const params = await searchParams;
+  const tab = VALID_TABS.includes(params.tab as TabId)
+    ? (params.tab as TabId)
+    : "llm";
+
+  return <AiPlaygroundSettingsClient language={language as "en" | "ja"} tab={tab} />;
 }

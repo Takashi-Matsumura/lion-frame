@@ -141,12 +141,12 @@ const translations = {
 
 type TabId = "llm" | "prompts" | "search" | "rag";
 
-export function AiPlaygroundSettingsClient({ language }: { language: "en" | "ja" }) {
+export function AiPlaygroundSettingsClient({ language, tab }: { language: "en" | "ja"; tab: TabId }) {
   const t = translations[language];
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [activeTab, setActiveTab] = useState<TabId>("llm");
+  const activeTab = tab;
 
   const [llmConfig, setLlmConfig] = useState<LLMConfig>(DEFAULT_LLM_CONFIG);
   const [searchConfig, setSearchConfig] = useState<SearchConfig>(DEFAULT_SEARCH_CONFIG);
@@ -244,31 +244,8 @@ export function AiPlaygroundSettingsClient({ language }: { language: "en" | "ja"
 
   if (loading) return <PageSkeleton />;
 
-  const tabs: Array<{ id: TabId; label: string }> = [
-    { id: "llm", label: t.llmSettings },
-    { id: "prompts", label: t.promptSettings },
-    { id: "search", label: t.searchSettings },
-    { id: "rag", label: t.ragSettings },
-  ];
-
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      {/* タブ */}
-      <div className="flex gap-1 border-b border-border">
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-              activeTab === tab.id
-                ? "border-primary text-primary"
-                : "border-transparent text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
+    <div className="max-w-4xl mx-auto mt-8 space-y-6">
 
       {/* LLM設定 */}
       {activeTab === "llm" && (
