@@ -3,12 +3,12 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { getLanguage } from "@/lib/i18n/get-language";
 import { AiSettingsClient } from "./AiSettingsClient";
+import type { TabId } from "./types";
 
 export const metadata: Metadata = {
   title: "AI Settings",
 };
 
-type TabId = "general" | "playground";
 const VALID_TABS: TabId[] = ["general", "playground"];
 
 export default async function Page({

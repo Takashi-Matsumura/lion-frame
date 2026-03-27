@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -20,10 +21,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Skeleton } from "@/components/ui/skeleton";
 import { DEFAULT_SYSTEM_PROMPTS } from "@lionframe/addon-ai-playground/src/prompts";
-
-// --- Types ---
+import type { SystemPrompts, SearchConfig, RAGConfig } from "@lionframe/addon-ai-playground";
+import { DEFAULT_SEARCH_CONFIG, DEFAULT_RAG_CONFIG } from "@lionframe/addon-ai-playground/src/types";
+import { AiSettingsSkeleton } from "./AiSettingsSkeleton";
+import type { TabId } from "./types";
 
 interface AIConfig {
   enabled: boolean;
@@ -40,33 +42,9 @@ interface LocalLLMDefaults {
   [key: string]: { endpoint: string; model: string };
 }
 
-interface SystemPrompts {
-  common: string;
-  explain: string;
-  idea: string;
-  search: string;
-  rag: string;
-}
+const EMPTY_PROMPTS: SystemPrompts = { common: "", explain: "", idea: "", search: "", rag: "" };
 
-interface SearchConfig {
-  provider: string;
-  braveApiKey?: string;
-}
-
-interface RAGConfig {
-  baseUrl: string;
-  category: string;
-}
-
-const DEFAULT_RAG_CONFIG: RAGConfig = {
-  baseUrl: "http://localhost:8000",
-  category: "ai-playground",
-};
-
-const DEFAULT_SEARCH_CONFIG: SearchConfig = {
-  provider: "duckduckgo",
-  braveApiKey: "",
-};
+const PROMPT_KEYS = ["common", "explain", "idea", "search", "rag"] as const;
 
 const translations = {
   en: {
@@ -99,14 +77,11 @@ const translations = {
     ragCategory: "Category",
     promptTitle: "Prompt Settings",
     promptDescription: "Customize system prompts for each AI Playground mode",
-    commonPrompt: "Common Prompt",
-    explainPrompt: "Explain Mode",
-    ideaPrompt: "Idea Mode",
-    searchPrompt: "Search Mode",
-    ragPrompt: "RAG Mode",
+    promptLabels: { common: "Common Prompt", explain: "Explain Mode", idea: "Idea Mode", search: "Search Mode", rag: "RAG Mode" },
     resetDefaults: "Reset to Defaults",
     defaultPrompt: "Default",
     customPrompt: "Custom",
+    promptPlaceholder: "Not set (using defaults)",
     save: "Save",
     saving: "Saving...",
     saved: "Saved",
@@ -141,21 +116,16 @@ const translations = {
     ragCategory: "カテゴリ",
     promptTitle: "プロンプト設定",
     promptDescription: "AI体験の各モードのシステムプロンプトをカスタマイズ",
-    commonPrompt: "共通プロンプト",
-    explainPrompt: "やさしく説明モード",
-    ideaPrompt: "企画アイデアモード",
-    searchPrompt: "検索して要約モード",
-    ragPrompt: "ナレッジ検索モード",
+    promptLabels: { common: "共通プロンプト", explain: "やさしく説明モード", idea: "企画アイデアモード", search: "検索して要約モード", rag: "ナレッジ検索モード" },
     resetDefaults: "デフォルトに戻す",
     defaultPrompt: "デフォルト",
     customPrompt: "カスタム",
+    promptPlaceholder: "未設定（デフォルトを使用）",
     save: "保存",
     saving: "保存中...",
     saved: "保存しました",
   },
 };
-
-type TabId = "general" | "playground";
 
 export function AiSettingsClient({ language, tab }: { language: "en" | "ja"; tab: TabId }) {
   const t = translations[language];
@@ -163,32 +133,35 @@ export function AiSettingsClient({ language, tab }: { language: "en" | "ja"; tab
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
-  // General AI
   const [aiConfig, setAiConfig] = useState<AIConfig | null>(null);
   const [localLLMDefaults, setLocalLLMDefaults] = useState<LocalLLMDefaults | null>(null);
   const [aiApiKeyInput, setAiApiKeyInput] = useState("");
   const [generalTestResult, setGeneralTestResult] = useState<{ success: boolean; message: string } | null>(null);
   const [generalTesting, setGeneralTesting] = useState(false);
 
-  // Playground
   const [searchConfig, setSearchConfig] = useState<SearchConfig>(DEFAULT_SEARCH_CONFIG);
   const [ragConfig, setRagConfig] = useState<RAGConfig>(DEFAULT_RAG_CONFIG);
   const [systemPrompts, setSystemPrompts] = useState<SystemPrompts | null>(null);
 
   useEffect(() => {
-    Promise.all([
+    const fetches: Promise<Record<string, unknown>>[] = [
       fetch("/api/admin/ai").then((r) => r.json()),
-      fetch("/api/ai-playground/settings").then((r) => r.json()),
-    ])
+    ];
+    if (tab === "playground") {
+      fetches.push(fetch("/api/ai-playground/settings").then((r) => r.json()));
+    }
+    Promise.all(fetches)
       .then(([aiData, pgData]) => {
-        if (aiData.config) setAiConfig(aiData.config);
-        if (aiData.localLLMDefaults) setLocalLLMDefaults(aiData.localLLMDefaults);
-        if (pgData.ai_playground_search_config) setSearchConfig(pgData.ai_playground_search_config);
-        if (pgData.ai_playground_rag_config) setRagConfig(pgData.ai_playground_rag_config);
-        if (pgData.ai_playground_system_prompts) setSystemPrompts(pgData.ai_playground_system_prompts);
+        if (aiData.config) setAiConfig(aiData.config as AIConfig);
+        if (aiData.localLLMDefaults) setLocalLLMDefaults(aiData.localLLMDefaults as LocalLLMDefaults);
+        if (pgData) {
+          if (pgData.ai_playground_search_config) setSearchConfig(pgData.ai_playground_search_config as SearchConfig);
+          if (pgData.ai_playground_rag_config) setRagConfig(pgData.ai_playground_rag_config as RAGConfig);
+          if (pgData.ai_playground_system_prompts) setSystemPrompts(pgData.ai_playground_system_prompts as SystemPrompts);
+        }
       })
       .finally(() => setLoading(false));
-  }, []);
+  }, [tab]);
 
   const handleUpdateAiConfig = useCallback(async (updates: Partial<AIConfig & { apiKey?: string }>) => {
     setSaving(true);
@@ -218,97 +191,11 @@ export function AiSettingsClient({ language, tab }: { language: "en" | "ja"; tab
     } finally { setSaving(false); }
   }, [searchConfig, ragConfig, systemPrompts]);
 
-  if (loading) return (
-    <div className={`${tab === "playground" ? "max-w-6xl" : "max-w-4xl"} mx-auto mt-8 space-y-6`}>
-      {tab === "general" && (
-        <Card>
-          <CardHeader>
-            <Skeleton className="h-6 w-40" />
-            <Skeleton className="h-4 w-72 mt-1" />
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="p-6 bg-muted rounded-lg">
-              <div className="flex items-center justify-between">
-                <div className="space-y-2">
-                  <Skeleton className="h-5 w-36" />
-                  <Skeleton className="h-4 w-56" />
-                </div>
-                <Skeleton className="h-6 w-11 rounded-full" />
-              </div>
-            </div>
-            {[1, 2].map((i) => (
-              <div key={i} className="space-y-2">
-                <Skeleton className="h-4 w-28" />
-                <Skeleton className="h-9 w-full md:w-[300px]" />
-              </div>
-            ))}
-            {[1, 2].map((i) => (
-              <div key={i} className="space-y-2">
-                <Skeleton className="h-4 w-32" />
-                <Skeleton className="h-9 w-full" />
-              </div>
-            ))}
-            <Skeleton className="h-9 w-28" />
-            <Skeleton className="h-12 w-full rounded-lg" />
-          </CardContent>
-        </Card>
-      )}
-      {tab === "playground" && (
-        <>
-          <Card>
-            <CardHeader><Skeleton className="h-6 w-24" /></CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Skeleton className="h-4 w-28" />
-                <div className="flex gap-2">
-                  {[1, 2].map((i) => <Skeleton key={i} className="h-8 w-28" />)}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader><Skeleton className="h-6 w-24" /></CardHeader>
-            <CardContent className="space-y-4">
-              {[1, 2].map((i) => (
-                <div key={i} className="space-y-2">
-                  <Skeleton className="h-4 w-32" />
-                  <Skeleton className="h-9 w-full" />
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div className="space-y-1">
-                  <Skeleton className="h-6 w-36" />
-                  <Skeleton className="h-4 w-72" />
-                </div>
-                <Skeleton className="h-8 w-32" />
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-8">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="space-y-2">
-                  <Skeleton className="h-4 w-36" />
-                  <div className="grid grid-cols-2 gap-4">
-                    <Skeleton className="h-[120px] w-full" />
-                    <Skeleton className="h-[120px] w-full" />
-                  </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-          <div className="flex justify-end"><Skeleton className="h-9 w-16" /></div>
-        </>
-      )}
-    </div>
-  );
+  if (loading) return <AiSettingsSkeleton tab={tab} />;
 
   return (
     <div className={`${tab === "playground" ? "max-w-6xl" : "max-w-4xl"} mx-auto mt-8 space-y-6`}>
 
-      {/* ===== 全般タブ ===== */}
       {tab === "general" && aiConfig && (
         <Card>
           <CardHeader>
@@ -408,7 +295,6 @@ export function AiSettingsClient({ language, tab }: { language: "en" | "ja"; tab
         </Card>
       )}
 
-      {/* ===== AI体験タブ ===== */}
       {tab === "playground" && (
         <>
           <Card>
@@ -441,25 +327,25 @@ export function AiSettingsClient({ language, tab }: { language: "en" | "ja"; tab
               </div>
             </CardHeader>
             <CardContent className="space-y-8">
-              {(["common", "explain", "idea", "search", "rag"] as const).map((key) => (
+              {PROMPT_KEYS.map((key) => (
                 <div key={key} className="space-y-2">
-                  <Label>{key === "common" ? t.commonPrompt : key === "explain" ? t.explainPrompt : key === "idea" ? t.ideaPrompt : key === "search" ? t.searchPrompt : t.ragPrompt}</Label>
+                  <Label>{t.promptLabels[key]}</Label>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1">
                       <span className="text-xs text-muted-foreground">{t.defaultPrompt}</span>
-                      <textarea
-                        className="w-full min-h-[120px] p-3 text-sm border border-input rounded-lg bg-muted text-muted-foreground resize-y font-mono"
+                      <Textarea
+                        className="min-h-[120px] bg-muted text-muted-foreground font-mono"
                         value={DEFAULT_SYSTEM_PROMPTS[key]}
                         readOnly
                       />
                     </div>
                     <div className="space-y-1">
                       <span className="text-xs text-muted-foreground">{t.customPrompt}</span>
-                      <textarea
-                        className="w-full min-h-[120px] p-3 text-sm border border-input rounded-lg bg-background text-foreground resize-y focus:outline-none focus:ring-2 focus:ring-ring font-mono"
+                      <Textarea
+                        className="min-h-[120px] font-mono"
                         value={systemPrompts?.[key] || ""}
-                        onChange={(e) => setSystemPrompts((prev) => ({ common: prev?.common || "", explain: prev?.explain || "", idea: prev?.idea || "", search: prev?.search || "", rag: prev?.rag || "", [key]: e.target.value }))}
-                        placeholder={language === "ja" ? "未設定（デフォルトを使用）" : "Not set (using defaults)"}
+                        onChange={(e) => setSystemPrompts((prev) => ({ ...EMPTY_PROMPTS, ...prev, [key]: e.target.value }))}
+                        placeholder={t.promptPlaceholder}
                       />
                     </div>
                   </div>
