@@ -7,6 +7,7 @@ import {
   buildSearchPrompt,
   buildRAGPrompt,
 } from "@lionframe/addon-ai-playground/src/prompts";
+import { AIService } from "@/lib/core-modules/ai/services/ai-service";
 
 // --- Inline LLM Provider (server-only) ---
 
@@ -108,6 +109,14 @@ function buildPrompt(mode: ChatMode, message: string, searchResults?: SearchResu
 
 export async function POST(request: NextRequest) {
   try {
+    const config = await AIService.getConfig();
+    if (!config.enabled) {
+      return new Response(
+        JSON.stringify({ error: "AI機能が無効です" }),
+        { status: 403, headers: { "Content-Type": "application/json" } },
+      );
+    }
+
     const body = await request.json();
     const { message, mode, llmConfig, searchResults, ragContext, history, systemPrompts } =
       body as ChatRequest;

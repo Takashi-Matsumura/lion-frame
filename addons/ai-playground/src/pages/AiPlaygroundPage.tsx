@@ -53,6 +53,7 @@ export function AiPlaygroundPage({ language }: { language: "en" | "ja" }) {
   const [searchConfig, setSearchConfig] = useState<SearchConfig>(DEFAULT_SEARCH_CONFIG);
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [aiEnabled, setAiEnabled] = useState<boolean | null>(null);
   const [configLoaded, setConfigLoaded] = useState(false);
   const [streamingContent, setStreamingContent] = useState("");
   const [mode, setMode] = useState<ChatMode>("explain");
@@ -79,15 +80,17 @@ export function AiPlaygroundPage({ language }: { language: "en" | "ja" }) {
     return CHAT_MODES.filter((m) => m.id !== "rag" || ragEnabled);
   }, [ragEnabled]);
 
-  // サーバーから設定を読み込み
   useEffect(() => {
-    fetch("/api/ai-playground/settings")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.ai_playground_llm_config) setLlmConfig(data.ai_playground_llm_config);
-        if (data.ai_playground_search_config) setSearchConfig({ ...DEFAULT_SEARCH_CONFIG, ...data.ai_playground_search_config });
-        if (data.ai_playground_rag_config) setRagConfig({ ...DEFAULT_RAG_CONFIG, ...data.ai_playground_rag_config });
-        if (data.ai_playground_system_prompts) setSystemPrompts({ ...DEFAULT_SYSTEM_PROMPTS, ...data.ai_playground_system_prompts });
+    Promise.all([
+      fetch("/api/admin/ai").then((r) => r.json()),
+      fetch("/api/ai-playground/settings").then((r) => r.json()),
+    ])
+      .then(([aiData, pgData]) => {
+        setAiEnabled(aiData.config?.enabled ?? false);
+        if (pgData.ai_playground_llm_config) setLlmConfig(pgData.ai_playground_llm_config);
+        if (pgData.ai_playground_search_config) setSearchConfig({ ...DEFAULT_SEARCH_CONFIG, ...pgData.ai_playground_search_config });
+        if (pgData.ai_playground_rag_config) setRagConfig({ ...DEFAULT_RAG_CONFIG, ...pgData.ai_playground_rag_config });
+        if (pgData.ai_playground_system_prompts) setSystemPrompts({ ...DEFAULT_SYSTEM_PROMPTS, ...pgData.ai_playground_system_prompts });
       })
       .finally(() => setConfigLoaded(true));
   }, []);
@@ -313,6 +316,26 @@ export function AiPlaygroundPage({ language }: { language: "en" | "ja" }) {
     return (
       <div className="flex-1 flex items-center justify-center" style={{ height: "calc(100vh - 160px)" }}>
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      </div>
+    );
+  }
+
+  if (aiEnabled === false) {
+    return (
+      <div className="flex-1 flex items-center justify-center" style={{ height: "calc(100vh - 160px)" }}>
+        <div className="text-center max-w-md px-4">
+          <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23.693L5 14.5m14.8.8l1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0112 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.61L5 14.5" />
+            </svg>
+          </div>
+          <h3 className="text-lg font-semibold text-foreground mb-2">
+            {language === "ja" ? "AIが有効になっていません" : "AI is not enabled"}
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            {language === "ja" ? "AI設定でAIを有効にしてください" : "Please enable AI in AI Settings"}
+          </p>
+        </div>
       </div>
     );
   }
