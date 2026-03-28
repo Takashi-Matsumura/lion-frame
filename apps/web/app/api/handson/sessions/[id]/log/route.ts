@@ -7,6 +7,7 @@ import {
 import {
   setCommandStatus,
   setCheckpoint,
+  setInstructorCheckpoint,
 } from "@/lib/addon-modules/handson/handson-store";
 
 // POST /api/handson/sessions/[id]/log — ログ記録（全ロール）
@@ -40,6 +41,11 @@ export const POST = apiHandler(async (request) => {
     case "CHECKPOINT_COMPLETE":
       if (sectionIndex != null) {
         setCheckpoint(sessionId, participantId, sectionIndex);
+      }
+      break;
+    case "INSTRUCTOR_CHECKPOINT":
+      if (commandIndex != null) {
+        setInstructorCheckpoint(sessionId, commandIndex);
       }
       break;
   }

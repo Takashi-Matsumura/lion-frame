@@ -24,11 +24,17 @@ export interface HelpRequestInfo {
   createdAt: Date;
 }
 
+export interface InstructorCheckpoint {
+  commandIndex: number;
+  timestamp: Date;
+}
+
 interface SessionStore {
   participants: Map<number, ParticipantInfo>; // seatNumber → info
   commands: Map<string, Map<number, CommandStatus>>; // participantId → commandIndex → status
   checkpoints: Map<string, Set<number>>; // participantId → completed sectionIndexes
   helpRequests: Map<string, HelpRequestInfo>; // logId → request
+  instructorCheckpoints: Map<number, InstructorCheckpoint>; // commandIndex → checkpoint
 }
 
 interface HandsonMemoryStore {
@@ -51,6 +57,7 @@ function getOrCreateSession(sessionId: string): SessionStore {
       commands: new Map(),
       checkpoints: new Map(),
       helpRequests: new Map(),
+      instructorCheckpoints: new Map(),
     });
   }
   return store.sessions.get(sessionId)!;
@@ -200,6 +207,29 @@ export function restoreSession(
   }
 }
 
+// === 講師チェックポイント ===
+
+export function setInstructorCheckpoint(
+  sessionId: string,
+  commandIndex: number,
+): void {
+  const session = getOrCreateSession(sessionId);
+  session.instructorCheckpoints.set(commandIndex, {
+    commandIndex,
+    timestamp: new Date(),
+  });
+}
+
+export function getInstructorCheckpoints(
+  sessionId: string,
+): InstructorCheckpoint[] {
+  const session = store.sessions.get(sessionId);
+  if (!session) return [];
+  return Array.from(session.instructorCheckpoints.values()).sort(
+    (a, b) => a.commandIndex - b.commandIndex,
+  );
+}
+
 /**
  * 進捗マトリクスを構築
  */
@@ -208,10 +238,11 @@ export function getProgressMatrix(sessionId: string): {
   commands: Record<string, Record<number, CommandStatus>>;
   checkpoints: Record<string, number[]>;
   helpRequests: HelpRequestInfo[];
+  instructorCheckpoints: number[];
 } {
   const session = store.sessions.get(sessionId);
   if (!session) {
-    return { participants: [], commands: {}, checkpoints: {}, helpRequests: [] };
+    return { participants: [], commands: {}, checkpoints: {}, helpRequests: [], instructorCheckpoints: [] };
   }
 
   const commands: Record<string, Record<number, CommandStatus>> = {};
@@ -224,10 +255,13 @@ export function getProgressMatrix(sessionId: string): {
     checkpoints[pid] = Array.from(sections).sort((a, b) => a - b);
   }
 
+  const instructorCheckpoints = Array.from(session.instructorCheckpoints.keys()).sort((a, b) => a - b);
+
   return {
     participants: Array.from(session.participants.values()),
     commands,
     checkpoints,
     helpRequests: Array.from(session.helpRequests.values()),
+    instructorCheckpoints,
   };
 }

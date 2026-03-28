@@ -10,6 +10,7 @@ const translations = {
     helpAlert: "Help requested",
     section: "Section",
     resolve: "Resolved",
+    instructor: "Instructor",
   },
   ja: {
     seat: "座席",
@@ -18,6 +19,7 @@ const translations = {
     helpAlert: "ヘルプ依頼",
     section: "セクション",
     resolve: "対応済み",
+    instructor: "講師",
   },
 };
 
@@ -44,6 +46,7 @@ interface ProgressData {
   commands: Record<string, Record<number, CommandStatus>>;
   checkpoints: Record<string, number[]>;
   helpRequests: HelpRequestInfo[];
+  instructorCheckpoints: number[];
 }
 
 interface Props {
@@ -63,6 +66,7 @@ export default function ProgressMatrix({ language, sessionId, totalCommands }: P
   const headerRef = useRef<HTMLDivElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
   const syncing = useRef(false);
+  const prevLastCheckpoint = useRef<number | null>(null);
 
   const fetchProgress = useCallback(async () => {
     try {
@@ -94,6 +98,24 @@ export default function ProgressMatrix({ language, sessionId, totalCommands }: P
     syncing.current = false;
   }
 
+  // 講師チェックポイントの最新位置に自動スクロール
+  useEffect(() => {
+    if (!data) return;
+    const icps = data.instructorCheckpoints || [];
+    if (icps.length === 0) return;
+    const lastIdx = icps[icps.length - 1];
+    if (lastIdx === prevLastCheckpoint.current) return;
+    prevLastCheckpoint.current = lastIdx;
+
+    // ヘッダーテーブル内の該当セルにスクロール
+    if (headerRef.current) {
+      const cell = headerRef.current.querySelector(`[data-instructor-col="${lastIdx}"]`);
+      if (cell) {
+        cell.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+      }
+    }
+  }, [data]);
+
   if (!data || data.participants.length === 0) {
     return (
       <div className="py-8 text-center text-sm text-muted-foreground">
@@ -105,6 +127,7 @@ export default function ProgressMatrix({ language, sessionId, totalCommands }: P
   const participants = [...data.participants].sort((a, b) => a.seatNumber - b.seatNumber);
   const commandIndices = Array.from({ length: totalCommands }, (_, i) => i);
   const helpRequests = data.helpRequests || [];
+  const instructorCheckpoints = data.instructorCheckpoints || [];
   const tableWidth = SEAT_COL_W + commandIndices.length * CELL_COL_W;
 
   async function handleResolveHelp(logId: string) {
@@ -187,11 +210,11 @@ export default function ProgressMatrix({ language, sessionId, totalCommands }: P
             {colGroup()}
             <thead>
               <tr>
-                <th className="border-r bg-muted px-3 py-2 text-left text-xs font-semibold text-muted-foreground">
+                <th className="border-b border-r bg-muted px-3 py-2 text-left text-xs font-semibold text-muted-foreground">
                   {t.seat}
                 </th>
                 {commandIndices.map((idx) => (
-                  <th key={idx} className="bg-muted px-1 py-2 text-center">
+                  <th key={idx} className="border-b bg-muted px-1 py-2 text-center">
                     <span className="font-mono text-[10px] text-muted-foreground">
                       #{idx + 1}
                     </span>
@@ -199,6 +222,31 @@ export default function ProgressMatrix({ language, sessionId, totalCommands }: P
                 ))}
               </tr>
             </thead>
+            <tbody>
+              <tr className="bg-blue-50 dark:bg-blue-950/30">
+                <td className="border-r bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-900 dark:border-border dark:bg-blue-950/30 dark:text-blue-200">
+                  {t.instructor}
+                </td>
+                {commandIndices.map((idx) => {
+                  const checked = instructorCheckpoints.includes(idx);
+                  return (
+                    <td
+                      key={idx}
+                      data-instructor-col={idx}
+                      className="bg-blue-50 px-1 py-1.5 text-center dark:bg-blue-950/30"
+                    >
+                      {checked ? (
+                        <span className="inline-block h-4 w-4 rounded bg-blue-500 text-[10px] leading-4 text-white">
+                          ✓
+                        </span>
+                      ) : (
+                        <span className="inline-block h-4 w-4 rounded bg-blue-100 dark:bg-blue-900/40" />
+                      )}
+                    </td>
+                  );
+                })}
+              </tr>
+            </tbody>
           </table>
         </div>
 

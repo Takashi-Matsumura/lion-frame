@@ -24,6 +24,8 @@ interface Props {
   parsed: ParsedHandson;
   readOnly?: boolean;
   onCommandReport?: (commandIndex: number, status: "ok" | "error") => Promise<void>;
+  /** 講師プレビューモード: コードブロック下にチェックポイントボタンを表示 */
+  onInstructorCheckpoint?: (commandIndex: number) => Promise<void>;
 }
 
 export default function HandsonMarkdownRenderer({
@@ -31,6 +33,7 @@ export default function HandsonMarkdownRenderer({
   parsed,
   readOnly = false,
   onCommandReport,
+  onInstructorCheckpoint,
 }: Props) {
   const t = translations[language];
 
@@ -51,6 +54,7 @@ export default function HandsonMarkdownRenderer({
             language={language}
             readOnly={readOnly}
             onCommandReport={onCommandReport}
+            onInstructorCheckpoint={onInstructorCheckpoint}
           />
         ),
       )}
@@ -110,11 +114,13 @@ function BodySection({
   language,
   readOnly,
   onCommandReport,
+  onInstructorCheckpoint,
 }: {
   section: HandsonSection;
   language: "en" | "ja";
   readOnly: boolean;
   onCommandReport?: (commandIndex: number, status: "ok" | "error") => Promise<void>;
+  onInstructorCheckpoint?: (commandIndex: number) => Promise<void>;
 }) {
   return (
     <div data-section-index={section.index}>
@@ -135,6 +141,7 @@ function BodySection({
           language={language}
           readOnly={readOnly}
           onCommandReport={onCommandReport}
+          onInstructorCheckpoint={onInstructorCheckpoint}
         />
       ))}
     </div>
@@ -191,11 +198,13 @@ function StepContent({
   language,
   readOnly,
   onCommandReport,
+  onInstructorCheckpoint,
 }: {
   step: HandsonStep;
   language: "en" | "ja";
   readOnly: boolean;
   onCommandReport?: (commandIndex: number, status: "ok" | "error") => Promise<void>;
+  onInstructorCheckpoint?: (commandIndex: number) => Promise<void>;
 }) {
   const parts = splitByCodeBlocks(step.contentMarkdown, step.codeBlocks);
 
@@ -210,12 +219,23 @@ function StepContent({
                   {part.content}
                 </ReactMarkdown>
               </div>
+              {/* 受講者: OK/Errorボタン */}
               {!readOnly && onCommandReport && part.globalIndex !== undefined && (
                 <CommandStatusButtons
                   language={language}
                   globalNumber={part.globalIndex + 1}
                   onReport={async (status) => {
                     await onCommandReport(part.globalIndex!, status);
+                  }}
+                />
+              )}
+              {/* 講師: チェックポイントボタン */}
+              {onInstructorCheckpoint && part.globalIndex !== undefined && (
+                <InstructorCheckpointButton
+                  language={language}
+                  globalNumber={part.globalIndex + 1}
+                  onCheckpoint={async () => {
+                    await onInstructorCheckpoint(part.globalIndex!);
                   }}
                 />
               )}
@@ -230,6 +250,63 @@ function StepContent({
           </div>
         );
       })}
+    </div>
+  );
+}
+
+// === 講師チェックポイントボタン ===
+function InstructorCheckpointButton({
+  language,
+  globalNumber,
+  onCheckpoint,
+}: {
+  language: "en" | "ja";
+  globalNumber: number;
+  onCheckpoint: () => Promise<void>;
+}) {
+  const [done, setDone] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  async function handleClick() {
+    if (done || loading) return;
+    setLoading(true);
+    try {
+      await onCheckpoint();
+      setDone(true);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const label = `#${globalNumber}`;
+
+  if (done) {
+    return (
+      <div className="mb-4 flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400">
+        <span className="font-mono text-xs text-muted-foreground">{label}</span>
+        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+        </svg>
+        {language === "ja" ? "チェック済み" : "Checked"}
+      </div>
+    );
+  }
+
+  return (
+    <div className="mb-4 flex items-center gap-2">
+      <span className="font-mono text-xs text-muted-foreground">{label}</span>
+      <button
+        onClick={handleClick}
+        disabled={loading}
+        className="flex items-center gap-1 rounded-md border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700 transition hover:bg-blue-100 disabled:opacity-50 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-400"
+      >
+        <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        {loading
+          ? (language === "ja" ? "送信中..." : "Sending...")
+          : (language === "ja" ? "チェックポイント" : "Checkpoint")}
+      </button>
     </div>
   );
 }
