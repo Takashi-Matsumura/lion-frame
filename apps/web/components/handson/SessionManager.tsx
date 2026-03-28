@@ -350,12 +350,12 @@ export default function SessionManager({
                 return (
                   <tr
                     key={s.id}
-                    onClick={() => !s.endedAt && handleSelect(s)}
+                    onClick={() => handleSelect(s)}
                     className={`border-b transition cursor-pointer ${
                       isSelected
                         ? "bg-primary/5"
                         : "hover:bg-muted/30"
-                    } ${s.endedAt ? "opacity-60 cursor-default" : ""}`}
+                    } ${s.endedAt ? "opacity-70" : ""}`}
                   >
                     <td className="px-4 py-2.5 text-foreground">{formatDate(s.date)}</td>
                     <td className="px-4 py-2.5">
