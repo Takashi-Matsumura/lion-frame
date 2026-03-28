@@ -82,6 +82,7 @@ interface Props {
   activeSessionId: string | null;
   onSessionSelected: (session: SessionInfo | null) => void;
   onActiveChanged: (activeId: string | null) => void;
+  onLoaded?: () => void;
 }
 
 export default function SessionManager({
@@ -89,6 +90,7 @@ export default function SessionManager({
   activeSessionId,
   onSessionSelected,
   onActiveChanged,
+  onLoaded,
 }: Props) {
   const t = translations[language];
   const [sessions, setSessions] = useState<SessionInfo[]>([]);
@@ -101,6 +103,7 @@ export default function SessionManager({
   const [documentId, setDocumentId] = useState("");
   const [maxSeats, setMaxSeats] = useState(15);
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(activeSessionId);
 
   const fetchSessions = useCallback(async () => {
@@ -112,8 +115,11 @@ export default function SessionManager({
       }
     } catch {
       // ignore
+    } finally {
+      setInitialLoading(false);
+      onLoaded?.();
     }
-  }, []);
+  }, [onLoaded]);
 
   useEffect(() => {
     fetchSessions();
@@ -313,7 +319,13 @@ export default function SessionManager({
       )}
 
       {/* セッション一覧テーブル */}
-      {sessions.length === 0 ? (
+      {initialLoading ? (
+        <div className="space-y-3">
+          {[1, 2].map((i) => (
+            <div key={i} className="h-12 animate-pulse rounded-lg bg-muted" />
+          ))}
+        </div>
+      ) : sessions.length === 0 ? (
         <div className="rounded-lg border bg-card py-8 text-center text-sm text-muted-foreground">
           {t.noSessions}
         </div>

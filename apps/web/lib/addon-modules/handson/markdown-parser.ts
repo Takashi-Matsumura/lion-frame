@@ -114,7 +114,8 @@ function isColumnSection(content: string): boolean {
 }
 
 function extractColumnTitle(content: string): string {
-  const match = content.match(COLUMN_PATTERN);
+  const firstLine = content.split("\n")[0];
+  const match = firstLine.match(COLUMN_PATTERN);
   return match ? match[1] : "コラム";
 }
 

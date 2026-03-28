@@ -3,6 +3,7 @@
 import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import rehypeRaw from "rehype-raw";
 import CommandStatusButtons from "./CommandStatusButtons";
 import type { ParsedHandson, HandsonSection, HandsonStep } from "@/lib/addon-modules/handson/markdown-parser";
 
@@ -97,7 +98,7 @@ function ColumnSection({
           </summary>
           <div className="border-t border-amber-200 px-8 py-1 dark:border-amber-900">
             <div className="prose prose-zinc max-w-none dark:prose-invert handson-prose">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
                 {col.contentMarkdown}
               </ReactMarkdown>
             </div>
@@ -127,7 +128,7 @@ function BodySection({
       {/* イントロ部分（ナンバリング対象外） */}
       {section.introMarkdown && (
         <div className="prose prose-zinc max-w-none dark:prose-invert handson-prose">
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+          <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
             {section.introMarkdown}
           </ReactMarkdown>
         </div>
@@ -215,7 +216,7 @@ function StepContent({
           return (
             <div key={i} id={part.globalIndex !== undefined ? `handson-cmd-${part.globalIndex}` : undefined}>
               <div className="prose prose-zinc max-w-none dark:prose-invert handson-prose overflow-visible">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
                   {part.content}
                 </ReactMarkdown>
               </div>
@@ -244,7 +245,7 @@ function StepContent({
         }
         return (
           <div key={i} className="prose prose-zinc max-w-none dark:prose-invert handson-prose">
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+            <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
               {part.content}
             </ReactMarkdown>
           </div>

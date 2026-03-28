@@ -117,7 +117,16 @@ export default function ProgressMatrix({ language, sessionId, totalCommands, onC
     }
   }, [data]);
 
-  if (!data || data.participants.length === 0) {
+  if (!data) {
+    return (
+      <div className="space-y-3">
+        <div className="h-8 w-48 animate-pulse rounded bg-muted" />
+        <div className="h-32 animate-pulse rounded-lg bg-muted" />
+      </div>
+    );
+  }
+
+  if (data.participants.length === 0) {
     return (
       <div className="py-8 text-center text-sm text-muted-foreground">
         {t.noParticipants}

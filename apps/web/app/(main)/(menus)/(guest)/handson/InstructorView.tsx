@@ -8,6 +8,7 @@ import { parseHandsonMarkdown } from "@/lib/addon-modules/handson/markdown-parse
 import type { ParsedHandson } from "@/lib/addon-modules/handson/markdown-parser";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageSkeleton } from "@/components/ui/page-skeleton";
 
 const translations = {
   en: {
@@ -47,6 +48,7 @@ export default function InstructorView({
   const [selectedSession, setSelectedSession] = useState<SessionInfo | null>(null);
   const [parsed, setParsed] = useState<ParsedHandson | null>(null);
   const [activeTab, setActiveTab] = useState("progress");
+  const [pageReady, setPageReady] = useState(false);
 
   // ドキュメント読み込み
   useEffect(() => {
@@ -77,7 +79,10 @@ export default function InstructorView({
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
-      <div className="flex-1 overflow-y-auto p-6">
+      {/* 初期ロード中はPageSkeleton */}
+      {!pageReady && <div className="p-6"><PageSkeleton /></div>}
+
+      <div className={`flex-1 overflow-y-auto p-6 ${!pageReady ? "hidden" : ""}`}>
         <div className="mx-auto max-w-6xl space-y-6">
           {/* セッション一覧 + 管理 */}
           <Card>
@@ -87,6 +92,7 @@ export default function InstructorView({
                 activeSessionId={activeSessionId}
                 onSessionSelected={(s) => setSelectedSession(s as SessionInfo | null)}
                 onActiveChanged={handleActiveChanged}
+                onLoaded={() => setPageReady(true)}
               />
             </CardContent>
           </Card>

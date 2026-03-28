@@ -1,12 +1,13 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useRef, useState } from "react";
 import type { ViewMode } from "@/components/business/editor/types";
 
 interface ToolbarProps {
   viewMode: ViewMode;
   onViewModeChange: (mode: ViewMode) => void;
   content: string;
+  onMediaInsert?: (markdown: string) => void;
 }
 
 function formatBytes(bytes: number): string {
@@ -18,13 +19,52 @@ export default function Toolbar({
   viewMode,
   onViewModeChange,
   content,
+  onMediaInsert,
 }: ToolbarProps) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+
   const stats = useMemo(() => {
     const chars = content.length;
     const lines = content ? content.split("\n").length : 0;
     const size = new TextEncoder().encode(content).byteLength;
     return { chars, lines, size };
   }, [content]);
+
+  async function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !onMediaInsert) return;
+
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch("/api/editor/media", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        alert(data.error || "Upload failed");
+        return;
+      }
+
+      const data = await res.json();
+
+      if (data.mediaType === "video") {
+        onMediaInsert(`\n<video src="${data.url}" controls width="100%"></video>\n`);
+      } else {
+        onMediaInsert(`\n![](${data.url})\n`);
+      }
+    } catch {
+      alert("Upload failed");
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }
 
   return (
     <div className="toolbar">
@@ -34,6 +74,31 @@ export default function Toolbar({
         </span>
       </div>
       <div className="toolbar-group">
+        {/* メディアアップロード */}
+        {onMediaInsert && (
+          <>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,video/quicktime,video/webm"
+              onChange={handleFileSelect}
+              className="hidden"
+            />
+            <button
+              className="toolbar-btn"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+              title="画像・動画を挿入"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                <circle cx="8.5" cy="8.5" r="1.5" />
+                <polyline points="21 15 16 10 5 21" />
+              </svg>
+              <span className="toolbar-btn-label">{uploading ? "..." : "メディア"}</span>
+            </button>
+          </>
+        )}
         <button
           className={`toolbar-btn ${viewMode === "live" ? "active" : ""}`}
           onClick={() => onViewModeChange("live")}

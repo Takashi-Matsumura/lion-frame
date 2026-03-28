@@ -149,6 +149,11 @@ export default function FloatingEditorContent({
           viewMode={viewMode}
           onViewModeChange={setViewMode}
           content={content}
+          onMediaInsert={(markdown) => {
+            const newContent = content + markdown;
+            setContent(newContent);
+            handleChange(newContent);
+          }}
         />
       )}
 
