@@ -93,23 +93,6 @@ export default function TraineeView({
     [sessionId, participantId],
   );
 
-  // チェックポイント
-  const handleCheckpoint = useCallback(
-    async (sectionIndex: number) => {
-      if (!participantId) return;
-      await fetch(`/api/handson/sessions/${sessionId}/log`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          participantId,
-          type: "CHECKPOINT_COMPLETE",
-          sectionIndex,
-        }),
-      });
-    },
-    [sessionId, participantId],
-  );
-
   // ヘルプリクエスト
   const handleHelpRequest = useCallback(
     async (sectionIndex: number) => {
@@ -181,7 +164,6 @@ export default function TraineeView({
         language={language}
         parsed={parsed}
         onCommandReport={handleCommandReport}
-        onCheckpoint={handleCheckpoint}
       />
 
       {/* ヘルプボタン */}

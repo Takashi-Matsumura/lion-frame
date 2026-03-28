@@ -158,12 +158,11 @@ export function parseHandsonMarkdown(markdown: string): ParsedHandson {
       introCodeBlocks: [],
     };
 
-    // イントロ部分
+    // イントロ部分（ステップに属さないのでナンバリング対象外）
     if (intro) {
-      const { codeBlocks, nextIndex } = extractCodeBlocks(intro, globalCommandIndex);
       section.introMarkdown = intro;
-      section.introCodeBlocks = codeBlocks;
-      globalCommandIndex = nextIndex;
+      // イントロのコードブロックはグローバルインデックスを振らない
+      section.introCodeBlocks = [];
     }
 
     // ステップ

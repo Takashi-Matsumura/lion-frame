@@ -111,18 +111,11 @@ export default function ProgressMatrix({ language, sessionId, totalCommands }: P
           <tbody>
             {participants.map((p) => {
               const cmds = data.commands[p.id] || {};
-              const hasError = Object.values(cmds).some((s) => s === "ERROR");
 
               return (
-                <tr
-                  key={p.id}
-                  className={hasError ? "bg-orange-50/50 dark:bg-orange-950/20" : ""}
-                >
+                <tr key={p.id}>
                   <td className="sticky left-0 z-10 border-b border-r bg-card px-3 py-2 font-medium text-foreground">
                     <div className="flex items-center gap-2">
-                      {hasError && (
-                        <span className="inline-block h-2.5 w-2.5 rounded-full bg-orange-500" />
-                      )}
                       <span className="font-semibold">{p.seatNumber}</span>
                       <span className="text-xs text-muted-foreground">{p.displayName}</span>
                     </div>

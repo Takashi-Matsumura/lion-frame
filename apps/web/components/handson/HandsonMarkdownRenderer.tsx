@@ -1,10 +1,9 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import CommandStatusButtons from "./CommandStatusButtons";
-import SectionCheckpoint from "./SectionCheckpoint";
 import type { ParsedHandson, HandsonSection, HandsonStep } from "@/lib/addon-modules/handson/markdown-parser";
 
 const translations = {
@@ -25,7 +24,6 @@ interface Props {
   parsed: ParsedHandson;
   readOnly?: boolean;
   onCommandReport?: (commandIndex: number, status: "ok" | "error") => Promise<void>;
-  onCheckpoint?: (sectionIndex: number) => Promise<void>;
 }
 
 export default function HandsonMarkdownRenderer({
@@ -33,7 +31,6 @@ export default function HandsonMarkdownRenderer({
   parsed,
   readOnly = false,
   onCommandReport,
-  onCheckpoint,
 }: Props) {
   const t = translations[language];
 
@@ -54,7 +51,6 @@ export default function HandsonMarkdownRenderer({
             language={language}
             readOnly={readOnly}
             onCommandReport={onCommandReport}
-            onCheckpoint={onCheckpoint}
           />
         ),
       )}
@@ -114,25 +110,21 @@ function BodySection({
   language,
   readOnly,
   onCommandReport,
-  onCheckpoint,
 }: {
   section: HandsonSection;
   language: "en" | "ja";
   readOnly: boolean;
   onCommandReport?: (commandIndex: number, status: "ok" | "error") => Promise<void>;
-  onCheckpoint?: (sectionIndex: number) => Promise<void>;
 }) {
   return (
     <div data-section-index={section.index}>
-      {/* イントロ部分 */}
+      {/* イントロ部分（ナンバリング対象外） */}
       {section.introMarkdown && (
-        <IntroContent
-          markdown={section.introMarkdown}
-          codeBlocks={section.introCodeBlocks}
-          language={language}
-          readOnly={readOnly}
-          onCommandReport={onCommandReport}
-        />
+        <div className="prose prose-zinc max-w-none dark:prose-invert handson-prose">
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+            {section.introMarkdown}
+          </ReactMarkdown>
+        </div>
       )}
 
       {/* ステップ */}
@@ -145,45 +137,52 @@ function BodySection({
           onCommandReport={onCommandReport}
         />
       ))}
-
-      {/* セクションチェックポイント */}
-      {!readOnly && onCheckpoint && section.steps.length > 0 && (
-        <SectionCheckpoint
-          language={language}
-          onComplete={async () => {
-            await onCheckpoint(section.index);
-          }}
-        />
-      )}
     </div>
   );
 }
 
-// === イントロコンテンツ ===
-function IntroContent({
-  markdown,
-  codeBlocks,
-  language,
-  readOnly,
-  onCommandReport,
-}: {
-  markdown: string;
-  codeBlocks: { globalIndex: number }[];
-  language: "en" | "ja";
-  readOnly: boolean;
-  onCommandReport?: (commandIndex: number, status: "ok" | "error") => Promise<void>;
-}) {
-  const codeBlockMap = new Map(codeBlocks.map((cb) => [cb.globalIndex, cb]));
+// === コンテンツパーツ（テキストとコードブロックを交互に表示） ===
+type ContentPart = {
+  type: "markdown" | "codeblock";
+  content: string;
+  globalIndex?: number; // コードブロックの場合のみ
+};
 
-  return (
-    <MarkdownWithCodeButtons
-      markdown={markdown}
-      codeBlocks={codeBlockMap}
-      language={language}
-      readOnly={readOnly}
-      onCommandReport={onCommandReport}
-    />
-  );
+/**
+ * Markdownテキストをコードブロックとテキスト部分に分割する。
+ * 参考リポジトリの splitByCodeBlocks と同じアプローチ。
+ */
+function splitByCodeBlocks(
+  content: string,
+  codeBlocks: { code: string; language: string; globalIndex: number }[],
+): ContentPart[] {
+  const parts: ContentPart[] = [];
+  const regex = /^(```[^\n]*\n[\s\S]*?^```)/gm;
+  let lastIndex = 0;
+  let codeBlockIdx = 0;
+  let match;
+
+  while ((match = regex.exec(content)) !== null) {
+    const before = content.slice(lastIndex, match.index).trim();
+    if (before) {
+      parts.push({ type: "markdown", content: before });
+    }
+    const cb = codeBlocks[codeBlockIdx];
+    parts.push({
+      type: "codeblock",
+      content: match[1],
+      globalIndex: cb?.globalIndex,
+    });
+    codeBlockIdx++;
+    lastIndex = match.index + match[0].length;
+  }
+
+  const after = content.slice(lastIndex).trim();
+  if (after) {
+    parts.push({ type: "markdown", content: after });
+  }
+
+  return parts;
 }
 
 // === ステップコンテンツ ===
@@ -198,116 +197,39 @@ function StepContent({
   readOnly: boolean;
   onCommandReport?: (commandIndex: number, status: "ok" | "error") => Promise<void>;
 }) {
-  const codeBlockMap = new Map(step.codeBlocks.map((cb) => [cb.globalIndex, cb]));
+  const parts = splitByCodeBlocks(step.contentMarkdown, step.codeBlocks);
 
   return (
     <div id={`step-${step.id}`}>
-      <MarkdownWithCodeButtons
-        markdown={step.contentMarkdown}
-        codeBlocks={codeBlockMap}
-        language={language}
-        readOnly={readOnly}
-        onCommandReport={onCommandReport}
-      />
-    </div>
-  );
-}
-
-// === Markdownレンダリング + コードブロックボタン ===
-function MarkdownWithCodeButtons({
-  markdown,
-  codeBlocks,
-  language,
-  readOnly,
-  onCommandReport,
-}: {
-  markdown: string;
-  codeBlocks: Map<number, { globalIndex: number }>;
-  language: "en" | "ja";
-  readOnly: boolean;
-  onCommandReport?: (commandIndex: number, status: "ok" | "error") => Promise<void>;
-}) {
-  // コードブロックの出現順でグローバルインデックスを割り当て
-  const globalIndices = Array.from(codeBlocks.keys()).sort((a, b) => a - b);
-  let codeBlockCounter = 0;
-
-  return (
-    <div className="prose prose-zinc max-w-none dark:prose-invert handson-prose">
-      <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
-        components={{
-          // コードブロックにコピーボタンとOK/Errorボタンを付与
-          pre({ children, ...props }) {
-            const currentIndex = codeBlockCounter;
-            codeBlockCounter++;
-            const globalIndex = globalIndices[currentIndex];
-
-            return (
-              <div>
-                <CodeBlockWrapper language={language}>
-                  <pre {...props}>{children}</pre>
-                </CodeBlockWrapper>
-                {!readOnly && onCommandReport && globalIndex !== undefined && (
-                  <CommandStatusButtons
-                    language={language}
-                    globalNumber={globalIndex + 1}
-                    onReport={async (status) => {
-                      await onCommandReport(globalIndex, status);
-                    }}
-                  />
-                )}
+      {parts.map((part, i) => {
+        if (part.type === "codeblock") {
+          return (
+            <div key={i}>
+              <div className="prose prose-zinc max-w-none dark:prose-invert handson-prose overflow-visible">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  {part.content}
+                </ReactMarkdown>
               </div>
-            );
-          },
-        }}
-      >
-        {markdown}
-      </ReactMarkdown>
-    </div>
-  );
-}
-
-// === コードブロックラッパー（コピーボタン付き） ===
-function CodeBlockWrapper({
-  language,
-  children,
-}: {
-  language: "en" | "ja";
-  children: React.ReactNode;
-}) {
-  const t = translations[language];
-  const [copied, setCopied] = useState(false);
-
-  const handleCopy = useCallback(() => {
-    // pre > code のテキストを取得
-    const el = document.querySelector(".handson-copy-target");
-    if (!el) return;
-    const text = el.textContent || "";
-    navigator.clipboard.writeText(text).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
-  }, []);
-
-  return (
-    <div className="group/code relative">
-      <div className="handson-copy-target">{children}</div>
-      <button
-        onClick={(e) => {
-          // pre内のcodeのテキストを取得
-          const pre = (e.currentTarget as HTMLElement).previousElementSibling?.querySelector("pre");
-          const code = pre?.querySelector("code") || pre;
-          if (code) {
-            navigator.clipboard.writeText(code.textContent || "").then(() => {
-              setCopied(true);
-              setTimeout(() => setCopied(false), 2000);
-            });
-          }
-        }}
-        className="absolute top-2 right-2 rounded-md bg-muted/80 px-2 py-1 text-xs text-muted-foreground opacity-0 transition hover:bg-muted group-hover/code:opacity-100"
-      >
-        {copied ? t.copied : t.copy}
-      </button>
+              {!readOnly && onCommandReport && part.globalIndex !== undefined && (
+                <CommandStatusButtons
+                  language={language}
+                  globalNumber={part.globalIndex + 1}
+                  onReport={async (status) => {
+                    await onCommandReport(part.globalIndex!, status);
+                  }}
+                />
+              )}
+            </div>
+          );
+        }
+        return (
+          <div key={i} className="prose prose-zinc max-w-none dark:prose-invert handson-prose">
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              {part.content}
+            </ReactMarkdown>
+          </div>
+        );
+      })}
     </div>
   );
 }
