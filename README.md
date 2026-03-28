@@ -27,7 +27,11 @@ cd apps/web && npx prisma db push && pnpm db:seed && cd ../..
 pnpm dev
 ```
 
-初期ログイン: `admin@lionframe.local` / `admin` (http://localhost:3000)
+初期ログイン:
+- 管理者: `admin@lionframe.local` / `admin`
+- ゲスト: `guest@lionframe.local` / `guest`
+
+http://localhost:3000
 
 ## アーキテクチャ
 
@@ -48,7 +52,7 @@ pnpm dev
 | モジュール | 説明 |
 |-----------|------|
 | system | ダッシュボード・システム環境・監査ログ・利用状況 |
-| ai | AIチャット・翻訳・要約・RAG |
+| ai | AIチャット・AI体験（Playground）・翻訳・要約・RAG |
 | organization | 組織図・社員管理・データインポート |
 | schedule | カレンダー・祝日管理 |
 
@@ -69,6 +73,12 @@ pnpm dev
 |-----------|------|
 | event-attendance | NFCカードによるイベント出欠管理 |
 
+### 外部アドオン
+
+| パッケージ | 説明 |
+|-----------|------|
+| @lionframe/addon-ai-playground | AI体験（AI Playground）- コアモジュール統合済み |
+
 外部 npm パッケージとしてのアドオン開発にも対応しています。
 
 ## ロール階層
@@ -76,6 +86,16 @@ pnpm dev
 ```
 GUEST → USER → MANAGER → EXECUTIVE → ADMIN
 ```
+
+| ロール | アクセス範囲 |
+|--------|-------------|
+| GUEST | ゲスト専用メニューのみ（AI体験など） |
+| USER | ゲスト + ユーザメニュー（ダッシュボード・組織図・AIチャットなど） |
+| MANAGER | + マネージャーメニュー（組織データ管理・カレンダー管理など） |
+| EXECUTIVE | + エグゼクティブメニュー |
+| ADMIN | 全メニュー（システム環境・監査ログ・AI設定など） |
+
+GUESTロールはログイン可能な一時的なゲストアカウントです。`/welcome` にリダイレクトされ、ゲストメニュー（AI体験など）のみ利用できます。
 
 ## ドキュメント
 
