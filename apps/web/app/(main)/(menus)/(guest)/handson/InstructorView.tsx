@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import SessionManager from "@/components/handson/SessionManager";
 import ProgressMatrix from "@/components/handson/ProgressMatrix";
-import HelpRequestPanel from "@/components/handson/HelpRequestPanel";
 import HandsonMarkdownRenderer from "@/components/handson/HandsonMarkdownRenderer";
 import { parseHandsonMarkdown } from "@/lib/addon-modules/handson/markdown-parser";
 import type { ParsedHandson } from "@/lib/addon-modules/handson/markdown-parser";
@@ -13,13 +12,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 const translations = {
   en: {
     progressTab: "Progress",
-    helpTab: "Help",
     previewTab: "Content Preview",
     selectSession: "Select a session from the list above to view details.",
   },
   ja: {
     progressTab: "進捗",
-    helpTab: "ヘルプ",
     previewTab: "教材プレビュー",
     selectSession: "上のリストからセッションを選択してください。",
   },
@@ -102,7 +99,6 @@ export default function InstructorView({
                     <CardTitle>{selectedSession.title}</CardTitle>
                     <TabsList>
                       <TabsTrigger value="progress">{t.progressTab}</TabsTrigger>
-                      <TabsTrigger value="help">{t.helpTab}</TabsTrigger>
                       <TabsTrigger value="preview">{t.previewTab}</TabsTrigger>
                     </TabsList>
                   </div>
@@ -113,12 +109,6 @@ export default function InstructorView({
                       language={language}
                       sessionId={selectedSession.id}
                       totalCommands={parsed?.totalCommands ?? 0}
-                    />
-                  </TabsContent>
-                  <TabsContent value="help" className="mt-0">
-                    <HelpRequestPanel
-                      language={language}
-                      sessionId={selectedSession.id}
                     />
                   </TabsContent>
                   <TabsContent value="preview" className="mt-0">
