@@ -213,7 +213,7 @@ function StepContent({
       {parts.map((part, i) => {
         if (part.type === "codeblock") {
           return (
-            <div key={i}>
+            <div key={i} id={part.globalIndex !== undefined ? `handson-cmd-${part.globalIndex}` : undefined}>
               <div className="prose prose-zinc max-w-none dark:prose-invert handson-prose overflow-visible">
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>
                   {part.content}

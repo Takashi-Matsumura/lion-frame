@@ -53,13 +53,14 @@ interface Props {
   language: "en" | "ja";
   sessionId: string;
   totalCommands: number;
+  onCommandClick?: (commandIndex: number) => void;
 }
 
 const POLL_INTERVAL = 3000;
 const SEAT_COL_W = 100;
 const CELL_COL_W = 36;
 
-export default function ProgressMatrix({ language, sessionId, totalCommands }: Props) {
+export default function ProgressMatrix({ language, sessionId, totalCommands, onCommandClick }: Props) {
   const t = translations[language];
   const [data, setData] = useState<ProgressData | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -215,9 +216,12 @@ export default function ProgressMatrix({ language, sessionId, totalCommands }: P
                 </th>
                 {commandIndices.map((idx) => (
                   <th key={idx} className="border-b bg-muted px-1 py-2 text-center">
-                    <span className="font-mono text-[10px] text-muted-foreground">
+                    <button
+                      onClick={() => onCommandClick?.(idx)}
+                      className="font-mono text-[10px] text-muted-foreground hover:text-primary hover:underline transition cursor-pointer"
+                    >
                       #{idx + 1}
-                    </span>
+                    </button>
                   </th>
                 ))}
               </tr>

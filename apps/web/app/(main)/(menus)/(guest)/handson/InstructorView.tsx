@@ -46,6 +46,7 @@ export default function InstructorView({
   const [activeSessionId, setActiveSessionId] = useState<string | null>(initialActiveId);
   const [selectedSession, setSelectedSession] = useState<SessionInfo | null>(null);
   const [parsed, setParsed] = useState<ParsedHandson | null>(null);
+  const [activeTab, setActiveTab] = useState("progress");
 
   // ドキュメント読み込み
   useEffect(() => {
@@ -93,7 +94,7 @@ export default function InstructorView({
           {/* 選択中セッションの詳細タブ */}
           {selectedSession ? (
             <Card>
-              <Tabs defaultValue="progress">
+              <Tabs value={activeTab} onValueChange={setActiveTab}>
                 <CardHeader className="pb-0">
                   <div className="flex items-center justify-between">
                     <CardTitle>{selectedSession.title}</CardTitle>
@@ -109,6 +110,13 @@ export default function InstructorView({
                       language={language}
                       sessionId={selectedSession.id}
                       totalCommands={parsed?.totalCommands ?? 0}
+                      onCommandClick={(commandIndex) => {
+                        setActiveTab("preview");
+                        setTimeout(() => {
+                          const el = document.getElementById(`handson-cmd-${commandIndex}`);
+                          if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+                        }, 100);
+                      }}
                     />
                   </TabsContent>
                   <TabsContent value="preview" className="mt-0">
