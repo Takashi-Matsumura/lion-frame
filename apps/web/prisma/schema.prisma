@@ -1319,3 +1319,72 @@ model GroupMember {
   @@index([groupId])
   @@index([employeeId])
 }
+
+// ========================================
+// ハンズオン
+// ========================================
+
+enum HandsonLogType {
+  SESSION_JOIN
+  SESSION_LEAVE
+  COMMAND_OK
+  COMMAND_ERROR
+  CHECKPOINT_COMPLETE
+  HELP_REQUEST
+  HELP_RESOLVED
+}
+
+model HandsonSession {
+  id          String    @id @default(cuid())
+  title       String
+  date        DateTime  @db.Date          // 開催日
+  documentId  String    // EditorDocument.id（ソフト参照）
+  maxSeats    Int       @default(15)
+  startedAt   DateTime  @default(now())
+  endedAt     DateTime?
+  createdBy   String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  participants HandsonParticipant[]
+  logs         HandsonLog[]
+
+  @@index([createdBy])
+  @@index([endedAt])
+}
+
+model HandsonParticipant {
+  id          String    @id @default(cuid())
+  sessionId   String
+  userId      String?
+  displayName String
+  seatNumber  Int
+  joinedAt    DateTime  @default(now())
+  leftAt      DateTime?
+
+  session     HandsonSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  logs        HandsonLog[]
+
+  @@unique([sessionId, seatNumber])
+  @@index([sessionId])
+}
+
+model HandsonLog {
+  id            String         @id @default(cuid())
+  sessionId     String
+  participantId String
+  type          HandsonLogType
+  sectionIndex  Int?
+  stepId        String?
+  commandIndex  Int?
+  status        String?
+  metadata      Json?
+  createdAt     DateTime       @default(now())
+
+  session     HandsonSession     @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  participant HandsonParticipant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, type])
+  @@index([participantId])
+  @@index([sessionId, createdAt])
+}

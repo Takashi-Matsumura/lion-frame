@@ -1,0 +1,194 @@
+"use client";
+
+import { useState, useEffect, useCallback } from "react";
+import SeatSelectionDialog from "@/components/handson/SeatSelectionDialog";
+import HandsonMarkdownRenderer from "@/components/handson/HandsonMarkdownRenderer";
+import HelpFloatingButton from "@/components/handson/HelpFloatingButton";
+import { parseHandsonMarkdown } from "@/lib/addon-modules/handson/markdown-parser";
+import type { ParsedHandson } from "@/lib/addon-modules/handson/markdown-parser";
+import { PageSkeleton } from "@/components/ui/page-skeleton";
+
+interface Props {
+  language: "en" | "ja";
+  sessionId: string;
+  maxSeats: number;
+  userId: string;
+  userName: string;
+}
+
+export default function TraineeView({
+  language,
+  sessionId,
+  maxSeats,
+  userId,
+  userName,
+}: Props) {
+  const [participantId, setParticipantId] = useState<string | null>(null);
+  const [seatNumber, setSeatNumber] = useState<number | null>(null);
+  const [parsed, setParsed] = useState<ParsedHandson | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  // localStorage復旧チェック
+  useEffect(() => {
+    const savedPid = localStorage.getItem(`handson_participant_${sessionId}`);
+    const savedSeat = localStorage.getItem(`handson_seat_${sessionId}`);
+    if (savedPid && savedSeat) {
+      setParticipantId(savedPid);
+      setSeatNumber(parseInt(savedSeat, 10));
+    }
+    fetchDocument();
+  }, [sessionId]);
+
+  async function fetchDocument() {
+    try {
+      const res = await fetch(`/api/handson/sessions/${sessionId}/document`);
+      if (!res.ok) return;
+      const data = await res.json();
+      const result = parseHandsonMarkdown(data.document.content);
+      setParsed(result);
+    } catch {
+      // ignore
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // セッション参加
+  async function handleJoin(seat: number, displayName: string): Promise<string | null> {
+    try {
+      const res = await fetch(`/api/handson/sessions/${sessionId}/join`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ seatNumber: seat, displayName }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        return data.error || "Failed to join";
+      }
+      setParticipantId(data.participantId);
+      setSeatNumber(seat);
+      localStorage.setItem(`handson_participant_${sessionId}`, data.participantId);
+      localStorage.setItem(`handson_seat_${sessionId}`, String(seat));
+      return null;
+    } catch {
+      return "Network error";
+    }
+  }
+
+  // コマンドレポート
+  const handleCommandReport = useCallback(
+    async (commandIndex: number, status: "ok" | "error") => {
+      if (!participantId) return;
+      await fetch(`/api/handson/sessions/${sessionId}/log`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          participantId,
+          type: status === "ok" ? "COMMAND_OK" : "COMMAND_ERROR",
+          commandIndex,
+          status: status.toUpperCase(),
+        }),
+      });
+    },
+    [sessionId, participantId],
+  );
+
+  // チェックポイント
+  const handleCheckpoint = useCallback(
+    async (sectionIndex: number) => {
+      if (!participantId) return;
+      await fetch(`/api/handson/sessions/${sessionId}/log`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          participantId,
+          type: "CHECKPOINT_COMPLETE",
+          sectionIndex,
+        }),
+      });
+    },
+    [sessionId, participantId],
+  );
+
+  // ヘルプリクエスト
+  const handleHelpRequest = useCallback(
+    async (sectionIndex: number) => {
+      if (!participantId) return;
+      await fetch(`/api/handson/sessions/${sessionId}/help`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          participantId,
+          sectionIndex,
+        }),
+      });
+    },
+    [sessionId, participantId],
+  );
+
+  if (loading) {
+    return <PageSkeleton />;
+  }
+
+  // 座席選択モーダル
+  if (!participantId) {
+    return (
+      <SeatSelectionDialog
+        language={language}
+        maxSeats={maxSeats}
+        defaultName={userName}
+        onSubmit={handleJoin}
+      />
+    );
+  }
+
+  if (!parsed) {
+    return (
+      <div className="p-6 text-center text-muted-foreground">
+        {language === "ja" ? "教材を読み込めませんでした" : "Failed to load content"}
+      </div>
+    );
+  }
+
+  return (
+    <div className="mx-auto max-w-3xl px-6 py-8">
+      {/* 座席番号バッジ + 退出ボタン */}
+      <div className="mb-6 flex items-center gap-3">
+        <span className="inline-flex items-center rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground">
+          {language === "ja" ? `座席 ${seatNumber}` : `Seat ${seatNumber}`}
+        </span>
+        <button
+          onClick={async () => {
+            if (participantId) {
+              await fetch(
+                `/api/handson/sessions/${sessionId}/join?participantId=${participantId}`,
+                { method: "DELETE" },
+              ).catch(() => {});
+            }
+            localStorage.removeItem(`handson_participant_${sessionId}`);
+            localStorage.removeItem(`handson_seat_${sessionId}`);
+            setParticipantId(null);
+            setSeatNumber(null);
+          }}
+          className="text-xs text-muted-foreground hover:text-foreground transition"
+        >
+          {language === "ja" ? "退出する" : "Leave seat"}
+        </button>
+      </div>
+
+      {/* 教材コンテンツ */}
+      <HandsonMarkdownRenderer
+        language={language}
+        parsed={parsed}
+        onCommandReport={handleCommandReport}
+        onCheckpoint={handleCheckpoint}
+      />
+
+      {/* ヘルプボタン */}
+      <HelpFloatingButton
+        language={language}
+        onRequest={handleHelpRequest}
+      />
+    </div>
+  );
+}
