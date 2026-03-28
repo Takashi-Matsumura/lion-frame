@@ -1,5 +1,6 @@
 import { apiHandler } from "@/lib/api/api-handler";
 import { ApiError } from "@/lib/api/api-error";
+import { checkAccess } from "@/lib/auth/access-checker";
 import {
   writeLog,
   ensureSessionInMemory,
@@ -11,19 +12,21 @@ import {
   getParticipants,
 } from "@/lib/addon-modules/handson/handson-store";
 
-// GET /api/handson/sessions/[id]/help — ヘルプリクエスト一覧（MANAGER+）
-export const GET = apiHandler(
-  async (request) => {
-    const url = new URL(request.url);
-    const segments = url.pathname.split("/");
-    const sessionId = segments[segments.indexOf("sessions") + 1];
+const HANDSON_ROLES = ["MANAGER", "EXECUTIVE", "ADMIN"];
 
-    await ensureSessionInMemory(sessionId);
-    const requests = getActiveHelpRequests(sessionId);
-    return { requests };
-  },
-  { requiredRole: "MANAGER" },
-);
+// GET /api/handson/sessions/[id]/help — ヘルプリクエスト一覧（講師権限）
+export const GET = apiHandler(async (request, session) => {
+  const hasAccess = await checkAccess(session, "/handson", HANDSON_ROLES);
+  if (!hasAccess) throw ApiError.forbidden("Access denied");
+
+  const url = new URL(request.url);
+  const segments = url.pathname.split("/");
+  const sessionId = segments[segments.indexOf("sessions") + 1];
+
+  await ensureSessionInMemory(sessionId);
+  const requests = getActiveHelpRequests(sessionId);
+  return { requests };
+});
 
 // POST /api/handson/sessions/[id]/help — ヘルプ送信（全ロール）
 export const POST = apiHandler(async (request) => {
@@ -40,7 +43,6 @@ export const POST = apiHandler(async (request) => {
 
   await ensureSessionInMemory(sessionId);
 
-  // 参加者情報取得
   const participants = getParticipants(sessionId);
   let seatNumber = 0;
   let displayName = "";
@@ -52,7 +54,6 @@ export const POST = apiHandler(async (request) => {
     }
   }
 
-  // DB書込み
   const log = await writeLog({
     sessionId,
     participantId,
@@ -61,7 +62,6 @@ export const POST = apiHandler(async (request) => {
     metadata: message ? { message } : undefined,
   });
 
-  // インメモリ登録
   addHelpRequest(sessionId, {
     logId: log.id,
     participantId,
@@ -75,34 +75,31 @@ export const POST = apiHandler(async (request) => {
   return { helpLogId: log.id };
 });
 
-// DELETE /api/handson/sessions/[id]/help — ヘルプ解決（MANAGER+）
-export const DELETE = apiHandler(
-  async (request) => {
-    const url = new URL(request.url);
-    const segments = url.pathname.split("/");
-    const sessionId = segments[segments.indexOf("sessions") + 1];
-    const logId = url.searchParams.get("logId");
+// DELETE /api/handson/sessions/[id]/help — ヘルプ解決（講師権限）
+export const DELETE = apiHandler(async (request, session) => {
+  const hasAccess = await checkAccess(session, "/handson", HANDSON_ROLES);
+  if (!hasAccess) throw ApiError.forbidden("Access denied");
 
-    if (!logId) throw ApiError.badRequest("logId is required");
+  const url = new URL(request.url);
+  const segments = url.pathname.split("/");
+  const sessionId = segments[segments.indexOf("sessions") + 1];
+  const logId = url.searchParams.get("logId");
 
-    await ensureSessionInMemory(sessionId);
-    const resolved = resolveHelpRequest(sessionId, logId);
+  if (!logId) throw ApiError.badRequest("logId is required");
 
-    if (resolved) {
-      // 解決ログを非同期で書込み
-      // participantIdは解決者ではなく元のヘルプリクエストのものを使う
-      // ここでは簡易的にlogIdをメタデータに記録
-      writeLog({
-        sessionId,
-        participantId: "system",
-        type: "HELP_RESOLVED",
-        metadata: { helpLogId: logId },
-      }).catch((err) => {
-        console.error("[HandsonLog] Failed to write HELP_RESOLVED:", err);
-      });
-    }
+  await ensureSessionInMemory(sessionId);
+  const resolved = resolveHelpRequest(sessionId, logId);
 
-    return { resolved };
-  },
-  { requiredRole: "MANAGER" },
-);
+  if (resolved) {
+    writeLog({
+      sessionId,
+      participantId: "system",
+      type: "HELP_RESOLVED",
+      metadata: { helpLogId: logId },
+    }).catch((err) => {
+      console.error("[HandsonLog] Failed to write HELP_RESOLVED:", err);
+    });
+  }
+
+  return { resolved };
+});

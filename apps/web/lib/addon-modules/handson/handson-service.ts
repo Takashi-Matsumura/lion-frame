@@ -268,6 +268,11 @@ export async function ensureSessionInMemory(sessionId: string): Promise<boolean>
           });
         }
         break;
+      case "INSTRUCTOR_CHECKPOINT":
+        if (log.commandIndex != null) {
+          store.setInstructorCheckpoint(sessionId, log.commandIndex);
+        }
+        break;
       case "HELP_REQUEST": {
         const participant = session.participants.find((p) => p.id === log.participantId);
         helpRequests.push({
@@ -294,4 +299,152 @@ export async function ensureSessionInMemory(sessionId: string): Promise<boolean>
 
   store.restoreSession(sessionId, participants, commands, checkpoints, activeHelps);
   return true;
+}
+
+// === セッション分析 ===
+
+export async function getSessionAnalytics(sessionId: string) {
+  const session = await prisma.handsonSession.findUnique({
+    where: { id: sessionId },
+    include: {
+      participants: { orderBy: { seatNumber: "asc" } },
+    },
+  });
+  if (!session) throw new Error("Session not found");
+
+  const logs = await prisma.handsonLog.findMany({
+    where: { sessionId },
+    orderBy: { createdAt: "asc" },
+  });
+
+  // 参加者マップ
+  const participantMap = new Map(
+    session.participants.map((p) => [p.id, p]),
+  );
+
+  // 集計用
+  const perParticipant: Record<string, {
+    commandsOk: number;
+    commandsError: number;
+    helpRequests: number;
+    lastActivityAt: Date | null;
+  }> = {};
+  const commandErrors: Record<number, { errors: number; oks: number }> = {};
+  const helpBySection: Record<number, number> = {};
+  const instructorTimeline: { commandIndex: number; timestamp: string }[] = [];
+  let totalCommands = 0;
+
+  for (const p of session.participants) {
+    perParticipant[p.id] = { commandsOk: 0, commandsError: 0, helpRequests: 0, lastActivityAt: null };
+  }
+
+  for (const log of logs) {
+    // 参加者の最終アクティビティ更新
+    if (log.participantId !== "system" && log.participantId !== "instructor" && perParticipant[log.participantId]) {
+      perParticipant[log.participantId].lastActivityAt = log.createdAt;
+    }
+
+    switch (log.type) {
+      case "COMMAND_OK":
+        if (perParticipant[log.participantId]) {
+          perParticipant[log.participantId].commandsOk++;
+        }
+        if (log.commandIndex != null) {
+          if (!commandErrors[log.commandIndex]) commandErrors[log.commandIndex] = { errors: 0, oks: 0 };
+          commandErrors[log.commandIndex].oks++;
+          if (log.commandIndex + 1 > totalCommands) totalCommands = log.commandIndex + 1;
+        }
+        break;
+      case "COMMAND_ERROR":
+        if (perParticipant[log.participantId]) {
+          perParticipant[log.participantId].commandsError++;
+        }
+        if (log.commandIndex != null) {
+          if (!commandErrors[log.commandIndex]) commandErrors[log.commandIndex] = { errors: 0, oks: 0 };
+          commandErrors[log.commandIndex].errors++;
+          if (log.commandIndex + 1 > totalCommands) totalCommands = log.commandIndex + 1;
+        }
+        break;
+      case "HELP_REQUEST":
+        if (perParticipant[log.participantId]) {
+          perParticipant[log.participantId].helpRequests++;
+        }
+        if (log.sectionIndex != null) {
+          helpBySection[log.sectionIndex] = (helpBySection[log.sectionIndex] || 0) + 1;
+        }
+        break;
+      case "INSTRUCTOR_CHECKPOINT":
+        if (log.commandIndex != null) {
+          instructorTimeline.push({
+            commandIndex: log.commandIndex,
+            timestamp: log.createdAt.toISOString(),
+          });
+        }
+        break;
+    }
+  }
+
+  // 所要時間
+  const durationMinutes = session.endedAt
+    ? Math.round((session.endedAt.getTime() - session.startedAt.getTime()) / 60000)
+    : 0;
+
+  // 受講者別データ
+  const participants = session.participants.map((p) => {
+    const stats = perParticipant[p.id] || { commandsOk: 0, commandsError: 0, helpRequests: 0, lastActivityAt: null };
+    return {
+      seatNumber: p.seatNumber,
+      displayName: p.displayName,
+      commandsOk: stats.commandsOk,
+      commandsError: stats.commandsError,
+      helpRequests: stats.helpRequests,
+      lastActivityAt: stats.lastActivityAt?.toISOString() ?? null,
+    };
+  });
+
+  // エラーホットスポット（上位10件）
+  const errorHotspots = Object.entries(commandErrors)
+    .filter(([, v]) => v.errors > 0)
+    .sort(([, a], [, b]) => b.errors - a.errors)
+    .slice(0, 10)
+    .map(([idx, v]) => ({
+      commandIndex: parseInt(idx, 10),
+      errorCount: v.errors,
+      okCount: v.oks,
+    }));
+
+  // セクション別ヘルプ
+  const helpBySectionArray = Object.entries(helpBySection)
+    .sort(([a], [b]) => parseInt(a) - parseInt(b))
+    .map(([idx, count]) => ({
+      sectionIndex: parseInt(idx, 10),
+      count,
+    }));
+
+  // 平均完了率
+  const participantCount = session.participants.length;
+  const avgCompletionRate = participantCount > 0 && totalCommands > 0
+    ? Math.round(
+        participants.reduce((sum, p) => sum + p.commandsOk, 0) /
+        (participantCount * totalCommands) * 100
+      )
+    : 0;
+
+  const totalErrors = participants.reduce((sum, p) => sum + p.commandsError, 0);
+  const totalHelpRequests = participants.reduce((sum, p) => sum + p.helpRequests, 0);
+
+  return {
+    summary: {
+      participantCount,
+      durationMinutes,
+      avgCompletionRate,
+      totalCommands,
+      totalErrors,
+      totalHelpRequests,
+    },
+    participants,
+    errorHotspots,
+    helpBySection: helpBySectionArray,
+    instructorTimeline,
+  };
 }

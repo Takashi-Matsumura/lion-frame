@@ -1332,6 +1332,7 @@ enum HandsonLogType {
   CHECKPOINT_COMPLETE
   HELP_REQUEST
   HELP_RESOLVED
+  INSTRUCTOR_CHECKPOINT
 }
 
 model HandsonSession {

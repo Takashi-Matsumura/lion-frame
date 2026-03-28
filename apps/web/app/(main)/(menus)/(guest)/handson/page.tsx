@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { getLanguage } from "@/lib/i18n/get-language";
+import { getUserAccessKeyPermissions } from "@/lib/access-keys";
 import HandsonClient from "./HandsonClient";
 
 const translations = {
@@ -25,12 +26,20 @@ export default async function HandsonPage() {
   const language = await getLanguage();
   const role = session.user.role as string;
 
+  // アクセスキーによる講師権限チェック
+  let hasHandsonAccessKey = false;
+  if (role !== "GUEST") {
+    const akPerms = await getUserAccessKeyPermissions(session.user.id);
+    hasHandsonAccessKey = akPerms.menuPaths.includes("/handson");
+  }
+
   return (
     <HandsonClient
       language={language as "en" | "ja"}
       userRole={role}
       userId={session.user.id}
       userName={session.user.name || ""}
+      hasHandsonAccessKey={hasHandsonAccessKey}
     />
   );
 }

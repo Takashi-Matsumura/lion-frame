@@ -52,6 +52,7 @@ export const handsonModule: AppModule = {
         "/api/handson/sessions/[id]/progress",
         "/api/handson/sessions/[id]/document",
         "/api/handson/sessions/[id]/help",
+        "/api/handson/sessions/[id]/analytics",
       ],
       enabled: true,
     },

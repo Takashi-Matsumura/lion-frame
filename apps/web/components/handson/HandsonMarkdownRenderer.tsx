@@ -27,6 +27,8 @@ interface Props {
   onCommandReport?: (commandIndex: number, status: "ok" | "error") => Promise<void>;
   /** 講師プレビューモード: コードブロック下にチェックポイントボタンを表示 */
   onInstructorCheckpoint?: (commandIndex: number) => Promise<void>;
+  /** 既存の回答状態（リロード復旧用） */
+  initialStatuses?: Record<number, "ok" | "error">;
 }
 
 export default function HandsonMarkdownRenderer({
@@ -35,6 +37,7 @@ export default function HandsonMarkdownRenderer({
   readOnly = false,
   onCommandReport,
   onInstructorCheckpoint,
+  initialStatuses,
 }: Props) {
   const t = translations[language];
 
@@ -56,6 +59,7 @@ export default function HandsonMarkdownRenderer({
             readOnly={readOnly}
             onCommandReport={onCommandReport}
             onInstructorCheckpoint={onInstructorCheckpoint}
+            initialStatuses={initialStatuses}
           />
         ),
       )}
@@ -116,12 +120,14 @@ function BodySection({
   readOnly,
   onCommandReport,
   onInstructorCheckpoint,
+  initialStatuses,
 }: {
   section: HandsonSection;
   language: "en" | "ja";
   readOnly: boolean;
   onCommandReport?: (commandIndex: number, status: "ok" | "error") => Promise<void>;
   onInstructorCheckpoint?: (commandIndex: number) => Promise<void>;
+  initialStatuses?: Record<number, "ok" | "error">;
 }) {
   return (
     <div data-section-index={section.index}>
@@ -143,6 +149,7 @@ function BodySection({
           readOnly={readOnly}
           onCommandReport={onCommandReport}
           onInstructorCheckpoint={onInstructorCheckpoint}
+          initialStatuses={initialStatuses}
         />
       ))}
     </div>
@@ -200,12 +207,14 @@ function StepContent({
   readOnly,
   onCommandReport,
   onInstructorCheckpoint,
+  initialStatuses,
 }: {
   step: HandsonStep;
   language: "en" | "ja";
   readOnly: boolean;
   onCommandReport?: (commandIndex: number, status: "ok" | "error") => Promise<void>;
   onInstructorCheckpoint?: (commandIndex: number) => Promise<void>;
+  initialStatuses?: Record<number, "ok" | "error">;
 }) {
   const parts = splitByCodeBlocks(step.contentMarkdown, step.codeBlocks);
 
@@ -225,6 +234,7 @@ function StepContent({
                 <CommandStatusButtons
                   language={language}
                   globalNumber={part.globalIndex + 1}
+                  initialStatus={initialStatuses?.[part.globalIndex] ?? null}
                   onReport={async (status) => {
                     await onCommandReport(part.globalIndex!, status);
                   }}

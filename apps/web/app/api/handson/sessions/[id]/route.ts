@@ -1,5 +1,6 @@
 import { apiHandler } from "@/lib/api/api-handler";
 import { ApiError } from "@/lib/api/api-error";
+import { checkAccess } from "@/lib/auth/access-checker";
 import {
   getSession,
   endSession,
@@ -7,56 +8,58 @@ import {
   activateSession,
 } from "@/lib/addon-modules/handson/handson-service";
 
-// GET /api/handson/sessions/[id] — セッション詳細（MANAGER+）
-export const GET = apiHandler(
-  async (request) => {
-    const id = new URL(request.url).pathname.split("/").pop()!;
-    const session = await getSession(id);
-    if (!session) throw ApiError.notFound("Session not found");
-    return { session };
-  },
-  { requiredRole: "MANAGER" },
-);
+const HANDSON_ROLES = ["MANAGER", "EXECUTIVE", "ADMIN"];
 
-// PATCH /api/handson/sessions/[id] — セッション更新/終了（MANAGER+）
-export const PATCH = apiHandler(
-  async (request) => {
-    const id = new URL(request.url).pathname.split("/").pop()!;
-    const body = await request.json();
+// GET /api/handson/sessions/[id] — セッション詳細（講師権限）
+export const GET = apiHandler(async (request, session) => {
+  const hasAccess = await checkAccess(session, "/handson", HANDSON_ROLES);
+  if (!hasAccess) throw ApiError.forbidden("Access denied");
 
-    if (body.action === "end") {
-      const session = await endSession(id);
-      return { session };
-    }
+  const id = new URL(request.url).pathname.split("/").pop()!;
+  const handsonSession = await getSession(id);
+  if (!handsonSession) throw ApiError.notFound("Session not found");
+  return { session: handsonSession };
+});
 
-    if (body.action === "activate") {
-      try {
-        await activateSession(id);
-        return { success: true };
-      } catch (e) {
-        throw ApiError.badRequest(
-          e instanceof Error ? e.message : "Activate failed",
-        );
-      }
-    }
+// PATCH /api/handson/sessions/[id] — セッション更新/終了/開始（講師権限）
+export const PATCH = apiHandler(async (request, session) => {
+  const hasAccess = await checkAccess(session, "/handson", HANDSON_ROLES);
+  if (!hasAccess) throw ApiError.forbidden("Access denied");
 
-    throw ApiError.badRequest("Unknown action");
-  },
-  { requiredRole: "MANAGER" },
-);
+  const id = new URL(request.url).pathname.split("/").pop()!;
+  const body = await request.json();
 
-// DELETE /api/handson/sessions/[id] — セッション削除（MANAGER+）
-export const DELETE = apiHandler(
-  async (request) => {
-    const id = new URL(request.url).pathname.split("/").pop()!;
+  if (body.action === "end") {
+    const handsonSession = await endSession(id);
+    return { session: handsonSession };
+  }
+
+  if (body.action === "activate") {
     try {
-      await deleteSession(id);
+      await activateSession(id);
       return { success: true };
     } catch (e) {
       throw ApiError.badRequest(
-        e instanceof Error ? e.message : "Delete failed",
+        e instanceof Error ? e.message : "Activate failed",
       );
     }
-  },
-  { requiredRole: "MANAGER" },
-);
+  }
+
+  throw ApiError.badRequest("Unknown action");
+});
+
+// DELETE /api/handson/sessions/[id] — セッション削除（講師権限）
+export const DELETE = apiHandler(async (request, session) => {
+  const hasAccess = await checkAccess(session, "/handson", HANDSON_ROLES);
+  if (!hasAccess) throw ApiError.forbidden("Access denied");
+
+  const id = new URL(request.url).pathname.split("/").pop()!;
+  try {
+    await deleteSession(id);
+    return { success: true };
+  } catch (e) {
+    throw ApiError.badRequest(
+      e instanceof Error ? e.message : "Delete failed",
+    );
+  }
+});

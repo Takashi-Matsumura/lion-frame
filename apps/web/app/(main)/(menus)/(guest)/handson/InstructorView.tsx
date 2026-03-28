@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import SessionManager from "@/components/handson/SessionManager";
 import ProgressMatrix from "@/components/handson/ProgressMatrix";
+import SessionAnalytics from "@/components/handson/SessionAnalytics";
 import HandsonMarkdownRenderer from "@/components/handson/HandsonMarkdownRenderer";
 import { parseHandsonMarkdown } from "@/lib/addon-modules/handson/markdown-parser";
 import type { ParsedHandson } from "@/lib/addon-modules/handson/markdown-parser";
@@ -14,11 +15,13 @@ const translations = {
   en: {
     progressTab: "Progress",
     previewTab: "Content Preview",
+    analyticsTab: "Analytics",
     selectSession: "Select a session from the list above to view details.",
   },
   ja: {
     progressTab: "進捗",
     previewTab: "教材プレビュー",
+    analyticsTab: "分析",
     selectSession: "上のリストからセッションを選択してください。",
   },
 };
@@ -107,6 +110,9 @@ export default function InstructorView({
                     <TabsList>
                       <TabsTrigger value="progress">{t.progressTab}</TabsTrigger>
                       <TabsTrigger value="preview">{t.previewTab}</TabsTrigger>
+                      {selectedSession.endedAt && (
+                        <TabsTrigger value="analytics">{t.analyticsTab}</TabsTrigger>
+                      )}
                     </TabsList>
                   </div>
                 </CardHeader>
@@ -151,6 +157,14 @@ export default function InstructorView({
                       </div>
                     )}
                   </TabsContent>
+                  {selectedSession.endedAt && (
+                    <TabsContent value="analytics" className="mt-0">
+                      <SessionAnalytics
+                        language={language}
+                        sessionId={selectedSession.id}
+                      />
+                    </TabsContent>
+                  )}
                 </CardContent>
               </Tabs>
             </Card>

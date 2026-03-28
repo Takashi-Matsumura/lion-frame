@@ -4,20 +4,26 @@ import {
   createSession,
   listSessions,
 } from "@/lib/addon-modules/handson/handson-service";
+import { checkAccess } from "@/lib/auth/access-checker";
 import { prisma } from "@/lib/prisma";
 
-// GET /api/handson/sessions — セッション一覧（MANAGER+）
-export const GET = apiHandler(
-  async () => {
-    const sessions = await listSessions();
-    return { sessions };
-  },
-  { requiredRole: "MANAGER" },
-);
+const HANDSON_ROLES = ["MANAGER", "EXECUTIVE", "ADMIN"];
 
-// POST /api/handson/sessions — セッション作成（MANAGER+）
+// GET /api/handson/sessions — セッション一覧（講師権限）
+export const GET = apiHandler(async (_request, session) => {
+  const hasAccess = await checkAccess(session, "/handson", HANDSON_ROLES);
+  if (!hasAccess) throw ApiError.forbidden("Access denied");
+
+  const sessions = await listSessions();
+  return { sessions };
+});
+
+// POST /api/handson/sessions — セッション作成（講師権限）
 export const POST = apiHandler(
   async (request, session) => {
+    const hasAccess = await checkAccess(session, "/handson", HANDSON_ROLES);
+    if (!hasAccess) throw ApiError.forbidden("Access denied");
+
     const body = await request.json();
     const { title, date, documentId, maxSeats } = body;
 
@@ -47,5 +53,5 @@ export const POST = apiHandler(
 
     return { session: handsonSession };
   },
-  { requiredRole: "MANAGER", successStatus: 201 },
+  { successStatus: 201 },
 );

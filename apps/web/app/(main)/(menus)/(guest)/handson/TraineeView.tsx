@@ -27,14 +27,22 @@ export default function TraineeView({
   const [seatNumber, setSeatNumber] = useState<number | null>(null);
   const [parsed, setParsed] = useState<ParsedHandson | null>(null);
   const [loading, setLoading] = useState(true);
+  const [savedStatuses, setSavedStatuses] = useState<Record<number, "ok" | "error">>({});
 
-  // localStorage復旧チェック
+  // localStorage復旧チェック + 既存回答状態の取得
   useEffect(() => {
     const savedPid = localStorage.getItem(`handson_participant_${sessionId}`);
     const savedSeat = localStorage.getItem(`handson_seat_${sessionId}`);
     if (savedPid && savedSeat) {
       setParticipantId(savedPid);
       setSeatNumber(parseInt(savedSeat, 10));
+      // 既存の回答状態を取得
+      fetch(`/api/handson/sessions/${sessionId}/my-status?participantId=${savedPid}`)
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.statuses) setSavedStatuses(data.statuses);
+        })
+        .catch(() => {});
     }
     fetchDocument();
   }, [sessionId]);
@@ -164,6 +172,7 @@ export default function TraineeView({
         language={language}
         parsed={parsed}
         onCommandReport={handleCommandReport}
+        initialStatuses={savedStatuses}
       />
 
       {/* ヘルプボタン */}

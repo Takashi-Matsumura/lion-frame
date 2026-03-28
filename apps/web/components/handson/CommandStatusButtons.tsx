@@ -24,16 +24,18 @@ type Status = "ok" | "error" | null;
 interface Props {
   language: "en" | "ja";
   globalNumber: number;
+  initialStatus?: Status;
   onReport: (status: "ok" | "error") => Promise<void>;
 }
 
 export default function CommandStatusButtons({
   language,
   globalNumber,
+  initialStatus = null,
   onReport,
 }: Props) {
   const t = translations[language];
-  const [status, setStatus] = useState<Status>(null);
+  const [status, setStatus] = useState<Status>(initialStatus);
   const [loading, setLoading] = useState(false);
 
   const label = `#${globalNumber}`;

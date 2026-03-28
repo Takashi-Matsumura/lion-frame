@@ -33,13 +33,14 @@ interface Props {
   userRole: string;
   userId: string;
   userName: string;
+  hasHandsonAccessKey?: boolean;
 }
 
 const INSTRUCTOR_ROLES = ["MANAGER", "EXECUTIVE", "ADMIN"];
 
-export default function HandsonClient({ language, userRole, userId, userName }: Props) {
+export default function HandsonClient({ language, userRole, userId, userName, hasHandsonAccessKey }: Props) {
   const t = translations[language];
-  const isInstructor = INSTRUCTOR_ROLES.includes(userRole);
+  const isInstructor = INSTRUCTOR_ROLES.includes(userRole) || hasHandsonAccessKey === true;
 
   const [loading, setLoading] = useState(true);
   const [activeSession, setActiveSession] = useState<ActiveSessionInfo | null>(null);
