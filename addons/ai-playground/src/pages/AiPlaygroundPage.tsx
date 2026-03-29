@@ -28,12 +28,14 @@ const DEFAULT_CONTEXT_WINDOW = 4096;
 
 const SUGGESTIONS = {
   ja: {
+    free: ["今日の天気について教えて", "おすすめの本を紹介して", "面白い雑学を教えて"],
     explain: ["プログラミングの「変数」って何？", "AIと機械学習の違いを教えて", "インターネットの仕組み"],
     idea: ["高校生向けの学習アプリ", "社内コミュニケーション改善", "新入社員研修プログラム"],
     search: ["2024年のAI技術トレンド", "リモートワークのベストプラクティス"],
     rag: ["ナレッジベースの内容を教えて"],
   },
   en: {
+    free: ["Tell me about today's weather", "Recommend a good book", "Share an interesting fact"],
     explain: ["What is a 'variable' in programming?", "Difference between AI and ML", "How does the internet work?"],
     idea: ["Learning app for students", "Improving team communication", "New employee training program"],
     search: ["AI technology trends 2024", "Remote work best practices"],
@@ -56,7 +58,7 @@ export function AiPlaygroundPage({ language }: { language: "en" | "ja" }) {
   const [aiEnabled, setAiEnabled] = useState<boolean | null>(null);
   const [configLoaded, setConfigLoaded] = useState(false);
   const [streamingContent, setStreamingContent] = useState("");
-  const [mode, setMode] = useState<ChatMode>("explain");
+  const [mode, setMode] = useState<ChatMode | null>(null);
   const [inputValue, setInputValue] = useState("");
   const [metrics, setMetrics] = useState<GenerationMetrics>({
     contextWindowSize: DEFAULT_CONTEXT_WINDOW,
@@ -120,7 +122,7 @@ export function AiPlaygroundPage({ language }: { language: "en" | "ja" }) {
   }, [streamingContent, focusInput]);
 
   const handleSubmit = useCallback(
-    async (message: string, selectedMode: ChatMode) => {
+    async (message: string, selectedMode: ChatMode | null) => {
       if (!message.trim() || isLoading) return;
 
       setIsLoading(true);
@@ -339,8 +341,8 @@ export function AiPlaygroundPage({ language }: { language: "en" | "ja" }) {
   }
 
   const hasMessages = messages.length > 0 || isLoading;
-  const currentSuggestions = SUGGESTIONS[language][mode] || [];
-  const currentModeInfo = CHAT_MODES.find((m) => m.id === mode);
+  const currentSuggestions = SUGGESTIONS[language][mode ?? "free"] || [];
+  const currentModeInfo = mode ? CHAT_MODES.find((m) => m.id === mode) : null;
 
   return (
     <div className="flex-1 flex overflow-hidden min-h-0 w-full" style={{ height: "calc(100vh - 160px)" }}>
@@ -351,7 +353,7 @@ export function AiPlaygroundPage({ language }: { language: "en" | "ja" }) {
             {availableModes.map((m) => (
               <button
                 key={m.id}
-                onClick={() => setMode(m.id)}
+                onClick={() => setMode(mode === m.id ? null : m.id)}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
                   mode === m.id
                     ? "bg-primary text-primary-foreground"
@@ -393,13 +395,17 @@ export function AiPlaygroundPage({ language }: { language: "en" | "ja" }) {
               </div>
               <h2 className="text-lg font-semibold text-foreground mb-1">AI Playground</h2>
               <p className="text-sm text-muted-foreground mb-6">
-                {currentModeInfo && (
-                  <span className="inline-flex items-center gap-1">
-                    <span className="text-primary"><ModeIcon icon={currentModeInfo.icon} /></span>
-                    {currentModeInfo.name}
-                  </span>
+                {currentModeInfo ? (
+                  <>
+                    <span className="inline-flex items-baseline gap-1">
+                      <span className="text-primary"><ModeIcon icon={currentModeInfo.icon} /></span>
+                      {currentModeInfo.name}
+                    </span>
+                    {" "}{language === "ja" ? "モードで質問してみましょう" : "mode — try asking a question"}
+                  </>
+                ) : (
+                  language === "ja" ? "AIに何でも聞いてみましょう" : "Ask AI anything"
                 )}
-                {" "}{language === "ja" ? "モードで質問してみましょう" : "mode — try asking a question"}
               </p>
               <div className="flex flex-wrap gap-2 justify-center max-w-lg">
                 {currentSuggestions.map((suggestion) => (
@@ -445,7 +451,8 @@ export function AiPlaygroundPage({ language }: { language: "en" | "ja" }) {
               onKeyDown={handleKeyDown}
               placeholder={
                 language === "ja"
-                  ? (mode === "explain" ? "何について知りたいですか？"
+                  ? (mode === null ? "メッセージを入力..."
+                    : mode === "explain" ? "何について知りたいですか？"
                     : mode === "idea" ? "企画のテーマや条件を入力..."
                     : mode === "search" ? "何を調べますか？"
                     : mode === "rag" ? "ナレッジベースに質問..."
@@ -468,7 +475,7 @@ export function AiPlaygroundPage({ language }: { language: "en" | "ja" }) {
             </button>
           </form>
           <p className="mt-2 text-xs text-muted-foreground text-center">
-            {language === "ja" ? "学習支援ツールです。最終判断は人が行ってください" : "This is a learning tool. Final decisions should be made by humans"}
+            {language === "ja" ? "AIの回答は参考情報です。最終判断は人が行ってください" : "AI responses are for reference. Final decisions should be made by humans"}
           </p>
         </div>
       </div>
