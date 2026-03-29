@@ -11,6 +11,8 @@ interface DatePickerProps {
   className?: string;
   min?: string; // YYYY-MM-DD
   max?: string; // YYYY-MM-DD
+  /** ポータル先のコンテナ要素（Dialog内で使う場合に指定） */
+  container?: HTMLElement | null;
 }
 
 interface HolidayInfo {
@@ -24,7 +26,7 @@ const WEEKDAYS_JA = ["日", "月", "火", "水", "木", "金", "土"];
  * カスタム日付ピッカー
  * ネイティブ<input type="date">と異なり、月移動時にカレンダーが閉じない
  */
-export function DatePicker({ value, onChange, className, min, max }: DatePickerProps) {
+export function DatePicker({ value, onChange, className, min, max, container }: DatePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [viewYear, setViewYear] = useState(() => {
     if (value) {
@@ -211,7 +213,7 @@ export function DatePicker({ value, onChange, className, min, max }: DatePickerP
         createPortal(
           <div
             ref={popoverRef}
-            className="fixed z-50 w-[280px] bg-card border border-border rounded-lg shadow-lg p-3"
+            className="fixed z-[9999] w-[280px] bg-card border border-border rounded-lg shadow-lg p-3 pointer-events-auto"
             style={{
               top: popoverPos.top,
               left: popoverPos.left,
@@ -300,7 +302,7 @@ export function DatePicker({ value, onChange, className, min, max }: DatePickerP
               })}
             </div>
           </div>,
-          document.body,
+          container || document.body,
         )}
     </>
   );

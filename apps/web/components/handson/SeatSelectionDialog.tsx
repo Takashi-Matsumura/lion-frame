@@ -10,6 +10,7 @@ const translations = {
     namePlaceholder: "Your name",
     nameLabel: "Display name",
     start: "Join Session",
+    back: "Back",
     error: "Please enter a valid seat number (1-{max})",
     nameError: "Please enter your name",
   },
@@ -19,6 +20,7 @@ const translations = {
     namePlaceholder: "あなたの名前",
     nameLabel: "表示名",
     start: "セッションに参加",
+    back: "戻る",
     error: "1〜{max}の番号を入力してください",
     nameError: "名前を入力してください",
   },
@@ -27,15 +29,19 @@ const translations = {
 interface Props {
   language: "en" | "ja";
   maxSeats: number;
+  sessionTitle?: string;
   defaultName?: string;
   onSubmit: (seatNumber: number, displayName: string) => Promise<string | null>;
+  onBack?: () => void;
 }
 
 export default function SeatSelectionDialog({
   language,
   maxSeats,
+  sessionTitle,
   defaultName = "",
   onSubmit,
+  onBack,
 }: Props) {
   const t = translations[language];
   const [seatValue, setSeatValue] = useState("");
@@ -73,6 +79,9 @@ export default function SeatSelectionDialog({
         onSubmit={handleSubmit}
         className="w-full max-w-sm rounded-xl bg-card p-8 shadow-xl"
       >
+        {sessionTitle && (
+          <p className="mb-2 text-sm font-medium text-primary">{sessionTitle}</p>
+        )}
         <h2 className="text-xl font-bold text-foreground">{t.title}</h2>
         <p className="mt-2 text-sm text-muted-foreground">
           {t.description.replace("{max}", String(maxSeats))}
@@ -117,6 +126,16 @@ export default function SeatSelectionDialog({
         >
           {loading ? "..." : t.start}
         </Button>
+        {onBack && (
+          <Button
+            type="button"
+            variant="ghost"
+            className="mt-2 w-full"
+            onClick={onBack}
+          >
+            {t.back}
+          </Button>
+        )}
       </form>
     </div>
   );

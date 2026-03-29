@@ -3,6 +3,7 @@ import { ApiError } from "@/lib/api/api-error";
 import {
   createSession,
   listSessions,
+  getRehearsalSessionId,
 } from "@/lib/addon-modules/handson/handson-service";
 import { checkAccess } from "@/lib/auth/access-checker";
 import { prisma } from "@/lib/prisma";
@@ -14,8 +15,11 @@ export const GET = apiHandler(async (_request, session) => {
   const hasAccess = await checkAccess(session, "/handson", HANDSON_ROLES);
   if (!hasAccess) throw ApiError.forbidden("Access denied");
 
-  const sessions = await listSessions();
-  return { sessions };
+  const [sessions, rehearsalSessionId] = await Promise.all([
+    listSessions(),
+    getRehearsalSessionId(),
+  ]);
+  return { sessions, rehearsalSessionId };
 });
 
 // POST /api/handson/sessions — セッション作成（講師権限）

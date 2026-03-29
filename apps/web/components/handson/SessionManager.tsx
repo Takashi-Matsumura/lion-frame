@@ -18,11 +18,15 @@ const translations = {
     active: "Active",
     ended: "Ended",
     ready: "Ready",
+    rehearsal: "Rehearsal",
     activate: "Start",
     end: "End",
     delete: "Delete",
+    startRehearsal: "Rehearsal",
+    endRehearsal: "End Rehearsal",
     confirmEnd: "Are you sure you want to end this session?",
     confirmDelete: "Are you sure you want to delete this session?",
+    confirmEndRehearsal: "End rehearsal? Rehearsal data (participants/logs) will be cleared.",
     noSessions: "No sessions yet. Create one to get started.",
     sessions: "Sessions",
     date: "Date",
@@ -31,6 +35,7 @@ const translations = {
     seats: "Seats",
     actions: "Actions",
     participants: "participants",
+    instructor: "Instructor",
   },
   ja: {
     createSession: "セッション作成",
@@ -45,11 +50,15 @@ const translations = {
     active: "開催中",
     ended: "終了",
     ready: "準備中",
+    rehearsal: "リハーサル",
     activate: "開始",
     end: "終了",
     delete: "削除",
+    startRehearsal: "リハーサル",
+    endRehearsal: "リハーサル終了",
     confirmEnd: "このセッションを終了しますか？",
     confirmDelete: "このセッションを削除しますか？",
+    confirmEndRehearsal: "リハーサルを終了しますか？リハーサルデータ（参加者・ログ）はクリアされます。",
     noSessions: "セッションがありません。作成してください。",
     sessions: "セッション",
     date: "開催日",
@@ -58,6 +67,7 @@ const translations = {
     seats: "座席数",
     actions: "操作",
     participants: "名参加",
+    instructor: "講師",
   },
 };
 
@@ -74,26 +84,37 @@ interface SessionInfo {
   maxSeats: number;
   startedAt: string;
   endedAt: string | null;
+  createdBy: string;
+  creator?: { id: string; name: string | null };
   _count?: { participants: number };
 }
 
 interface Props {
   language: "en" | "ja";
+  userId: string;
+  userRole: string;
   activeSessionId: string | null;
+  rehearsalSessionId?: string | null;
   onSessionSelected: (session: SessionInfo | null) => void;
   onActiveChanged: (activeId: string | null) => void;
+  onRehearsalChanged?: (rehearsalId: string | null) => void;
   onLoaded?: () => void;
 }
 
 export default function SessionManager({
   language,
+  userId,
+  userRole,
   activeSessionId,
+  rehearsalSessionId: initialRehearsalId,
   onSessionSelected,
   onActiveChanged,
+  onRehearsalChanged,
   onLoaded,
 }: Props) {
   const t = translations[language];
   const [sessions, setSessions] = useState<SessionInfo[]>([]);
+  const [rehearsalId, setRehearsalId] = useState<string | null>(initialRehearsalId ?? null);
   const [showForm, setShowForm] = useState(false);
   const [documents, setDocuments] = useState<DocOption[]>([]);
   const [title, setTitle] = useState("");
@@ -112,6 +133,9 @@ export default function SessionManager({
       if (res.ok) {
         const data = await res.json();
         setSessions(data.sessions || []);
+        if (data.rehearsalSessionId !== undefined) {
+          setRehearsalId(data.rehearsalSessionId);
+        }
       }
     } catch {
       // ignore
@@ -204,6 +228,46 @@ export default function SessionManager({
     }
   }
 
+  async function handleStartRehearsal(id: string) {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/handson/sessions/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "rehearsal_start" }),
+      });
+      if (res.ok) {
+        setRehearsalId(id);
+        onRehearsalChanged?.(id);
+        setSelectedId(id);
+        const session = sessions.find((s) => s.id === id);
+        if (session) onSessionSelected(session);
+        await fetchSessions();
+      }
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleEndRehearsal(id: string) {
+    if (!confirm(t.confirmEndRehearsal)) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/handson/sessions/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "rehearsal_end" }),
+      });
+      if (res.ok) {
+        setRehearsalId(null);
+        onRehearsalChanged?.(null);
+        await fetchSessions();
+      }
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function handleDelete(id: string) {
     if (!confirm(t.confirmDelete)) return;
     setLoading(true);
@@ -237,9 +301,10 @@ export default function SessionManager({
     }
   }
 
-  function getStatus(s: SessionInfo): "active" | "ended" | "ready" {
+  function getStatus(s: SessionInfo): "active" | "ended" | "ready" | "rehearsal" {
     if (s.endedAt) return "ended";
     if (activeSessionId === s.id) return "active";
+    if (rehearsalId === s.id) return "rehearsal";
     return "ready";
   }
 
@@ -336,6 +401,7 @@ export default function SessionManager({
               <tr className="border-b bg-muted/50">
                 <th className="px-4 py-2.5 text-left font-medium text-muted-foreground">{t.date}</th>
                 <th className="px-4 py-2.5 text-left font-medium text-muted-foreground">{t.title}</th>
+                <th className="px-4 py-2.5 text-left font-medium text-muted-foreground">{t.instructor}</th>
                 <th className="px-4 py-2.5 text-center font-medium text-muted-foreground">{t.status}</th>
                 <th className="px-4 py-2.5 text-center font-medium text-muted-foreground">{t.seats}</th>
                 <th className="px-4 py-2.5 text-right font-medium text-muted-foreground">{t.actions}</th>
@@ -345,6 +411,7 @@ export default function SessionManager({
               {sessions.map((s) => {
                 const status = getStatus(s);
                 const isSelected = selectedId === s.id;
+                const isOwner = s.createdBy === userId || userRole === "ADMIN";
                 const participantCount = s._count?.participants ?? 0;
 
                 return (
@@ -368,9 +435,15 @@ export default function SessionManager({
                         )}
                       </div>
                     </td>
+                    <td className="px-4 py-2.5 text-sm text-muted-foreground">
+                      {s.creator?.name || "—"}
+                    </td>
                     <td className="px-4 py-2.5 text-center">
                       {status === "active" && (
                         <Badge variant="default" className="bg-green-600">{t.active}</Badge>
+                      )}
+                      {status === "rehearsal" && (
+                        <Badge variant="default" className="bg-amber-500">{t.rehearsal}</Badge>
                       )}
                       {status === "ended" && (
                         <Badge variant="secondary">{t.ended}</Badge>
@@ -382,8 +455,11 @@ export default function SessionManager({
                     <td className="px-4 py-2.5 text-center text-muted-foreground">{s.maxSeats}</td>
                     <td className="px-4 py-2.5 text-right">
                       <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
-                        {status === "ready" && (
+                        {isOwner && status === "ready" && (
                           <>
+                            <Button size="sm" variant="outline" onClick={() => handleStartRehearsal(s.id)} disabled={loading}>
+                              {t.startRehearsal}
+                            </Button>
                             <Button size="sm" onClick={() => handleActivate(s.id)} disabled={loading}>
                               {t.activate}
                             </Button>
@@ -392,7 +468,17 @@ export default function SessionManager({
                             </Button>
                           </>
                         )}
-                        {status === "active" && (
+                        {isOwner && status === "rehearsal" && (
+                          <>
+                            <Button size="sm" variant="outline" onClick={() => handleEndRehearsal(s.id)} disabled={loading}>
+                              {t.endRehearsal}
+                            </Button>
+                            <Button size="sm" onClick={() => handleActivate(s.id)} disabled={loading}>
+                              {t.activate}
+                            </Button>
+                          </>
+                        )}
+                        {isOwner && status === "active" && (
                           <Button size="sm" variant="destructive" onClick={() => handleEnd(s.id)} disabled={loading}>
                             {t.end}
                           </Button>

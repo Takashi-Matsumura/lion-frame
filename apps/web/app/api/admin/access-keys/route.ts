@@ -38,13 +38,10 @@ export const POST = apiHandler(async (request, session) => {
     permissions?: PermissionInput[];
   };
 
-  if (
-    !name ||
-    !expiresAt ||
-    !targetUserId ||
-    !menuPaths ||
-    menuPaths.length === 0
-  ) {
+  const hasPermissions = permissions && permissions.length > 0;
+  const hasMenuPaths = menuPaths && menuPaths.length > 0;
+
+  if (!name || !expiresAt || !targetUserId || (!hasPermissions && !hasMenuPaths)) {
     throw ApiError.badRequest("Missing required fields");
   }
 
@@ -68,7 +65,7 @@ export const POST = apiHandler(async (request, session) => {
         key,
         name,
         targetUserId,
-        menuPaths: JSON.stringify(menuPaths), // Store as JSON string (後方互換性)
+        menuPaths: JSON.stringify(menuPaths || []), // Store as JSON string (後方互換性)
         expiresAt: expiryDate,
         isActive: true,
         createdBy: session.user.id,

@@ -22,13 +22,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   Table,
   TableBody,
   TableCell,
@@ -462,9 +455,9 @@ export function AccessKeyManager({
         </CardContent>
       </Card>
 
-      {/* Create Access Key Modal */}
+      {/* Create Access Key Modal — 左右2段レイアウト */}
       <Dialog open={isCreating} onOpenChange={handleCloseModal}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-4xl max-h-[85vh] flex flex-col">
           <DialogHeader>
             <DialogTitle>
               {t("Create New Access Key", "新しいアクセスキーを作成")}
@@ -477,69 +470,58 @@ export function AccessKeyManager({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>{t("Key Name", "キー名")}</Label>
-              <Input
-                value={formData.name}
-                onChange={(e) =>
-                  setFormData({ ...formData, name: e.target.value })
-                }
-                placeholder={t(
-                  "e.g., Manager Access for John",
-                  "例: John用マネージャーアクセス",
-                )}
-              />
-            </div>
+          <div className="flex-1 min-h-0 flex gap-6 py-2">
+            {/* 左カラム: キー名・対象ユーザ・有効期限 */}
+            <div className="flex-1 min-w-0 flex flex-col space-y-4">
+              <div className="space-y-2">
+                <Label>{t("Key Name", "キー名")}</Label>
+                <Input
+                  value={formData.name}
+                  onChange={(e) =>
+                    setFormData({ ...formData, name: e.target.value })
+                  }
+                  placeholder={t(
+                    "e.g., Manager Access for John",
+                    "例: John用マネージャーアクセス",
+                  )}
+                />
+              </div>
 
-            <div className="space-y-2">
-              <Label>{t("Target User", "対象ユーザ")}</Label>
-              <Select
+              <div className="space-y-2">
+                <Label>{t("Expiration Date", "有効期限")}</Label>
+                <DatePicker
+                  value={formData.expiresAt}
+                  onChange={(val) =>
+                    setFormData({ ...formData, expiresAt: val })
+                  }
+                />
+              </div>
+
+              <UserTableSelector
+                language={language}
+                users={users}
                 value={formData.targetUserId}
-                onValueChange={(value) =>
+                onChange={(value) =>
                   setFormData({ ...formData, targetUserId: value })
                 }
-              >
-                <SelectTrigger>
-                  <SelectValue
-                    placeholder={t("-- Select a user --", "-- ユーザを選択 --")}
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  {users.map((user) => (
-                    <SelectItem key={user.id} value={user.id}>
-                      {user.name} ({user.email}) - {user.role}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label>{t("Expiration Date", "有効期限")}</Label>
-              <DatePicker
-                value={formData.expiresAt}
-                onChange={(val) =>
-                  setFormData({
-                    ...formData,
-                    expiresAt: val,
-                  })
-                }
               />
             </div>
 
-            <div className="space-y-2">
+            {/* 右カラム: 権限ツリー */}
+            <div className="flex-1 min-w-0 flex flex-col space-y-2">
               <Label>
                 {t("Select Permissions to Grant", "付与する権限を選択")}
               </Label>
-              <PermissionTreeSelector
-                modules={modules}
-                selectedPermissions={formData.permissions}
-                onSelectionChange={(permissions) =>
-                  setFormData({ ...formData, permissions })
-                }
-                language={language}
-              />
+              <div className="flex-1 min-h-0 overflow-y-auto">
+                <PermissionTreeSelector
+                  modules={modules}
+                  selectedPermissions={formData.permissions}
+                  onSelectionChange={(permissions) =>
+                    setFormData({ ...formData, permissions })
+                  }
+                  language={language}
+                />
+              </div>
             </div>
           </div>
 
@@ -553,6 +535,87 @@ export function AccessKeyManager({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+// === ユーザー選択（テーブル+フィルタ型） ===
+function UserTableSelector({
+  language,
+  users,
+  value,
+  onChange,
+}: {
+  language: string;
+  users: { id: string; name: string | null; email: string | null; role: string }[];
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const [search, setSearch] = useState("");
+  const t = (en: string, ja: string) => (language === "ja" ? ja : en);
+
+  const filtered = search.trim()
+    ? users.filter((u) => {
+        const q = search.toLowerCase();
+        return (
+          (u.name?.toLowerCase() || "").includes(q) ||
+          (u.email?.toLowerCase() || "").includes(q)
+        );
+      })
+    : users;
+
+  return (
+    <div className="flex-1 min-h-0 flex flex-col space-y-2">
+      <Label>{t("Target User", "対象ユーザ")}</Label>
+      <Input
+        placeholder={t("Search by name or email...", "名前またはメールで検索...")}
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        className="h-8 text-sm shrink-0"
+      />
+      <div className="flex-1 min-h-0 overflow-y-auto rounded-lg border">
+        <table className="w-full text-sm">
+          <tbody>
+            {filtered.length === 0 ? (
+              <tr>
+                <td className="px-3 py-4 text-center text-muted-foreground">
+                  {t("No users found", "該当するユーザがありません")}
+                </td>
+              </tr>
+            ) : (
+              filtered.map((user) => {
+                const isSelected = value === user.id;
+                return (
+                  <tr
+                    key={user.id}
+                    onClick={() => onChange(user.id)}
+                    className={`border-b cursor-pointer transition ${
+                      isSelected
+                        ? "bg-primary/10"
+                        : "hover:bg-muted/30"
+                    }`}
+                  >
+                    <td className="px-3 py-1.5">
+                      <div className="flex items-center gap-2">
+                        <div className={`h-3 w-3 rounded-full border-2 shrink-0 ${
+                          isSelected ? "border-primary bg-primary" : "border-input"
+                        }`} />
+                        <div className="min-w-0">
+                          <span className="font-medium text-foreground">{user.name}</span>
+                          <span className="ml-2 text-xs text-muted-foreground">{user.email}</span>
+                        </div>
+                        <Badge variant="outline" className="ml-auto shrink-0 text-[10px]">
+                          {user.role}
+                        </Badge>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

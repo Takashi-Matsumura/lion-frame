@@ -6,6 +6,8 @@ import {
   endSession,
   deleteSession,
   activateSession,
+  startRehearsal,
+  endRehearsal,
 } from "@/lib/addon-modules/handson/handson-service";
 
 const HANDSON_ROLES = ["MANAGER", "EXECUTIVE", "ADMIN"];
@@ -41,6 +43,28 @@ export const PATCH = apiHandler(async (request, session) => {
     } catch (e) {
       throw ApiError.badRequest(
         e instanceof Error ? e.message : "Activate failed",
+      );
+    }
+  }
+
+  if (body.action === "rehearsal_start") {
+    try {
+      await startRehearsal(id);
+      return { success: true };
+    } catch (e) {
+      throw ApiError.badRequest(
+        e instanceof Error ? e.message : "Rehearsal start failed",
+      );
+    }
+  }
+
+  if (body.action === "rehearsal_end") {
+    try {
+      await endRehearsal(id);
+      return { success: true };
+    } catch (e) {
+      throw ApiError.badRequest(
+        e instanceof Error ? e.message : "Rehearsal end failed",
       );
     }
   }

@@ -79,6 +79,7 @@ model User {
   kioskEvents     KioskEvent[]   @relation("KioskEventCreator")
   healthCampaigns HealthCheckupCampaign[] @relation("HealthCampaignCreator")
   editorDocuments EditorDocument[] @relation("EditorDocumentCreator")
+  handsonSessions HandsonSession[] @relation("HandsonSessionCreator")
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 }
@@ -1347,6 +1348,7 @@ model HandsonSession {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
+  creator      User      @relation("HandsonSessionCreator", fields: [createdBy], references: [id])
   participants HandsonParticipant[]
   logs         HandsonLog[]
 

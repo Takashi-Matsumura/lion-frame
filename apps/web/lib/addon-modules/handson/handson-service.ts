@@ -39,6 +39,16 @@ export async function activateSession(id: string) {
   if (!session) throw new Error("Session not found");
   if (session.endedAt) throw new Error("Cannot activate an ended session");
 
+  // リハーサル中だった場合はクリア
+  const rehearsalSetting = await prisma.systemSetting.findUnique({
+    where: { key: "handson_rehearsal_session_id" },
+  });
+  if (rehearsalSetting?.value === id) {
+    await prisma.systemSetting.delete({
+      where: { key: "handson_rehearsal_session_id" },
+    });
+  }
+
   await prisma.systemSetting.upsert({
     where: { key: "handson_active_session_id" },
     update: { value: id },
@@ -64,6 +74,7 @@ export async function listSessions() {
     orderBy: { createdAt: "desc" },
     include: {
       _count: { select: { participants: true } },
+      creator: { select: { id: true, name: true } },
     },
   });
 }
@@ -109,8 +120,83 @@ export async function deleteSession(id: string) {
     });
   }
 
+  // リハーサルセッションの場合もクリア
+  const rehearsalSetting = await prisma.systemSetting.findUnique({
+    where: { key: "handson_rehearsal_session_id" },
+  });
+  if (rehearsalSetting?.value === id) {
+    await prisma.systemSetting.delete({
+      where: { key: "handson_rehearsal_session_id" },
+    });
+  }
+
   store.clearSession(id);
   return prisma.handsonSession.delete({ where: { id } });
+}
+
+// === リハーサル ===
+
+export async function startRehearsal(id: string) {
+  const session = await prisma.handsonSession.findUnique({
+    where: { id },
+    select: { id: true, endedAt: true },
+  });
+  if (!session) throw new Error("Session not found");
+  if (session.endedAt) throw new Error("Cannot rehearse an ended session");
+
+  await prisma.systemSetting.upsert({
+    where: { key: "handson_rehearsal_session_id" },
+    update: { value: id },
+    create: { key: "handson_rehearsal_session_id", value: id },
+  });
+
+  return session;
+}
+
+export async function endRehearsal(id: string) {
+  const setting = await prisma.systemSetting.findUnique({
+    where: { key: "handson_rehearsal_session_id" },
+  });
+  if (setting?.value === id) {
+    await prisma.systemSetting.delete({
+      where: { key: "handson_rehearsal_session_id" },
+    });
+  }
+
+  // リハーサル中の参加者・ログをクリア（本番に持ち越さない）
+  await prisma.handsonLog.deleteMany({ where: { sessionId: id } });
+  await prisma.handsonParticipant.deleteMany({ where: { sessionId: id } });
+  store.clearSession(id);
+}
+
+export async function getRehearsalSessionId(): Promise<string | null> {
+  const setting = await prisma.systemSetting.findUnique({
+    where: { key: "handson_rehearsal_session_id" },
+  });
+  return setting?.value ?? null;
+}
+
+export async function getRehearsalSession() {
+  const setting = await prisma.systemSetting.findUnique({
+    where: { key: "handson_rehearsal_session_id" },
+  });
+  if (!setting) return null;
+
+  const session = await prisma.handsonSession.findUnique({
+    where: { id: setting.value },
+    include: {
+      _count: { select: { participants: true } },
+    },
+  });
+
+  if (!session || session.endedAt) {
+    await prisma.systemSetting.delete({
+      where: { key: "handson_rehearsal_session_id" },
+    }).catch(() => {});
+    return null;
+  }
+
+  return session;
 }
 
 // === アクティブセッション ===

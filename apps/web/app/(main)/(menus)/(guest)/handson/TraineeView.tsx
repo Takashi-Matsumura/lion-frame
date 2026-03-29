@@ -11,23 +11,46 @@ import { PageSkeleton } from "@/components/ui/page-skeleton";
 interface Props {
   language: "en" | "ja";
   sessionId: string;
+  sessionTitle?: string;
   maxSeats: number;
   userId: string;
   userName: string;
+  onSessionEnded?: () => void;
+  onBack?: () => void;
 }
 
 export default function TraineeView({
   language,
   sessionId,
+  sessionTitle,
   maxSeats,
   userId,
   userName,
+  onSessionEnded,
+  onBack,
 }: Props) {
   const [participantId, setParticipantId] = useState<string | null>(null);
   const [seatNumber, setSeatNumber] = useState<number | null>(null);
   const [parsed, setParsed] = useState<ParsedHandson | null>(null);
   const [loading, setLoading] = useState(true);
   const [savedStatuses, setSavedStatuses] = useState<Record<number, "ok" | "error">>({});
+
+  // セッション終了をポーリングで検知（10秒間隔）
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch("/api/handson/active");
+        const data = await res.json();
+        if (!data.active || data.session?.id !== sessionId) {
+          clearInterval(interval);
+          onSessionEnded?.();
+        }
+      } catch {
+        // ignore
+      }
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [sessionId, onSessionEnded]);
 
   // localStorage復旧チェック + 既存回答状態の取得
   useEffect(() => {
@@ -127,8 +150,10 @@ export default function TraineeView({
       <SeatSelectionDialog
         language={language}
         maxSeats={maxSeats}
+        sessionTitle={sessionTitle}
         defaultName={userName}
         onSubmit={handleJoin}
+        onBack={onBack}
       />
     );
   }

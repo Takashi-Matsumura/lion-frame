@@ -193,11 +193,9 @@ export function PermissionTreeSelector({
     }
   };
 
-  // タブがあるメニューのみをフィルタリング
+  // メニューがあるモジュールをフィルタリング
   const modulesWithTabs = useMemo(() => {
-    return modules.filter((module) =>
-      module.menus.some((menu) => menu.tabs && menu.tabs.length > 0),
-    );
+    return modules.filter((module) => module.menus.length > 0);
   }, [modules]);
 
   return (

@@ -37,17 +37,26 @@ interface SessionInfo {
 
 interface Props {
   language: "en" | "ja";
+  userId: string;
+  userRole: string;
   activeSessionId: string | null;
+  rehearsalSessionId?: string | null;
   onActiveChanged: (activeId: string | null) => void;
+  onRehearsalChanged?: (rehearsalId: string | null) => void;
 }
 
 export default function InstructorView({
   language,
+  userId,
+  userRole,
   activeSessionId: initialActiveId,
+  rehearsalSessionId: initialRehearsalId,
   onActiveChanged,
+  onRehearsalChanged,
 }: Props) {
   const t = translations[language];
   const [activeSessionId, setActiveSessionId] = useState<string | null>(initialActiveId);
+  const [rehearsalSessionId, setRehearsalSessionId] = useState<string | null>(initialRehearsalId ?? null);
   const [selectedSession, setSelectedSession] = useState<SessionInfo | null>(null);
   const [parsed, setParsed] = useState<ParsedHandson | null>(null);
   const [activeTab, setActiveTab] = useState("progress");
@@ -80,6 +89,11 @@ export default function InstructorView({
     onActiveChanged(newActiveId);
   }
 
+  function handleRehearsalChanged(newRehearsalId: string | null) {
+    setRehearsalSessionId(newRehearsalId);
+    onRehearsalChanged?.(newRehearsalId);
+  }
+
   return (
     <div className="flex flex-1 flex-col overflow-hidden">
       {/* 初期ロード中はPageSkeleton */}
@@ -92,7 +106,10 @@ export default function InstructorView({
             <CardContent className="pt-6">
               <SessionManager
                 language={language}
+                userId={userId}
+                userRole={userRole}
                 activeSessionId={activeSessionId}
+                rehearsalSessionId={rehearsalSessionId}
                 onSessionSelected={(s) => {
                   setSelectedSession(s as SessionInfo | null);
                   if (s && (s as SessionInfo).endedAt) {
@@ -102,20 +119,26 @@ export default function InstructorView({
                   }
                 }}
                 onActiveChanged={handleActiveChanged}
+                onRehearsalChanged={handleRehearsalChanged}
                 onLoaded={() => setPageReady(true)}
               />
             </CardContent>
           </Card>
 
           {/* 選択中セッションの詳細タブ */}
-          {selectedSession ? (
+          {selectedSession ? (() => {
+            const isLive = !selectedSession.endedAt && (
+              activeSessionId === selectedSession.id ||
+              rehearsalSessionId === selectedSession.id
+            );
+            return (
             <Card>
               <Tabs value={activeTab} onValueChange={setActiveTab}>
                 <CardHeader className="pb-0">
                   <div className="flex items-center justify-between">
                     <CardTitle>{selectedSession.title}</CardTitle>
                     <TabsList>
-                      {!selectedSession.endedAt && (
+                      {isLive && (
                         <TabsTrigger value="progress">{t.progressTab}</TabsTrigger>
                       )}
                       <TabsTrigger value="preview">{t.previewTab}</TabsTrigger>
@@ -177,7 +200,8 @@ export default function InstructorView({
                 </CardContent>
               </Tabs>
             </Card>
-          ) : (
+            );
+          })() : (
             <Card>
               <CardContent className="py-8">
                 <p className="text-center text-sm text-muted-foreground">
