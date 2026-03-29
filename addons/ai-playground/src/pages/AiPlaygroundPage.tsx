@@ -81,12 +81,10 @@ export function AiPlaygroundPage({ language }: { language: "en" | "ja" }) {
   }, [ragEnabled]);
 
   useEffect(() => {
-    Promise.all([
-      fetch("/api/admin/ai").then((r) => r.json()),
-      fetch("/api/ai-playground/settings").then((r) => r.json()),
-    ])
-      .then(([aiData, pgData]) => {
-        setAiEnabled(aiData.config?.enabled ?? false);
+    fetch("/api/ai-playground/settings")
+      .then((r) => r.json())
+      .then((pgData) => {
+        setAiEnabled(pgData.ai_enabled === true || pgData.ai_enabled === "true");
         if (pgData.ai_playground_llm_config) setLlmConfig(pgData.ai_playground_llm_config);
         if (pgData.ai_playground_search_config) setSearchConfig({ ...DEFAULT_SEARCH_CONFIG, ...pgData.ai_playground_search_config });
         if (pgData.ai_playground_rag_config) setRagConfig({ ...DEFAULT_RAG_CONFIG, ...pgData.ai_playground_rag_config });

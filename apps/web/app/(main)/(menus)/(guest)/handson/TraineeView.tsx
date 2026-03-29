@@ -36,12 +36,15 @@ export default function TraineeView({
   const [savedStatuses, setSavedStatuses] = useState<Record<number, "ok" | "error">>({});
 
   // セッション終了をポーリングで検知（10秒間隔）
+  // availableSessionsにセッションが含まれているかで判定（リハーサル対応）
   useEffect(() => {
     const interval = setInterval(async () => {
       try {
         const res = await fetch("/api/handson/active");
         const data = await res.json();
-        if (!data.active || data.session?.id !== sessionId) {
+        const available = (data.availableSessions || []) as Array<{ id: string }>;
+        const stillAvailable = available.some((s) => s.id === sessionId);
+        if (!stillAvailable) {
           clearInterval(interval);
           onSessionEnded?.();
         }

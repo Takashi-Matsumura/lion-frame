@@ -18,7 +18,7 @@ export async function GET() {
 
     const settings = await prisma.systemSetting.findMany({
       where: {
-        key: { in: Object.values(SETTINGS_KEYS) },
+        key: { in: [...Object.values(SETTINGS_KEYS), "ai_enabled"] },
       },
     });
 

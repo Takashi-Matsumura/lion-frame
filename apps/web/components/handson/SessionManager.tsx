@@ -123,7 +123,7 @@ export default function SessionManager({
   );
   const [documentId, setDocumentId] = useState("");
   const [maxSeats, setMaxSeats] = useState(15);
-  const [loading, setLoading] = useState(false);
+  const [loadingAction, setLoadingAction] = useState<{ id: string; action: string } | null>(null);
   const [initialLoading, setInitialLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(activeSessionId);
 
@@ -168,7 +168,7 @@ export default function SessionManager({
 
   async function handleCreate() {
     if (!title.trim() || !date || !documentId) return;
-    setLoading(true);
+    setLoadingAction({ id: "", action: "create" });
     try {
       const res = await fetch("/api/handson/sessions", {
         method: "POST",
@@ -184,12 +184,12 @@ export default function SessionManager({
         await fetchSessions();
       }
     } finally {
-      setLoading(false);
+      setLoadingAction(null);
     }
   }
 
   async function handleActivate(id: string) {
-    setLoading(true);
+    setLoadingAction({ id, action: "activate" });
     try {
       const res = await fetch(`/api/handson/sessions/${id}`, {
         method: "PATCH",
@@ -204,13 +204,13 @@ export default function SessionManager({
         await fetchSessions();
       }
     } finally {
-      setLoading(false);
+      setLoadingAction(null);
     }
   }
 
   async function handleEnd(id: string) {
     if (!confirm(t.confirmEnd)) return;
-    setLoading(true);
+    setLoadingAction({ id, action: "end" });
     try {
       await fetch(`/api/handson/sessions/${id}`, {
         method: "PATCH",
@@ -224,12 +224,12 @@ export default function SessionManager({
       }
       await fetchSessions();
     } finally {
-      setLoading(false);
+      setLoadingAction(null);
     }
   }
 
   async function handleStartRehearsal(id: string) {
-    setLoading(true);
+    setLoadingAction({ id, action: "rehearsal_start" });
     try {
       const res = await fetch(`/api/handson/sessions/${id}`, {
         method: "PATCH",
@@ -245,13 +245,13 @@ export default function SessionManager({
         await fetchSessions();
       }
     } finally {
-      setLoading(false);
+      setLoadingAction(null);
     }
   }
 
   async function handleEndRehearsal(id: string) {
     if (!confirm(t.confirmEndRehearsal)) return;
-    setLoading(true);
+    setLoadingAction({ id, action: "rehearsal_end" });
     try {
       const res = await fetch(`/api/handson/sessions/${id}`, {
         method: "PATCH",
@@ -264,13 +264,13 @@ export default function SessionManager({
         await fetchSessions();
       }
     } finally {
-      setLoading(false);
+      setLoadingAction(null);
     }
   }
 
   async function handleDelete(id: string) {
     if (!confirm(t.confirmDelete)) return;
-    setLoading(true);
+    setLoadingAction({ id, action: "delete" });
     try {
       await fetch(`/api/handson/sessions/${id}`, { method: "DELETE" });
       if (selectedId === id) {
@@ -279,7 +279,7 @@ export default function SessionManager({
       }
       await fetchSessions();
     } finally {
-      setLoading(false);
+      setLoadingAction(null);
     }
   }
 
@@ -373,7 +373,7 @@ export default function SessionManager({
             </div>
           </div>
           <div className="mt-4 flex gap-3">
-            <Button onClick={handleCreate} disabled={loading || !title.trim() || !date || !documentId}>
+            <Button onClick={handleCreate} loading={loadingAction?.action === "create"} disabled={!!loadingAction || !title.trim() || !date || !documentId}>
               {t.create}
             </Button>
             <Button variant="outline" onClick={() => setShowForm(false)}>
@@ -457,29 +457,29 @@ export default function SessionManager({
                       <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
                         {isOwner && status === "ready" && (
                           <>
-                            <Button size="sm" variant="outline" onClick={() => handleStartRehearsal(s.id)} disabled={loading}>
+                            <Button size="sm" variant="outline" onClick={() => handleStartRehearsal(s.id)} loading={loadingAction?.id === s.id && loadingAction.action === "rehearsal_start"} disabled={!!loadingAction}>
                               {t.startRehearsal}
                             </Button>
-                            <Button size="sm" onClick={() => handleActivate(s.id)} disabled={loading}>
+                            <Button size="sm" onClick={() => handleActivate(s.id)} loading={loadingAction?.id === s.id && loadingAction.action === "activate"} disabled={!!loadingAction}>
                               {t.activate}
                             </Button>
-                            <Button size="sm" variant="ghost" className="text-destructive" onClick={() => handleDelete(s.id)} disabled={loading}>
+                            <Button size="sm" variant="ghost" className="text-destructive" onClick={() => handleDelete(s.id)} loading={loadingAction?.id === s.id && loadingAction.action === "delete"} disabled={!!loadingAction}>
                               {t.delete}
                             </Button>
                           </>
                         )}
                         {isOwner && status === "rehearsal" && (
                           <>
-                            <Button size="sm" variant="outline" onClick={() => handleEndRehearsal(s.id)} disabled={loading}>
+                            <Button size="sm" variant="outline" onClick={() => handleEndRehearsal(s.id)} loading={loadingAction?.id === s.id && loadingAction.action === "rehearsal_end"} disabled={!!loadingAction}>
                               {t.endRehearsal}
                             </Button>
-                            <Button size="sm" onClick={() => handleActivate(s.id)} disabled={loading}>
+                            <Button size="sm" onClick={() => handleActivate(s.id)} loading={loadingAction?.id === s.id && loadingAction.action === "activate"} disabled={!!loadingAction}>
                               {t.activate}
                             </Button>
                           </>
                         )}
                         {isOwner && status === "active" && (
-                          <Button size="sm" variant="destructive" onClick={() => handleEnd(s.id)} disabled={loading}>
+                          <Button size="sm" variant="destructive" onClick={() => handleEnd(s.id)} loading={loadingAction?.id === s.id && loadingAction.action === "end"} disabled={!!loadingAction}>
                             {t.end}
                           </Button>
                         )}

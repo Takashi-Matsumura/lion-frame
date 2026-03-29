@@ -140,7 +140,13 @@ cd apps/web && npx prisma db push && pnpm db:seed
 | タグ | Tag, TagAssignment |
 | NFCカード | NfcCard |
 | グループ | Group, GroupMember |
+| ハンズオン | HandsonSession, HandsonParticipant, HandsonLog |
 | システム | SystemSetting |
+
+> **ハンズオンセッション状態フロー:** `準備中`(READY) → `リハーサル`(REHEARSAL) → `開催中`(ACTIVE) → `終了`(ENDED)。リハーサルを経ずに直接「開始」も可能。状態はDB列ではなく`SystemSetting`で管理: `handson_active_session_id`（開催中）、`handson_rehearsal_session_id`（リハーサル中）、`endedAt`（終了）。
+> **ハンズオンリハーサル:** リハーサル中はGUESTも含む全ロールが参加可能（講師が事前確認できる）。リハーサル終了時に参加者・ログデータはクリアされ、本番はクリーンな状態で開始。操作（リハーサル開始/終了/本番開始/終了/削除）はセッション作成者（オーナー）またはADMINのみ。
+> **ハンズオン受講者フロー:** `/api/handson/active`が`availableSessions`（アクティブ+リハーサル）を返す。1つなら自動遷移、複数なら選択画面を表示。受講者はセッション終了を10秒ポーリングで検知し自動復帰。座席選択ダイアログに「戻る」ボタンあり。
+> **AI体験（AI Playground）:** AI有効状態は`/api/ai-playground/settings`から`ai_enabled`を取得（ADMIN専用APIではなく全ロールアクセス可）。GUESTロールでも利用可能。
 
 > **エディタモジュール:** 複合型エディタ。`EditorDocument.type`でドキュメント種別を管理。`"markdown"`（マークダウン）と`"excalidraw"`（ホワイトボード）をサポート。マークダウンはCodeMirror 6のLive Preview、ExcalidrawはフローティングウィンドウでExcalidrawキャンバスを全面表示。自動保存: マークダウン500ms、Excalidraw 1000msデバウンス。Excalidrawデータは`JSON.stringify({ elements, appState })`で`content`フィールドに格納。タイトルはコンテンツとは独立（管理画面でリネーム）。
 > **PDFエクスポート（HQ方式）:** マークダウンのPDFエクスポートはブラウザ印刷エンジン方式（`window.print()`）を使用。CSS `@page` + `break-inside: avoid` + `break-after: avoid` でブラウザが改ページを自動制御。テーブル行の途中での切断や見出しの孤立を防止。`<table>` の `<thead>/<tfoot>` 自動繰り返しでヘッダー/フッター領域を確保し、`position: fixed` で重畳表示。テンプレートのマージン・ヘッダー・フッター設定を反映。ページ番号（`%page`/`%total`）はCSS counterの制約によりHQモードでは非対応。Excalidrawは従来のjsPDF Canvas方式を使用。
