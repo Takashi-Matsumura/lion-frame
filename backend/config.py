@@ -16,7 +16,10 @@ class Settings(BaseSettings):
 
     # ChromaDB
     chroma_persist_dir: str = "../chroma_data"
-    chroma_collection_name: str = "evaluation_documents"
+    chroma_collection_name: str = "evaluation_documents"  # legacy (migration source)
+    chroma_collection_guest: str = "guest"
+    chroma_collection_business: str = "business"
+    chroma_default_collection: str = "business"
 
     # Embeddings
     embedding_model: str = "intfloat/multilingual-e5-base"

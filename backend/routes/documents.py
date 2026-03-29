@@ -1,7 +1,7 @@
 """Document management API routes."""
 
 import logging
-from typing import List, Optional
+from typing import Optional
 from fastapi import APIRouter, UploadFile, File, HTTPException, Query
 from pydantic import BaseModel
 
@@ -35,6 +35,7 @@ class DocumentCreateRequest(BaseModel):
 async def upload_document(
     file: UploadFile = File(...),
     user_id: Optional[str] = Query(default=None, description="User ID for personal documents"),
+    collection: Optional[str] = Query(default=None, description="Collection name: guest or business"),
 ):
     """
     Upload and process a document for RAG.
@@ -52,7 +53,7 @@ async def upload_document(
                 detail="Only .md (Markdown) files are supported"
             )
 
-        logger.info(f"Uploading document: {file.filename} (user_id: {user_id or 'shared'})")
+        logger.info(f"Uploading document: {file.filename} (user_id: {user_id or 'shared'}, collection: {collection or 'default'})")
 
         # Read file content
         content = await file.read()
@@ -92,6 +93,7 @@ async def upload_document(
             documents=chunks,
             embeddings=embeddings,
             metadatas=metadatas,
+            collection=collection,
         )
 
         logger.info(
@@ -120,6 +122,7 @@ async def upload_document(
 async def upload_text(
     request: TextUploadRequest,
     user_id: Optional[str] = Query(default=None, description="User ID for personal documents"),
+    collection: Optional[str] = Query(default=None, description="Collection name: guest or business"),
 ):
     """
     Upload text directly to RAG.
@@ -127,10 +130,11 @@ async def upload_text(
     Args:
         request: Text and filename
         user_id: Optional user ID (defaults to "shared")
+        collection: Optional collection name
     """
     try:
         doc_user_id = user_id or "shared"
-        logger.info(f"Uploading text as: {request.filename} (user_id: {doc_user_id})")
+        logger.info(f"Uploading text as: {request.filename} (user_id: {doc_user_id}, collection: {collection or 'default'})")
 
         text = clean_text(request.text)
 
@@ -166,6 +170,7 @@ async def upload_text(
             documents=chunks,
             embeddings=embeddings,
             metadatas=metadatas,
+            collection=collection,
         )
 
         logger.info(
@@ -193,16 +198,17 @@ async def upload_text(
 @router.get("/list", response_model=DocumentListResponse)
 async def list_documents(
     user_id: Optional[str] = Query(default=None, description="Filter by user_id (omit for all)"),
+    collection: Optional[str] = Query(default=None, description="Collection name: guest or business"),
 ):
     """Get list of uploaded documents, optionally filtered by user_id."""
     try:
-        logger.info(f"Listing documents (user_id filter: {user_id or 'all'})")
+        logger.info(f"Listing documents (user_id filter: {user_id or 'all'}, collection: {collection or 'default'})")
 
         # Get documents from vector database
         if user_id:
-            results = vector_db.get_by_metadata({"user_id": user_id})
+            results = vector_db.get_by_metadata({"user_id": user_id}, collection=collection)
         else:
-            results = vector_db.get_all_documents()
+            results = vector_db.get_all_documents(collection=collection)
 
         # Group chunks by filename
         documents_map = {}
@@ -241,13 +247,16 @@ async def list_documents(
 
 
 @router.get("/content/{filename}")
-async def get_document_content(filename: str):
+async def get_document_content(
+    filename: str,
+    collection: Optional[str] = Query(default=None, description="Collection name: guest or business"),
+):
     """Get document content by filename."""
     try:
-        logger.info(f"Getting content for: {filename}")
+        logger.info(f"Getting content for: {filename} (collection: {collection or 'default'})")
 
         # Get all documents from vector database
-        results = vector_db.get_all_documents()
+        results = vector_db.get_all_documents(collection=collection)
 
         # Filter chunks that match the filename
         chunks = []
@@ -291,16 +300,17 @@ async def get_document_content(filename: str):
 async def delete_document(
     filename: str,
     user_id: Optional[str] = Query(default=None, description="User ID to scope deletion"),
+    collection: Optional[str] = Query(default=None, description="Collection name: guest or business"),
 ):
     """Delete a document and all its chunks, optionally scoped by user_id."""
     try:
-        logger.info(f"Deleting document: {filename} (user_id: {user_id or 'any'})")
+        logger.info(f"Deleting document: {filename} (user_id: {user_id or 'any'}, collection: {collection or 'default'})")
 
         # Delete chunks scoped by user_id if provided
         if user_id:
-            deleted_count = vector_db.delete_by_filename_and_user(filename, user_id)
+            deleted_count = vector_db.delete_by_filename_and_user(filename, user_id, collection=collection)
         else:
-            deleted_count = vector_db.delete_by_filename(filename)
+            deleted_count = vector_db.delete_by_filename(filename, collection=collection)
 
         if deleted_count == 0:
             raise HTTPException(
@@ -327,12 +337,14 @@ async def delete_document(
 
 
 @router.post("/reset")
-async def reset_collection():
-    """Reset the entire collection (delete all documents)."""
+async def reset_collection(
+    collection: Optional[str] = Query(default=None, description="Collection name: guest or business"),
+):
+    """Reset a collection (delete all documents)."""
     try:
-        logger.warning("Resetting collection...")
+        logger.warning(f"Resetting collection: {collection or 'default'}...")
 
-        vector_db.reset()
+        vector_db.reset(collection=collection)
 
         logger.info("Collection reset successfully")
 
@@ -350,10 +362,12 @@ async def reset_collection():
 
 
 @router.get("/count")
-async def get_document_count():
-    """Get total document count in the collection."""
+async def get_document_count(
+    collection: Optional[str] = Query(default=None, description="Collection name: guest or business"),
+):
+    """Get total document count in a collection."""
     try:
-        count = vector_db.count()
+        count = vector_db.count(collection=collection)
         return {
             "total_chunks": count,
         }
@@ -367,7 +381,10 @@ async def get_document_count():
 
 
 @router.post("")
-async def create_document(request: DocumentCreateRequest):
+async def create_document(
+    request: DocumentCreateRequest,
+    collection: Optional[str] = Query(default=None, description="Collection name: guest or business"),
+):
     """
     Create a document from plain text content.
 
@@ -408,9 +425,10 @@ async def create_document(request: DocumentCreateRequest):
             documents=chunks,
             embeddings=embeddings,
             metadatas=metadatas,
+            collection=collection,
         )
 
-        logger.info(f"Created document '{title}': {len(chunks)} chunks")
+        logger.info(f"Created document '{title}': {len(chunks)} chunks (collection: {collection or 'default'})")
 
         return {
             "success": True,
@@ -430,14 +448,16 @@ async def create_document(request: DocumentCreateRequest):
 
 
 @router.get("")
-async def get_documents():
+async def get_documents(
+    collection: Optional[str] = Query(default=None, description="Collection name: guest or business"),
+):
     """
     Get all documents in simplified format.
 
     Returns individual chunks with their IDs for management.
     """
     try:
-        results = vector_db.get_all_documents()
+        results = vector_db.get_all_documents(collection=collection)
 
         documents = []
         for i, doc_id in enumerate(results["ids"]):
@@ -467,13 +487,16 @@ async def get_documents():
 
 
 @router.delete("/by-id/{doc_id}")
-async def delete_document_by_id(doc_id: str):
+async def delete_document_by_id(
+    doc_id: str,
+    collection: Optional[str] = Query(default=None, description="Collection name: guest or business"),
+):
     """Delete a single document chunk by its ID."""
     try:
-        logger.info(f"Deleting document by ID: {doc_id}")
+        logger.info(f"Deleting document by ID: {doc_id} (collection: {collection or 'default'})")
 
         # Delete the specific document
-        vector_db.delete_documents([doc_id])
+        vector_db.delete_documents([doc_id], collection=collection)
 
         logger.info(f"Deleted document: {doc_id}")
 

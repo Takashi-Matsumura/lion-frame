@@ -70,6 +70,7 @@ export async function buildRagContext(
         query: userMessage,
         top_k: 5,
         threshold: 0.3,
+        collection: "business",
         ...(userId && { user_id: userId }),
       }),
       signal: controller.signal,
@@ -123,7 +124,7 @@ export async function getUserRagDocumentCount(
     const timeout = setTimeout(() => controller.abort(), 3000);
 
     const response = await fetch(
-      `${RAG_BACKEND_URL}/api/documents/list?user_id=${encodeURIComponent(userId)}`,
+      `${RAG_BACKEND_URL}/api/documents/list?user_id=${encodeURIComponent(userId)}&collection=business`,
       { signal: controller.signal },
     );
     clearTimeout(timeout);

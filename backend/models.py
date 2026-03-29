@@ -17,6 +17,7 @@ class ChatRequest(BaseModel):
     use_rag: bool = Field(default=True, description="Enable RAG context retrieval")
     top_k: Optional[int] = Field(default=None, description="Number of context chunks to retrieve")
     stream: bool = Field(default=True, description="Enable streaming response")
+    collection: Optional[str] = Field(default=None, description="Collection name: guest or business")
 
 
 # Document Models
@@ -57,6 +58,7 @@ class RAGQueryRequest(BaseModel):
     top_k: Optional[int] = Field(default=3, description="Number of results to retrieve")
     threshold: Optional[float] = Field(default=0.5, description="Similarity threshold")
     user_id: Optional[str] = Field(default=None, description="User ID for filtering personal + shared documents")
+    collection: Optional[str] = Field(default=None, description="Collection name: guest or business")
 
 
 class ContextItem(BaseModel):
@@ -80,3 +82,4 @@ class HealthResponse(BaseModel):
     version: str
     chroma_status: str
     embedding_model: str
+    collection_stats: Optional[Dict[str, int]] = None

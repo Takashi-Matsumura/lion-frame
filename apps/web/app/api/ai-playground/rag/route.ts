@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
         query,
         top_k: topK ?? 5,
         threshold: threshold ?? 0.3,
-        category,
+        collection: "guest",
       }),
     });
 

@@ -1,7 +1,8 @@
 """RAG (Retrieval-Augmented Generation) API routes."""
 
 import logging
-from fastapi import APIRouter, HTTPException
+from typing import Optional
+from fastapi import APIRouter, HTTPException, Query
 
 from models import RAGQueryRequest, RAGQueryResponse, ContextItem
 from vectordb import vector_db
@@ -25,14 +26,14 @@ async def query_rag(request: RAGQueryRequest):
     4. Returns the most relevant context chunks
     """
     try:
-        logger.info(f"RAG query: {request.query[:50]}...")
+        logger.info(f"RAG query: {request.query[:50]}... (collection: {request.collection or 'default'})")
 
         # Use provided parameters or defaults from settings
         top_k = request.top_k or settings.rag_top_k
         threshold = request.threshold or settings.rag_similarity_threshold
 
         # Check if collection is empty
-        doc_count = vector_db.count()
+        doc_count = vector_db.count(collection=request.collection)
         if doc_count == 0:
             logger.warning("No documents in collection")
             return RAGQueryResponse(
@@ -60,6 +61,7 @@ async def query_rag(request: RAGQueryRequest):
             query_embeddings=[query_embedding],
             n_results=top_k,
             where=where_filter,
+            collection=request.collection,
         )
 
         # Process results
@@ -110,13 +112,15 @@ async def query_rag(request: RAGQueryRequest):
 
 
 @router.get("/stats")
-async def get_rag_stats():
+async def get_rag_stats(
+    collection: Optional[str] = Query(default=None, description="Collection name: guest or business"),
+):
     """Get RAG system statistics."""
     try:
-        total_chunks = vector_db.count()
+        total_chunks = vector_db.count(collection=collection)
 
         # Get unique documents count
-        results = vector_db.get_all_documents()
+        results = vector_db.get_all_documents(collection=collection)
         unique_files = set()
         if results["metadatas"]:
             unique_files = {
@@ -127,6 +131,7 @@ async def get_rag_stats():
         return {
             "total_chunks": total_chunks,
             "unique_documents": len(unique_files),
+            "collection": collection or settings.chroma_default_collection,
             "embedding_model": settings.embedding_model,
             "embedding_dimension": embedding_model.embedding_dim if embedding_model._is_loaded else None,
             "chunk_size": settings.chunk_size,

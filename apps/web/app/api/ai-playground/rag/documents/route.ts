@@ -16,9 +16,9 @@ export async function GET(request: NextRequest) {
     const ragBaseUrl = searchParams.get("ragBaseUrl") || undefined;
     const baseUrl = getBaseUrl(ragBaseUrl);
 
-    const url = category
-      ? `${baseUrl}/api/documents/list?category=${encodeURIComponent(category)}`
-      : `${baseUrl}/api/documents/list`;
+    const params = new URLSearchParams({ collection: "guest" });
+    if (category) params.set("category", category);
+    const url = `${baseUrl}/api/documents/list?${params.toString()}`;
 
     const response = await fetch(url, { method: "GET" });
 
@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
 
     const baseUrl = getBaseUrl(ragBaseUrl);
 
-    const response = await fetch(`${baseUrl}/api/documents`, {
+    const response = await fetch(`${baseUrl}/api/documents?collection=guest`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

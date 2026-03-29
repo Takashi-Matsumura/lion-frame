@@ -29,7 +29,7 @@ async def chat_with_rag(request: ChatRequest):
     5. Streams the response back to the client
     """
     try:
-        logger.info(f"Chat request (RAG: {request.use_rag})")
+        logger.info(f"Chat request (RAG: {request.use_rag}, collection: {request.collection or 'default'})")
 
         # Get the latest user message
         user_messages = [msg for msg in request.messages if msg.role == "user"]
@@ -47,7 +47,7 @@ async def chat_with_rag(request: ChatRequest):
 
         # If RAG is enabled, retrieve context and modify the latest message
         if request.use_rag:
-            doc_count = vector_db.count()
+            doc_count = vector_db.count(collection=request.collection)
 
             if doc_count > 0:
                 logger.info("Retrieving RAG context...")
@@ -62,6 +62,7 @@ async def chat_with_rag(request: ChatRequest):
                 results = vector_db.query(
                     query_embeddings=[query_embedding],
                     n_results=top_k,
+                    collection=request.collection,
                 )
 
                 # Build context items

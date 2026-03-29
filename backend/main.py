@@ -30,7 +30,9 @@ async def lifespan(app: FastAPI):
     from vectordb import vector_db
     from embeddings import embedding_model
 
-    logger.info(f"VectorDB initialized with {vector_db.count()} documents")
+    stats = vector_db.get_collection_stats()
+    for name, count in stats.items():
+        logger.info(f"Collection '{name}': {count} documents")
     logger.info("Embedding model ready (lazy loading enabled)")
 
     yield
@@ -73,14 +75,16 @@ async def health_check():
         from vectordb import vector_db
 
         # Check ChromaDB connection
-        doc_count = vector_db.count()
-        chroma_status = f"connected ({doc_count} documents)"
+        collection_stats = vector_db.get_collection_stats()
+        total = sum(collection_stats.values())
+        chroma_status = f"connected ({total} documents)"
 
         return HealthResponse(
             status="healthy",
             version="0.1.0",
             chroma_status=chroma_status,
             embedding_model=settings.embedding_model,
+            collection_stats=collection_stats,
         )
     except Exception as e:
         logger.error(f"Health check failed: {e}")
