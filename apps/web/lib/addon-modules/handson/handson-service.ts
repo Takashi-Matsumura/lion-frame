@@ -433,6 +433,22 @@ export async function getSessionAnalytics(sessionId: string) {
   const totalErrors = participants.reduce((sum, p) => sum + p.commandsError, 0);
   const totalHelpRequests = participants.reduce((sum, p) => sum + p.helpRequests, 0);
 
+  // 生ログデータ（参加者名を付与）
+  const rawLogs = logs.map((log) => {
+    const p = participantMap.get(log.participantId);
+    return {
+      id: log.id,
+      type: log.type,
+      participantName: p?.displayName ?? log.participantId,
+      seatNumber: p?.seatNumber ?? null,
+      commandIndex: log.commandIndex,
+      sectionIndex: log.sectionIndex,
+      stepId: log.stepId,
+      status: log.status,
+      createdAt: log.createdAt.toISOString(),
+    };
+  });
+
   return {
     summary: {
       participantCount,
@@ -446,5 +462,6 @@ export async function getSessionAnalytics(sessionId: string) {
     errorHotspots,
     helpBySection: helpBySectionArray,
     instructorTimeline,
+    rawLogs,
   };
 }

@@ -93,7 +93,14 @@ export default function InstructorView({
               <SessionManager
                 language={language}
                 activeSessionId={activeSessionId}
-                onSessionSelected={(s) => setSelectedSession(s as SessionInfo | null)}
+                onSessionSelected={(s) => {
+                  setSelectedSession(s as SessionInfo | null);
+                  if (s && (s as SessionInfo).endedAt) {
+                    setActiveTab("analytics");
+                  } else {
+                    setActiveTab("progress");
+                  }
+                }}
                 onActiveChanged={handleActiveChanged}
                 onLoaded={() => setPageReady(true)}
               />
@@ -108,7 +115,9 @@ export default function InstructorView({
                   <div className="flex items-center justify-between">
                     <CardTitle>{selectedSession.title}</CardTitle>
                     <TabsList>
-                      <TabsTrigger value="progress">{t.progressTab}</TabsTrigger>
+                      {!selectedSession.endedAt && (
+                        <TabsTrigger value="progress">{t.progressTab}</TabsTrigger>
+                      )}
                       <TabsTrigger value="preview">{t.previewTab}</TabsTrigger>
                       {selectedSession.endedAt && (
                         <TabsTrigger value="analytics">{t.analyticsTab}</TabsTrigger>

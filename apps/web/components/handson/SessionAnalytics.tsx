@@ -31,6 +31,12 @@ const translations = {
     noHelp: "No help requests recorded",
     noTimeline: "No instructor checkpoints recorded",
     lastActivity: "Last Activity",
+    chartView: "Chart",
+    rawDataView: "Data",
+    time: "Time",
+    type: "Type",
+    participant: "Participant",
+    detail: "Detail",
   },
   ja: {
     loading: "分析データを読み込み中...",
@@ -60,6 +66,12 @@ const translations = {
     noHelp: "ヘルプリクエストの記録がありません",
     noTimeline: "講師チェックポイントの記録がありません",
     lastActivity: "最終操作",
+    chartView: "グラフ",
+    rawDataView: "データ",
+    time: "時刻",
+    type: "種別",
+    participant: "参加者",
+    detail: "詳細",
   },
 };
 
@@ -93,6 +105,17 @@ interface AnalyticsData {
     commandIndex: number;
     timestamp: string;
   }[];
+  rawLogs: {
+    id: string;
+    type: string;
+    participantName: string;
+    seatNumber: number | null;
+    commandIndex: number | null;
+    sectionIndex: number | null;
+    stepId: string | null;
+    status: string | null;
+    createdAt: string;
+  }[];
 }
 
 interface Props {
@@ -105,6 +128,7 @@ export default function SessionAnalytics({ language, sessionId }: Props) {
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [viewMode, setViewMode] = useState<"chart" | "raw">("chart");
 
   useEffect(() => {
     (async () => {
@@ -140,6 +164,35 @@ export default function SessionAnalytics({ language, sessionId }: Props) {
 
   return (
     <div className="space-y-6">
+      {/* 表示モード切替 */}
+      <div className="flex items-center gap-1 rounded-lg bg-muted p-1 w-fit">
+        <button
+          onClick={() => setViewMode("chart")}
+          className={`rounded-md px-3 py-1.5 text-xs font-medium transition ${
+            viewMode === "chart"
+              ? "bg-card text-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          {t.chartView}
+        </button>
+        <button
+          onClick={() => setViewMode("raw")}
+          className={`rounded-md px-3 py-1.5 text-xs font-medium transition ${
+            viewMode === "raw"
+              ? "bg-card text-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          {t.rawDataView}
+        </button>
+      </div>
+
+      {/* 生データモード */}
+      {viewMode === "raw" ? (
+        <RawDataTable data={data} language={language} />
+      ) : (
+      <>
       {/* KPIカード */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
         <KpiCard label={t.participants} value={String(summary.participantCount)} color="blue" />
@@ -294,6 +347,91 @@ export default function SessionAnalytics({ language, sessionId }: Props) {
           </div>
         )}
       </section>
+      </>
+      )}
+    </div>
+  );
+}
+
+// === 生データテーブル ===
+function RawDataTable({ data, language }: { data: AnalyticsData; language: "en" | "ja" }) {
+  const t = translations[language];
+
+  const typeLabels: Record<string, string> = language === "ja"
+    ? {
+        SESSION_JOIN: "参加",
+        SESSION_LEAVE: "退出",
+        COMMAND_OK: "OK",
+        COMMAND_ERROR: "エラー",
+        CHECKPOINT_COMPLETE: "チェックポイント",
+        HELP_REQUEST: "ヘルプ依頼",
+        HELP_RESOLVED: "ヘルプ解決",
+        INSTRUCTOR_CHECKPOINT: "講師チェック",
+      }
+    : {
+        SESSION_JOIN: "Join",
+        SESSION_LEAVE: "Leave",
+        COMMAND_OK: "OK",
+        COMMAND_ERROR: "Error",
+        CHECKPOINT_COMPLETE: "Checkpoint",
+        HELP_REQUEST: "Help Request",
+        HELP_RESOLVED: "Help Resolved",
+        INSTRUCTOR_CHECKPOINT: "Instructor Check",
+      };
+
+  const typeColors: Record<string, string> = {
+    SESSION_JOIN: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
+    SESSION_LEAVE: "bg-muted text-muted-foreground",
+    COMMAND_OK: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+    COMMAND_ERROR: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
+    CHECKPOINT_COMPLETE: "bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-200",
+    HELP_REQUEST: "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200",
+    HELP_RESOLVED: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+    INSTRUCTOR_CHECKPOINT: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
+  };
+
+  return (
+    <div className="overflow-hidden rounded-lg border">
+      <div className="overflow-x-auto overflow-y-auto" style={{ maxHeight: "500px" }}>
+        <table className="w-full border-collapse text-sm">
+          <thead className="sticky top-0 z-10">
+            <tr className="bg-muted">
+              <th className="px-3 py-2 text-left font-medium text-muted-foreground">{t.time}</th>
+              <th className="px-3 py-2 text-left font-medium text-muted-foreground">{t.type}</th>
+              <th className="px-3 py-2 text-left font-medium text-muted-foreground">{t.participant}</th>
+              <th className="px-3 py-2 text-left font-medium text-muted-foreground">{t.detail}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.rawLogs.map((log) => (
+              <tr key={log.id} className="border-b hover:bg-muted/30">
+                <td className="whitespace-nowrap px-3 py-1.5 font-mono text-xs text-muted-foreground">
+                  {new Date(log.createdAt).toLocaleTimeString(language === "ja" ? "ja-JP" : "en-US", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    second: "2-digit",
+                  })}
+                </td>
+                <td className="px-3 py-1.5">
+                  <span className={`inline-block rounded px-1.5 py-0.5 text-xs font-medium ${typeColors[log.type] || "bg-muted text-muted-foreground"}`}>
+                    {typeLabels[log.type] || log.type}
+                  </span>
+                </td>
+                <td className="px-3 py-1.5 text-foreground">
+                  {log.seatNumber != null && (
+                    <span className="mr-1 font-semibold">{log.seatNumber}</span>
+                  )}
+                  <span className="text-xs text-muted-foreground">{log.participantName}</span>
+                </td>
+                <td className="px-3 py-1.5 text-xs text-muted-foreground">
+                  {log.commandIndex != null && `#${log.commandIndex + 1}`}
+                  {log.sectionIndex != null && log.commandIndex == null && `${t.section} ${log.sectionIndex + 1}`}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
