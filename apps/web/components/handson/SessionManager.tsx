@@ -2,95 +2,21 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui";
-import { Badge } from "@/components/ui/badge";
-
-const translations = {
-  en: {
-    createSession: "Create Session",
-    sessionTitle: "Session Title",
-    sessionDate: "Date",
-    selectDocument: "Select Document",
-    maxSeats: "Max Seats",
-    create: "Create",
-    cancel: "Cancel",
-    noDocuments: "No published documents found. Create and publish a document in the Editor first.",
-    titlePlaceholder: "e.g. Git Hands-on Day 1",
-    active: "Active",
-    ended: "Ended",
-    ready: "Ready",
-    rehearsal: "Rehearsal",
-    activate: "Start",
-    end: "End",
-    delete: "Delete",
-    startRehearsal: "Rehearsal",
-    endRehearsal: "End Rehearsal",
-    confirmEnd: "Are you sure you want to end this session?",
-    confirmDelete: "Are you sure you want to delete this session?",
-    confirmEndRehearsal: "End rehearsal? Rehearsal data (participants/logs) will be cleared.",
-    noSessions: "No sessions yet. Create one to get started.",
-    sessions: "Sessions",
-    date: "Date",
-    title: "Title",
-    status: "Status",
-    seats: "Seats",
-    actions: "Actions",
-    participants: "participants",
-    instructor: "Instructor",
-  },
-  ja: {
-    createSession: "セッション作成",
-    sessionTitle: "セッション名",
-    sessionDate: "開催日",
-    selectDocument: "教材ドキュメント",
-    maxSeats: "最大座席数",
-    create: "作成",
-    cancel: "キャンセル",
-    noDocuments: "公開済みドキュメントがありません。先にエディタでドキュメントを作成・公開してください。",
-    titlePlaceholder: "例: Git ハンズオン Day 1",
-    active: "開催中",
-    ended: "終了",
-    ready: "準備中",
-    rehearsal: "リハーサル",
-    activate: "開始",
-    end: "終了",
-    delete: "削除",
-    startRehearsal: "リハーサル",
-    endRehearsal: "リハーサル終了",
-    confirmEnd: "このセッションを終了しますか？",
-    confirmDelete: "このセッションを削除しますか？",
-    confirmEndRehearsal: "リハーサルを終了しますか？リハーサルデータ（参加者・ログ）はクリアされます。",
-    noSessions: "セッションがありません。作成してください。",
-    sessions: "セッション",
-    date: "開催日",
-    title: "セッション名",
-    status: "状態",
-    seats: "座席数",
-    actions: "操作",
-    participants: "名参加",
-    instructor: "講師",
-  },
-};
-
-interface DocOption {
-  id: string;
-  title: string;
-}
-
-interface SessionInfo {
-  id: string;
-  title: string;
-  date: string;
-  documentId: string;
-  maxSeats: number;
-  startedAt: string;
-  endedAt: string | null;
-  createdBy: string;
-  creator?: { id: string; name: string | null };
-  _count?: { participants: number };
-}
+import { handsonTranslations } from "./translations";
+import {
+  fetchSessions as apiFetchSessions,
+  createSession as apiCreateSession,
+  patchSession,
+  deleteSession as apiDeleteSession,
+} from "./api";
+import type { Language, SessionInfo } from "./types";
+import type { SessionStatus } from "./SessionListTable";
+import SessionCreateForm from "./SessionCreateForm";
+import SessionListTable from "./SessionListTable";
+import { SessionManagerSkeleton } from "./skeletons";
 
 interface Props {
-  language: "en" | "ja";
+  language: Language;
   userId: string;
   userRole: string;
   activeSessionId: string | null;
@@ -112,33 +38,20 @@ export default function SessionManager({
   onRehearsalChanged,
   onLoaded,
 }: Props) {
-  const t = translations[language];
+  const t = handsonTranslations[language].sessionManager;
   const [sessions, setSessions] = useState<SessionInfo[]>([]);
   const [rehearsalId, setRehearsalId] = useState<string | null>(initialRehearsalId ?? null);
   const [showForm, setShowForm] = useState(false);
-  const [documents, setDocuments] = useState<DocOption[]>([]);
-  const [title, setTitle] = useState("");
-  const [date, setDate] = useState(() =>
-    new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Tokyo" }),
-  );
-  const [documentId, setDocumentId] = useState("");
-  const [maxSeats, setMaxSeats] = useState(15);
   const [loadingAction, setLoadingAction] = useState<{ id: string; action: string } | null>(null);
   const [initialLoading, setInitialLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(activeSessionId);
 
-  const fetchSessions = useCallback(async () => {
+  const fetchSessionList = useCallback(async () => {
     try {
-      const res = await fetch("/api/handson/sessions");
-      if (res.ok) {
-        const data = await res.json();
-        setSessions(data.sessions || []);
-        if (data.rehearsalSessionId !== undefined) {
-          setRehearsalId(data.rehearsalSessionId);
-        }
-      }
+      const list = await apiFetchSessions();
+      setSessions(list);
     } catch {
-      // ignore
+      // handled by api layer
     } finally {
       setInitialLoading(false);
       onLoaded?.();
@@ -146,43 +59,17 @@ export default function SessionManager({
   }, [onLoaded]);
 
   useEffect(() => {
-    fetchSessions();
-  }, [fetchSessions]);
+    fetchSessionList();
+  }, [fetchSessionList]);
 
-  useEffect(() => {
-    if (showForm) fetchDocuments();
-  }, [showForm]);
+  // --- Action handlers ---
 
-  async function fetchDocuments() {
-    try {
-      const res = await fetch("/api/editor?scope=all");
-      const data = await res.json();
-      const published = (data.documents || []).filter(
-        (d: { status: string; type: string }) => d.status === "PUBLISHED" && d.type === "markdown",
-      );
-      setDocuments(published.map((d: { id: string; title: string }) => ({ id: d.id, title: d.title })));
-    } catch {
-      // ignore
-    }
-  }
-
-  async function handleCreate() {
-    if (!title.trim() || !date || !documentId) return;
+  async function handleCreate(params: { title: string; date: string; documentId: string; maxSeats: number }) {
     setLoadingAction({ id: "", action: "create" });
     try {
-      const res = await fetch("/api/handson/sessions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: title.trim(), date, documentId, maxSeats }),
-      });
-      if (res.ok) {
-        setShowForm(false);
-        setTitle("");
-        setDate(new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Tokyo" }));
-        setDocumentId("");
-        setMaxSeats(15);
-        await fetchSessions();
-      }
+      await apiCreateSession(params);
+      setShowForm(false);
+      await fetchSessionList();
     } finally {
       setLoadingAction(null);
     }
@@ -191,18 +78,12 @@ export default function SessionManager({
   async function handleActivate(id: string) {
     setLoadingAction({ id, action: "activate" });
     try {
-      const res = await fetch(`/api/handson/sessions/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "activate" }),
-      });
-      if (res.ok) {
-        onActiveChanged(id);
-        setSelectedId(id);
-        const session = sessions.find((s) => s.id === id);
-        if (session) onSessionSelected(session);
-        await fetchSessions();
-      }
+      await patchSession(id, "activate");
+      onActiveChanged(id);
+      setSelectedId(id);
+      const session = sessions.find((s) => s.id === id);
+      if (session) onSessionSelected(session);
+      await fetchSessionList();
     } finally {
       setLoadingAction(null);
     }
@@ -212,17 +93,13 @@ export default function SessionManager({
     if (!confirm(t.confirmEnd)) return;
     setLoadingAction({ id, action: "end" });
     try {
-      await fetch(`/api/handson/sessions/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "end" }),
-      });
+      await patchSession(id, "end");
       onActiveChanged(null);
       if (selectedId === id) {
         setSelectedId(null);
         onSessionSelected(null);
       }
-      await fetchSessions();
+      await fetchSessionList();
     } finally {
       setLoadingAction(null);
     }
@@ -231,19 +108,13 @@ export default function SessionManager({
   async function handleStartRehearsal(id: string) {
     setLoadingAction({ id, action: "rehearsal_start" });
     try {
-      const res = await fetch(`/api/handson/sessions/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "rehearsal_start" }),
-      });
-      if (res.ok) {
-        setRehearsalId(id);
-        onRehearsalChanged?.(id);
-        setSelectedId(id);
-        const session = sessions.find((s) => s.id === id);
-        if (session) onSessionSelected(session);
-        await fetchSessions();
-      }
+      await patchSession(id, "rehearsal_start");
+      setRehearsalId(id);
+      onRehearsalChanged?.(id);
+      setSelectedId(id);
+      const session = sessions.find((s) => s.id === id);
+      if (session) onSessionSelected(session);
+      await fetchSessionList();
     } finally {
       setLoadingAction(null);
     }
@@ -253,16 +124,10 @@ export default function SessionManager({
     if (!confirm(t.confirmEndRehearsal)) return;
     setLoadingAction({ id, action: "rehearsal_end" });
     try {
-      const res = await fetch(`/api/handson/sessions/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "rehearsal_end" }),
-      });
-      if (res.ok) {
-        setRehearsalId(null);
-        onRehearsalChanged?.(null);
-        await fetchSessions();
-      }
+      await patchSession(id, "rehearsal_end");
+      setRehearsalId(null);
+      onRehearsalChanged?.(null);
+      await fetchSessionList();
     } finally {
       setLoadingAction(null);
     }
@@ -272,12 +137,12 @@ export default function SessionManager({
     if (!confirm(t.confirmDelete)) return;
     setLoadingAction({ id, action: "delete" });
     try {
-      await fetch(`/api/handson/sessions/${id}`, { method: "DELETE" });
+      await apiDeleteSession(id);
       if (selectedId === id) {
         setSelectedId(null);
         onSessionSelected(null);
       }
-      await fetchSessions();
+      await fetchSessionList();
     } finally {
       setLoadingAction(null);
     }
@@ -288,20 +153,7 @@ export default function SessionManager({
     onSessionSelected(session);
   }
 
-  function formatDate(dateStr: string) {
-    try {
-      return new Date(dateStr).toLocaleDateString(language === "ja" ? "ja-JP" : "en-US", {
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-        timeZone: "Asia/Tokyo",
-      });
-    } catch {
-      return dateStr;
-    }
-  }
-
-  function getStatus(s: SessionInfo): "active" | "ended" | "ready" | "rehearsal" {
+  function getStatus(s: SessionInfo): SessionStatus {
     if (s.endedAt) return "ended";
     if (activeSessionId === s.id) return "active";
     if (rehearsalId === s.id) return "rehearsal";
@@ -320,177 +172,33 @@ export default function SessionManager({
 
       {/* 作成フォーム */}
       {showForm && (
-        <div className="rounded-lg border bg-card p-6">
-          <div className="space-y-4">
-            <div>
-              <label className="mb-1 block text-sm font-medium text-foreground">{t.sessionTitle}</label>
-              <input
-                type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder={t.titlePlaceholder}
-                className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-              />
-            </div>
-            <div className="flex gap-4">
-              <div>
-                <label className="mb-1 block text-sm font-medium text-foreground">{t.sessionDate}</label>
-                <input
-                  type="date"
-                  value={date}
-                  onChange={(e) => setDate(e.target.value)}
-                  className="w-48 rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium text-foreground">{t.maxSeats}</label>
-                <input
-                  type="number"
-                  min={1}
-                  max={50}
-                  value={maxSeats}
-                  onChange={(e) => setMaxSeats(parseInt(e.target.value, 10) || 15)}
-                  className="w-24 rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-                />
-              </div>
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium text-foreground">{t.selectDocument}</label>
-              {documents.length === 0 ? (
-                <p className="text-sm text-muted-foreground">{t.noDocuments}</p>
-              ) : (
-                <select
-                  value={documentId}
-                  onChange={(e) => setDocumentId(e.target.value)}
-                  className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-                >
-                  <option value="">---</option>
-                  {documents.map((doc) => (
-                    <option key={doc.id} value={doc.id}>{doc.title}</option>
-                  ))}
-                </select>
-              )}
-            </div>
-          </div>
-          <div className="mt-4 flex gap-3">
-            <Button onClick={handleCreate} loading={loadingAction?.action === "create"} disabled={!!loadingAction || !title.trim() || !date || !documentId}>
-              {t.create}
-            </Button>
-            <Button variant="outline" onClick={() => setShowForm(false)}>
-              {t.cancel}
-            </Button>
-          </div>
-        </div>
+        <SessionCreateForm
+          language={language}
+          loading={loadingAction?.action === "create"}
+          onSubmit={handleCreate}
+          onCancel={() => setShowForm(false)}
+        />
       )}
 
       {/* セッション一覧テーブル */}
       {initialLoading ? (
-        <div className="space-y-3">
-          {[1, 2].map((i) => (
-            <div key={i} className="h-12 animate-pulse rounded-lg bg-muted" />
-          ))}
-        </div>
-      ) : sessions.length === 0 ? (
-        <div className="rounded-lg border bg-card py-8 text-center text-sm text-muted-foreground">
-          {t.noSessions}
-        </div>
+        <SessionManagerSkeleton />
       ) : (
-        <div className="overflow-hidden rounded-lg border">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b bg-muted/50">
-                <th className="px-4 py-2.5 text-left font-medium text-muted-foreground">{t.date}</th>
-                <th className="px-4 py-2.5 text-left font-medium text-muted-foreground">{t.title}</th>
-                <th className="px-4 py-2.5 text-left font-medium text-muted-foreground">{t.instructor}</th>
-                <th className="px-4 py-2.5 text-center font-medium text-muted-foreground">{t.status}</th>
-                <th className="px-4 py-2.5 text-center font-medium text-muted-foreground">{t.seats}</th>
-                <th className="px-4 py-2.5 text-right font-medium text-muted-foreground">{t.actions}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sessions.map((s) => {
-                const status = getStatus(s);
-                const isSelected = selectedId === s.id;
-                const isOwner = s.createdBy === userId || userRole === "ADMIN";
-                const participantCount = s._count?.participants ?? 0;
-
-                return (
-                  <tr
-                    key={s.id}
-                    onClick={() => handleSelect(s)}
-                    className={`border-b transition cursor-pointer ${
-                      isSelected
-                        ? "bg-primary/5"
-                        : "hover:bg-muted/30"
-                    } ${s.endedAt ? "opacity-70" : ""}`}
-                  >
-                    <td className="px-4 py-2.5 text-foreground">{formatDate(s.date)}</td>
-                    <td className="px-4 py-2.5">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium text-foreground">{s.title}</span>
-                        {participantCount > 0 && (
-                          <span className="text-xs text-muted-foreground">
-                            ({participantCount}{t.participants})
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-4 py-2.5 text-sm text-muted-foreground">
-                      {s.creator?.name || "—"}
-                    </td>
-                    <td className="px-4 py-2.5 text-center">
-                      {status === "active" && (
-                        <Badge variant="default" className="bg-green-600">{t.active}</Badge>
-                      )}
-                      {status === "rehearsal" && (
-                        <Badge variant="default" className="bg-amber-500">{t.rehearsal}</Badge>
-                      )}
-                      {status === "ended" && (
-                        <Badge variant="secondary">{t.ended}</Badge>
-                      )}
-                      {status === "ready" && (
-                        <Badge variant="outline">{t.ready}</Badge>
-                      )}
-                    </td>
-                    <td className="px-4 py-2.5 text-center text-muted-foreground">{s.maxSeats}</td>
-                    <td className="px-4 py-2.5 text-right">
-                      <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
-                        {isOwner && status === "ready" && (
-                          <>
-                            <Button size="sm" variant="outline" onClick={() => handleStartRehearsal(s.id)} loading={loadingAction?.id === s.id && loadingAction.action === "rehearsal_start"} disabled={!!loadingAction}>
-                              {t.startRehearsal}
-                            </Button>
-                            <Button size="sm" onClick={() => handleActivate(s.id)} loading={loadingAction?.id === s.id && loadingAction.action === "activate"} disabled={!!loadingAction}>
-                              {t.activate}
-                            </Button>
-                            <Button size="sm" variant="ghost" className="text-destructive" onClick={() => handleDelete(s.id)} loading={loadingAction?.id === s.id && loadingAction.action === "delete"} disabled={!!loadingAction}>
-                              {t.delete}
-                            </Button>
-                          </>
-                        )}
-                        {isOwner && status === "rehearsal" && (
-                          <>
-                            <Button size="sm" variant="outline" onClick={() => handleEndRehearsal(s.id)} loading={loadingAction?.id === s.id && loadingAction.action === "rehearsal_end"} disabled={!!loadingAction}>
-                              {t.endRehearsal}
-                            </Button>
-                            <Button size="sm" onClick={() => handleActivate(s.id)} loading={loadingAction?.id === s.id && loadingAction.action === "activate"} disabled={!!loadingAction}>
-                              {t.activate}
-                            </Button>
-                          </>
-                        )}
-                        {isOwner && status === "active" && (
-                          <Button size="sm" variant="destructive" onClick={() => handleEnd(s.id)} loading={loadingAction?.id === s.id && loadingAction.action === "end"} disabled={!!loadingAction}>
-                            {t.end}
-                          </Button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        <SessionListTable
+          language={language}
+          sessions={sessions}
+          selectedId={selectedId}
+          userId={userId}
+          userRole={userRole}
+          loadingAction={loadingAction}
+          getStatus={getStatus}
+          onSelect={handleSelect}
+          onActivate={handleActivate}
+          onEnd={handleEnd}
+          onStartRehearsal={handleStartRehearsal}
+          onEndRehearsal={handleEndRehearsal}
+          onDelete={handleDelete}
+        />
       )}
     </div>
   );

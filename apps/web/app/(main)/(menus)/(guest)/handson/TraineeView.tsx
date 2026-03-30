@@ -4,12 +4,21 @@ import { useState, useEffect, useCallback } from "react";
 import SeatSelectionDialog from "@/components/handson/SeatSelectionDialog";
 import HandsonMarkdownRenderer from "@/components/handson/HandsonMarkdownRenderer";
 import HelpFloatingButton from "@/components/handson/HelpFloatingButton";
-import { parseHandsonMarkdown } from "@/lib/addon-modules/handson/markdown-parser";
-import type { ParsedHandson } from "@/lib/addon-modules/handson/markdown-parser";
-import { PageSkeleton } from "@/components/ui/page-skeleton";
+import { useFetchDocument } from "@/components/handson/hooks";
+import {
+  fetchActiveSessions,
+  joinSession,
+  leaveSession,
+  postLog,
+  postHelpRequest,
+  fetchMyStatus,
+} from "@/components/handson/api";
+import { handsonTranslations } from "@/components/handson/translations";
+import type { Language } from "@/components/handson/types";
+import { TraineeContentSkeleton } from "@/components/handson/skeletons";
 
 interface Props {
-  language: "en" | "ja";
+  language: Language;
   sessionId: string;
   sessionTitle?: string;
   maxSeats: number;
@@ -29,27 +38,26 @@ export default function TraineeView({
   onSessionEnded,
   onBack,
 }: Props) {
+  const tc = handsonTranslations[language].common;
   const [participantId, setParticipantId] = useState<string | null>(null);
   const [seatNumber, setSeatNumber] = useState<number | null>(null);
-  const [parsed, setParsed] = useState<ParsedHandson | null>(null);
-  const [loading, setLoading] = useState(true);
   const [savedStatuses, setSavedStatuses] = useState<Record<number, "ok" | "error">>({});
 
+  const { parsed, loading } = useFetchDocument(sessionId);
+
   // セッション終了をポーリングで検知（10秒間隔）
-  // availableSessionsにセッションが含まれているかで判定（リハーサル対応）
   useEffect(() => {
     const interval = setInterval(async () => {
       try {
-        const res = await fetch("/api/handson/active");
-        const data = await res.json();
-        const available = (data.availableSessions || []) as Array<{ id: string }>;
+        const data = await fetchActiveSessions();
+        const available = data.availableSessions || [];
         const stillAvailable = available.some((s) => s.id === sessionId);
         if (!stillAvailable) {
           clearInterval(interval);
           onSessionEnded?.();
         }
       } catch {
-        // ignore
+        // ignore polling errors
       }
     }, 10000);
     return () => clearInterval(interval);
@@ -62,50 +70,25 @@ export default function TraineeView({
     if (savedPid && savedSeat) {
       setParticipantId(savedPid);
       setSeatNumber(parseInt(savedSeat, 10));
-      // 既存の回答状態を取得
-      fetch(`/api/handson/sessions/${sessionId}/my-status?participantId=${savedPid}`)
-        .then((r) => r.json())
+      fetchMyStatus(sessionId, savedPid)
         .then((data) => {
           if (data.statuses) setSavedStatuses(data.statuses);
         })
         .catch(() => {});
     }
-    fetchDocument();
   }, [sessionId]);
-
-  async function fetchDocument() {
-    try {
-      const res = await fetch(`/api/handson/sessions/${sessionId}/document`);
-      if (!res.ok) return;
-      const data = await res.json();
-      const result = parseHandsonMarkdown(data.document.content);
-      setParsed(result);
-    } catch {
-      // ignore
-    } finally {
-      setLoading(false);
-    }
-  }
 
   // セッション参加
   async function handleJoin(seat: number, displayName: string): Promise<string | null> {
     try {
-      const res = await fetch(`/api/handson/sessions/${sessionId}/join`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ seatNumber: seat, displayName }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        return data.error || "Failed to join";
-      }
+      const data = await joinSession(sessionId, { seatNumber: seat, displayName });
       setParticipantId(data.participantId);
       setSeatNumber(seat);
       localStorage.setItem(`handson_participant_${sessionId}`, data.participantId);
       localStorage.setItem(`handson_seat_${sessionId}`, String(seat));
       return null;
-    } catch {
-      return "Network error";
+    } catch (e) {
+      return e instanceof Error ? e.message : "Network error";
     }
   }
 
@@ -113,15 +96,11 @@ export default function TraineeView({
   const handleCommandReport = useCallback(
     async (commandIndex: number, status: "ok" | "error") => {
       if (!participantId) return;
-      await fetch(`/api/handson/sessions/${sessionId}/log`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          participantId,
-          type: status === "ok" ? "COMMAND_OK" : "COMMAND_ERROR",
-          commandIndex,
-          status: status.toUpperCase(),
-        }),
+      await postLog(sessionId, {
+        participantId,
+        type: status === "ok" ? "COMMAND_OK" : "COMMAND_ERROR",
+        commandIndex,
+        status: status.toUpperCase(),
       });
     },
     [sessionId, participantId],
@@ -131,20 +110,13 @@ export default function TraineeView({
   const handleHelpRequest = useCallback(
     async (sectionIndex: number) => {
       if (!participantId) return;
-      await fetch(`/api/handson/sessions/${sessionId}/help`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          participantId,
-          sectionIndex,
-        }),
-      });
+      await postHelpRequest(sessionId, { participantId, sectionIndex });
     },
     [sessionId, participantId],
   );
 
   if (loading) {
-    return <PageSkeleton />;
+    return <TraineeContentSkeleton />;
   }
 
   // 座席選択モーダル
@@ -164,7 +136,7 @@ export default function TraineeView({
   if (!parsed) {
     return (
       <div className="p-6 text-center text-muted-foreground">
-        {language === "ja" ? "教材を読み込めませんでした" : "Failed to load content"}
+        {tc.failedToLoadContent}
       </div>
     );
   }
@@ -174,15 +146,12 @@ export default function TraineeView({
       {/* 座席番号バッジ + 退出ボタン */}
       <div className="mb-6 flex items-center gap-3">
         <span className="inline-flex items-center rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground">
-          {language === "ja" ? `座席 ${seatNumber}` : `Seat ${seatNumber}`}
+          {tc.seat} {seatNumber}
         </span>
         <button
           onClick={async () => {
             if (participantId) {
-              await fetch(
-                `/api/handson/sessions/${sessionId}/join?participantId=${participantId}`,
-                { method: "DELETE" },
-              ).catch(() => {});
+              await leaveSession(sessionId, participantId).catch(() => {});
             }
             localStorage.removeItem(`handson_participant_${sessionId}`);
             localStorage.removeItem(`handson_seat_${sessionId}`);
@@ -191,7 +160,7 @@ export default function TraineeView({
           }}
           className="text-xs text-muted-foreground hover:text-foreground transition"
         >
-          {language === "ja" ? "退出する" : "Leave seat"}
+          {tc.leaveSeat}
         </button>
       </div>
 

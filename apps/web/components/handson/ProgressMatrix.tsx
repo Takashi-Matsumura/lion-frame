@@ -1,56 +1,14 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-
-const translations = {
-  en: {
-    seat: "Seat",
-    noParticipants: "No participants have joined yet. Waiting for trainees to connect...",
-    legend: { ok: "OK", error: "Error", none: "Not reported" },
-    helpAlert: "Help requested",
-    section: "Section",
-    resolve: "Resolved",
-    instructor: "Instructor",
-  },
-  ja: {
-    seat: "座席",
-    noParticipants: "参加者がまだいません。受講者の接続を待っています...",
-    legend: { ok: "OK / できた", error: "エラー", none: "未報告" },
-    helpAlert: "ヘルプ依頼",
-    section: "セクション",
-    resolve: "対応済み",
-    instructor: "講師",
-  },
-};
-
-type CommandStatus = "OK" | "ERROR";
-
-interface ParticipantInfo {
-  id: string;
-  displayName: string;
-  seatNumber: number;
-}
-
-interface HelpRequestInfo {
-  logId: string;
-  participantId: string;
-  seatNumber: number;
-  displayName: string;
-  sectionIndex: number;
-  message?: string;
-  createdAt: string;
-}
-
-interface ProgressData {
-  participants: ParticipantInfo[];
-  commands: Record<string, Record<number, CommandStatus>>;
-  checkpoints: Record<string, number[]>;
-  helpRequests: HelpRequestInfo[];
-  instructorCheckpoints: number[];
-}
+import { handsonTranslations } from "./translations";
+import { usePolling } from "./hooks";
+import { fetchProgress as apiFetchProgress, resolveHelpRequest } from "./api";
+import type { Language, ProgressData } from "./types";
+import { ProgressMatrixSkeleton } from "./skeletons";
 
 interface Props {
-  language: "en" | "ja";
+  language: Language;
   sessionId: string;
   totalCommands: number;
   onCommandClick?: (commandIndex: number) => void;
@@ -61,33 +19,15 @@ const SEAT_COL_W = 100;
 const CELL_COL_W = 36;
 
 export default function ProgressMatrix({ language, sessionId, totalCommands, onCommandClick }: Props) {
-  const t = translations[language];
-  const [data, setData] = useState<ProgressData | null>(null);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const tc = handsonTranslations[language].common;
+  const tp = handsonTranslations[language].progressMatrix;
   const headerRef = useRef<HTMLDivElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
   const syncing = useRef(false);
   const prevLastCheckpoint = useRef<number | null>(null);
 
-  const fetchProgress = useCallback(async () => {
-    try {
-      const res = await fetch(`/api/handson/sessions/${sessionId}/progress`);
-      if (res.ok) {
-        const json = await res.json();
-        setData(json);
-      }
-    } catch {
-      // ignore
-    }
-  }, [sessionId]);
-
-  useEffect(() => {
-    fetchProgress();
-    intervalRef.current = setInterval(fetchProgress, POLL_INTERVAL);
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    };
-  }, [fetchProgress]);
+  const fetchFn = useCallback(() => apiFetchProgress(sessionId), [sessionId]);
+  const { data, isLoading, hasConnectionIssue, refresh } = usePolling<ProgressData>(fetchFn, POLL_INTERVAL);
 
   // ヘッダーとボディの横スクロールを同期
   function syncScroll(source: "header" | "body") {
@@ -108,7 +48,6 @@ export default function ProgressMatrix({ language, sessionId, totalCommands, onC
     if (lastIdx === prevLastCheckpoint.current) return;
     prevLastCheckpoint.current = lastIdx;
 
-    // ヘッダーテーブル内の該当セルにスクロール
     if (headerRef.current) {
       const cell = headerRef.current.querySelector(`[data-instructor-col="${lastIdx}"]`);
       if (cell) {
@@ -117,19 +56,14 @@ export default function ProgressMatrix({ language, sessionId, totalCommands, onC
     }
   }, [data]);
 
-  if (!data) {
-    return (
-      <div className="space-y-3">
-        <div className="h-8 w-48 animate-pulse rounded bg-muted" />
-        <div className="h-32 animate-pulse rounded-lg bg-muted" />
-      </div>
-    );
+  if (isLoading || !data) {
+    return <ProgressMatrixSkeleton />;
   }
 
   if (data.participants.length === 0) {
     return (
       <div className="py-8 text-center text-sm text-muted-foreground">
-        {t.noParticipants}
+        {tp.noParticipants}
       </div>
     );
   }
@@ -142,11 +76,9 @@ export default function ProgressMatrix({ language, sessionId, totalCommands, onC
 
   async function handleResolveHelp(logId: string) {
     try {
-      await fetch(`/api/handson/sessions/${sessionId}/help?logId=${logId}`, {
-        method: "DELETE",
-      });
+      await resolveHelpRequest(sessionId, logId);
     } catch {
-      // ignore
+      // handled by api layer
     }
   }
 
@@ -163,6 +95,22 @@ export default function ProgressMatrix({ language, sessionId, totalCommands, onC
 
   return (
     <div>
+      {/* コネクションエラー警告 */}
+      {hasConnectionIssue && (
+        <div className="mb-4 flex items-center gap-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-2.5 text-sm dark:border-amber-900 dark:bg-amber-950/40">
+          <svg className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M12 3a9 9 0 100 18 9 9 0 000-18z" />
+          </svg>
+          <span className="text-amber-800 dark:text-amber-200">{tc.connectionError}</span>
+          <button
+            onClick={refresh}
+            className="ml-auto rounded-md border border-amber-300 px-3 py-1 text-xs font-medium text-amber-700 hover:bg-amber-100 transition dark:border-amber-800 dark:text-amber-300 dark:hover:bg-amber-900/40"
+          >
+            {tc.retry}
+          </button>
+        </div>
+      )}
+
       {/* ヘルプリクエストアラート */}
       {helpRequests.length > 0 && (
         <div className="mb-4 space-y-2">
@@ -175,17 +123,17 @@ export default function ProgressMatrix({ language, sessionId, totalCommands, onC
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M12 3a9 9 0 100 18 9 9 0 000-18z" />
               </svg>
               <span className="font-bold text-red-700 dark:text-red-400">
-                {t.seat} {req.seatNumber}
+                {tc.seat} {req.seatNumber}
               </span>
               <span className="text-sm font-medium text-foreground">{req.displayName}</span>
               <span className="text-sm text-muted-foreground">
-                {t.section} {req.sectionIndex + 1}
+                {tc.section} {req.sectionIndex + 1}
               </span>
               <button
                 onClick={() => handleResolveHelp(req.logId)}
                 className="ml-auto rounded-md border px-3 py-1 text-xs font-medium text-muted-foreground hover:bg-muted transition"
               >
-                {t.resolve}
+                {tc.resolve}
               </button>
             </div>
           ))}
@@ -195,13 +143,13 @@ export default function ProgressMatrix({ language, sessionId, totalCommands, onC
       {/* 凡例 */}
       <div className="mb-4 flex items-center gap-4 text-xs text-muted-foreground">
         <span className="flex items-center gap-1">
-          <span className="inline-block h-3 w-3 rounded bg-green-500" /> {t.legend.ok}
+          <span className="inline-block h-3 w-3 rounded bg-green-500" /> {tp.legend.ok}
         </span>
         <span className="flex items-center gap-1">
-          <span className="inline-block h-3 w-3 rounded bg-red-500" /> {t.legend.error}
+          <span className="inline-block h-3 w-3 rounded bg-red-500" /> {tp.legend.error}
         </span>
         <span className="flex items-center gap-1">
-          <span className="inline-block h-3 w-3 rounded bg-muted" /> {t.legend.none}
+          <span className="inline-block h-3 w-3 rounded bg-muted" /> {tp.legend.none}
         </span>
       </div>
 
@@ -221,7 +169,7 @@ export default function ProgressMatrix({ language, sessionId, totalCommands, onC
             <thead>
               <tr>
                 <th className="border-b border-r bg-muted px-3 py-2 text-left text-xs font-semibold text-muted-foreground">
-                  {t.seat}
+                  {tc.seat}
                 </th>
                 {commandIndices.map((idx) => (
                   <th key={idx} className="border-b bg-muted px-1 py-2 text-center">
@@ -238,7 +186,7 @@ export default function ProgressMatrix({ language, sessionId, totalCommands, onC
             <tbody>
               <tr className="bg-blue-50 dark:bg-blue-950/30">
                 <td className="border-r bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-900 dark:border-border dark:bg-blue-950/30 dark:text-blue-200">
-                  {t.instructor}
+                  {tc.instructor}
                 </td>
                 {commandIndices.map((idx) => {
                   const checked = instructorCheckpoints.includes(idx);

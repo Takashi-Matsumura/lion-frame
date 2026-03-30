@@ -2,32 +2,11 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui";
-
-const translations = {
-  en: {
-    title: "Enter your seat number",
-    description: "Enter a number between 1 and {max}",
-    namePlaceholder: "Your name",
-    nameLabel: "Display name",
-    start: "Join Session",
-    back: "Back",
-    error: "Please enter a valid seat number (1-{max})",
-    nameError: "Please enter your name",
-  },
-  ja: {
-    title: "座席番号を入力してください",
-    description: "1〜{max}の番号を入力してください",
-    namePlaceholder: "あなたの名前",
-    nameLabel: "表示名",
-    start: "セッションに参加",
-    back: "戻る",
-    error: "1〜{max}の番号を入力してください",
-    nameError: "名前を入力してください",
-  },
-};
+import { handsonTranslations } from "./translations";
+import type { Language } from "./types";
 
 interface Props {
-  language: "en" | "ja";
+  language: Language;
   maxSeats: number;
   sessionTitle?: string;
   defaultName?: string;
@@ -43,7 +22,7 @@ export default function SeatSelectionDialog({
   onSubmit,
   onBack,
 }: Props) {
-  const t = translations[language];
+  const t = handsonTranslations[language].seatSelection;
   const [seatValue, setSeatValue] = useState("");
   const [nameValue, setNameValue] = useState(defaultName);
   const [error, setError] = useState("");

@@ -2,12 +2,12 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { getLanguage } from "@/lib/i18n/get-language";
-import TraineeClient from "./TraineeClient";
+import InstructorView from "./InstructorView";
 import type { Language } from "@/components/handson/types";
 
 const translations = {
-  en: { title: "Hands-on" },
-  ja: { title: "ハンズオン" },
+  en: { title: "Hands-on Management" },
+  ja: { title: "ハンズオン管理" },
 };
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -16,25 +16,19 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: t.title };
 }
 
-export default async function HandsonPage() {
+export default async function HandsonManagementPage() {
   const session = await auth();
   if (!session?.user) {
     redirect("/login");
   }
 
-  // GUEST専用ページ — 他ロールはダッシュボードへリダイレクト
-  const role = session.user.role as string;
-  if (role !== "GUEST") {
-    redirect("/dashboard");
-  }
-
   const language = (await getLanguage()) as Language;
 
   return (
-    <TraineeClient
+    <InstructorView
       language={language}
       userId={session.user.id}
-      userName={session.user.name || ""}
+      userRole={session.user.role as string}
     />
   );
 }

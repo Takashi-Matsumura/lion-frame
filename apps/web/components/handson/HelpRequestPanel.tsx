@@ -1,82 +1,51 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useCallback } from "react";
 import { Button } from "@/components/ui";
-
-const translations = {
-  en: {
-    noRequests: "No help requests at the moment.",
-    seat: "Seat",
-    section: "Section",
-    resolve: "Resolved",
-    helpRequests: "Help Requests",
-  },
-  ja: {
-    noRequests: "現在、ヘルプリクエストはありません。",
-    seat: "座席",
-    section: "セクション",
-    resolve: "対応済み",
-    helpRequests: "ヘルプリクエスト",
-  },
-};
-
-interface HelpRequest {
-  logId: string;
-  participantId: string;
-  seatNumber: number;
-  displayName: string;
-  sectionIndex: number;
-  message?: string;
-  createdAt: string;
-}
+import { handsonTranslations } from "./translations";
+import { usePolling } from "./hooks";
+import { fetchHelpRequests as apiFetchHelp, resolveHelpRequest } from "./api";
+import type { Language, HelpRequestInfo } from "./types";
 
 interface Props {
-  language: "en" | "ja";
+  language: Language;
   sessionId: string;
 }
 
 const POLL_INTERVAL = 3000;
 
 export default function HelpRequestPanel({ language, sessionId }: Props) {
-  const t = translations[language];
-  const [requests, setRequests] = useState<HelpRequest[]>([]);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const tc = handsonTranslations[language].common;
+  const t = handsonTranslations[language].helpPanel;
 
-  const fetchHelp = useCallback(async () => {
-    try {
-      const res = await fetch(`/api/handson/sessions/${sessionId}/help`);
-      if (res.ok) {
-        const data = await res.json();
-        setRequests(data.requests || []);
-      }
-    } catch {
-      // ignore
-    }
-  }, [sessionId]);
-
-  useEffect(() => {
-    fetchHelp();
-    intervalRef.current = setInterval(fetchHelp, POLL_INTERVAL);
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    };
-  }, [fetchHelp]);
+  const fetchFn = useCallback(() => apiFetchHelp(sessionId), [sessionId]);
+  const { data: requests, hasConnectionIssue, refresh } = usePolling<HelpRequestInfo[]>(fetchFn, POLL_INTERVAL);
 
   async function handleResolve(logId: string) {
     try {
-      await fetch(`/api/handson/sessions/${sessionId}/help?logId=${logId}`, {
-        method: "DELETE",
-      });
-      setRequests((prev) => prev.filter((r) => r.logId !== logId));
+      await resolveHelpRequest(sessionId, logId);
+      refresh();
     } catch {
-      // ignore
+      // handled by api layer
     }
   }
 
-  if (requests.length === 0) {
+  if (!requests || requests.length === 0) {
     return (
       <div className="py-8 text-center text-sm text-muted-foreground">
-        {t.noRequests}
+        {hasConnectionIssue ? (
+          <div className="flex flex-col items-center gap-2">
+            <span className="text-amber-600 dark:text-amber-400">{tc.connectionError}</span>
+            <button
+              onClick={refresh}
+              className="rounded-md border border-amber-300 px-3 py-1 text-xs font-medium text-amber-700 hover:bg-amber-100 transition dark:border-amber-800 dark:text-amber-300 dark:hover:bg-amber-900/40"
+            >
+              {tc.retry}
+            </button>
+          </div>
+        ) : (
+          t.noRequests
+        )}
       </div>
     );
   }
@@ -89,13 +58,13 @@ export default function HelpRequestPanel({ language, sessionId }: Props) {
           className="flex items-center gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 shadow-sm animate-pulse dark:border-red-900 dark:bg-red-950/40"
         >
           <span className="text-lg font-bold text-red-700 dark:text-red-400">
-            {t.seat} {req.seatNumber}
+            {tc.seat} {req.seatNumber}
           </span>
           <span className="text-sm font-medium text-foreground">
             {req.displayName}
           </span>
           <span className="text-sm text-muted-foreground">
-            {t.section} {req.sectionIndex + 1}
+            {tc.section} {req.sectionIndex + 1}
           </span>
           {req.message && (
             <span className="text-sm text-muted-foreground italic">
@@ -108,7 +77,7 @@ export default function HelpRequestPanel({ language, sessionId }: Props) {
               size="sm"
               onClick={() => handleResolve(req.logId)}
             >
-              {t.resolve}
+              {tc.resolve}
             </Button>
           </div>
         </div>

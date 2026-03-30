@@ -143,9 +143,11 @@ cd apps/web && npx prisma db push && pnpm db:seed
 | ハンズオン | HandsonSession, HandsonParticipant, HandsonLog |
 | システム | SystemSetting |
 
+> **ハンズオン画面分離:** 講師用（`/handson-management`、userグループ、`handson`アクセスキー必須）と受講者用（`/handson`、guestグループ、GUEST専用）の2メニューに分離。GUEST以外が`/handson`にアクセスするとダッシュボードにリダイレクト。講師メニューはアクセスキーを付与された社員が利用可能（ADMINはキー不要）。
 > **ハンズオンセッション状態フロー:** `準備中`(READY) → `リハーサル`(REHEARSAL) → `開催中`(ACTIVE) → `終了`(ENDED)。リハーサルを経ずに直接「開始」も可能。状態はDB列ではなく`SystemSetting`で管理: `handson_active_session_id`（開催中）、`handson_rehearsal_session_id`（リハーサル中）、`endedAt`（終了）。
 > **ハンズオンリハーサル:** リハーサル中はGUESTも含む全ロールが参加可能（講師が事前確認できる）。リハーサル終了時に参加者・ログデータはクリアされ、本番はクリーンな状態で開始。操作（リハーサル開始/終了/本番開始/終了/削除）はセッション作成者（オーナー）またはADMINのみ。
 > **ハンズオン受講者フロー:** `/api/handson/active`が`availableSessions`（アクティブ+リハーサル）を返す。1つなら自動遷移、複数なら選択画面を表示。受講者はセッション終了を10秒ポーリングで検知し自動復帰。座席選択ダイアログに「戻る」ボタンあり。
+> **ハンズオンコード構造:** 共通基盤は`components/handson/`に集約（`types.ts`型定義、`translations.ts`翻訳、`hooks.ts`ポーリング/ドキュメント取得、`api.ts`APIクライアント、`skeletons.tsx`スケルトン）。SessionManagerは`SessionCreateForm`+`SessionListTable`に分割。SessionAnalyticsは`analytics/`サブディレクトリに6コンポーネント分割。
 > **AI体験（AI Playground）:** AI有効状態は`/api/ai-playground/settings`から`ai_enabled`を取得（ADMIN専用APIではなく全ロールアクセス可）。GUESTロールでも利用可能。モードボタンはトグル式（再クリックで解除）。モード未選択時はシステムプロンプトなしのシンプルチャット。初期状態はモード未選択。
 > **RAGコレクション分離:** ChromaDB内で`guest`（AI体験用）と`business`（AIチャット用）の2コレクションに分離。ゲストユーザが社内業務ドキュメントにアクセスすることを防止。APIの`collection`パラメータで指定（未指定時は`business`で後方互換）。将来的にDockerコンテナレベルの物理分離も検討可（`backend/README.md`参照）。
 

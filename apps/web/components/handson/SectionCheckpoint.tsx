@@ -1,27 +1,17 @@
 "use client";
 
 import { useState } from "react";
-
-const translations = {
-  en: {
-    done: "Done",
-    completed: "Completed",
-    sending: "Sending...",
-  },
-  ja: {
-    done: "できた",
-    completed: "完了",
-    sending: "送信中...",
-  },
-};
+import { handsonTranslations } from "./translations";
+import type { Language } from "./types";
 
 interface Props {
-  language: "en" | "ja";
+  language: Language;
   onComplete: () => Promise<void>;
 }
 
 export default function SectionCheckpoint({ language, onComplete }: Props) {
-  const t = translations[language];
+  const tc = handsonTranslations[language].common;
+  const t = handsonTranslations[language].checkpoint;
   const [done, setDone] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -56,7 +46,7 @@ export default function SectionCheckpoint({ language, onComplete }: Props) {
       <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <rect x="3" y="3" width="18" height="18" rx="4" />
       </svg>
-      {loading ? t.sending : t.done}
+      {loading ? tc.sending : t.done}
     </button>
   );
 }

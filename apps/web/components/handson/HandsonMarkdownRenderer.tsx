@@ -5,23 +5,12 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
 import CommandStatusButtons from "./CommandStatusButtons";
+import { handsonTranslations } from "./translations";
+import type { Language } from "./types";
 import type { ParsedHandson, HandsonSection, HandsonStep } from "@/lib/addon-modules/handson/markdown-parser";
 
-const translations = {
-  en: {
-    clickToExpand: "Click to expand",
-    copied: "Copied!",
-    copy: "Copy",
-  },
-  ja: {
-    clickToExpand: "クリックで展開",
-    copied: "コピーしました",
-    copy: "コピー",
-  },
-};
-
 interface Props {
-  language: "en" | "ja";
+  language: Language;
   parsed: ParsedHandson;
   readOnly?: boolean;
   onCommandReport?: (commandIndex: number, status: "ok" | "error") => Promise<void>;
@@ -39,7 +28,7 @@ export default function HandsonMarkdownRenderer({
   onInstructorCheckpoint,
   initialStatuses,
 }: Props) {
-  const t = translations[language];
+  const t = handsonTranslations[language].markdownRenderer;
 
   return (
     <div className="handson-article">
@@ -74,7 +63,7 @@ function ColumnSection({
   expandLabel,
 }: {
   section: HandsonSection;
-  language: "en" | "ja";
+  language: Language;
   expandLabel: string;
 }) {
   return (
@@ -95,7 +84,7 @@ function ColumnSection({
             >
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
             </svg>
-            {language === "ja" ? "コラム：" : "Column: "}{col.title}
+            {handsonTranslations[language].markdownRenderer.column}{col.title}
             <span className="ml-auto text-xs font-normal text-amber-600 dark:text-amber-400">
               {expandLabel}
             </span>
@@ -123,7 +112,7 @@ function BodySection({
   initialStatuses,
 }: {
   section: HandsonSection;
-  language: "en" | "ja";
+  language: Language;
   readOnly: boolean;
   onCommandReport?: (commandIndex: number, status: "ok" | "error") => Promise<void>;
   onInstructorCheckpoint?: (commandIndex: number) => Promise<void>;
@@ -210,7 +199,7 @@ function StepContent({
   initialStatuses,
 }: {
   step: HandsonStep;
-  language: "en" | "ja";
+  language: Language;
   readOnly: boolean;
   onCommandReport?: (commandIndex: number, status: "ok" | "error") => Promise<void>;
   onInstructorCheckpoint?: (commandIndex: number) => Promise<void>;
@@ -271,7 +260,7 @@ function InstructorCheckpointButton({
   globalNumber,
   onCheckpoint,
 }: {
-  language: "en" | "ja";
+  language: Language;
   globalNumber: number;
   onCheckpoint: () => Promise<void>;
 }) {
@@ -298,7 +287,7 @@ function InstructorCheckpointButton({
         <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
         </svg>
-        {language === "ja" ? "チェック済み" : "Checked"}
+        {handsonTranslations[language].markdownRenderer.checked}
       </div>
     );
   }
@@ -315,8 +304,8 @@ function InstructorCheckpointButton({
           <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
         {loading
-          ? (language === "ja" ? "送信中..." : "Sending...")
-          : (language === "ja" ? "チェックポイント" : "Checkpoint")}
+          ? handsonTranslations[language].common.sending
+          : handsonTranslations[language].markdownRenderer.checkpoint}
       </button>
     </div>
   );

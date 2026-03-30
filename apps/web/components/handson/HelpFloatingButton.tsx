@@ -1,27 +1,17 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-
-const translations = {
-  en: {
-    help: "I need help",
-    sent: "Help requested",
-    sending: "Sending...",
-  },
-  ja: {
-    help: "助けてほしい",
-    sent: "送信しました",
-    sending: "送信中...",
-  },
-};
+import { handsonTranslations } from "./translations";
+import type { Language } from "./types";
 
 interface Props {
-  language: "en" | "ja";
+  language: Language;
   onRequest: (sectionIndex: number) => Promise<void>;
 }
 
 export default function HelpFloatingButton({ language, onRequest }: Props) {
-  const t = translations[language];
+  const tc = handsonTranslations[language].common;
+  const t = handsonTranslations[language].helpButton;
   const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
   const currentSectionRef = useRef(0);
@@ -84,7 +74,7 @@ export default function HelpFloatingButton({ language, onRequest }: Props) {
           <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M12 3a9 9 0 100 18 9 9 0 000-18z" />
           </svg>
-          {loading ? t.sending : t.help}
+          {loading ? tc.sending : t.help}
         </>
       )}
     </button>
