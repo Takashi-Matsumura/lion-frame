@@ -2,12 +2,19 @@
 
 import { useEffect, useRef, useCallback, useImperativeHandle, forwardRef } from "react";
 import { EditorView } from "@codemirror/view";
-import { createEditorState, livePreviewCompartment, tablePreviewCompartment } from "@/components/business/editor/codemirror/setup";
+import { createEditorState, livePreviewCompartment, tablePreviewCompartment, selectionTooltipCompartment } from "@/components/business/editor/codemirror/setup";
 import { livePreviewPlugin, tableDecorationField } from "@/components/business/editor/codemirror/live-preview";
+import { selectionTooltipField, aiRequestCallbackFacet } from "@/components/business/editor/codemirror/selection-tooltip";
 
 export interface CodeMirrorEditorHandle {
   /** カーソル選択をクリアしてプレビュー表示に戻す */
   clearFocus: () => void;
+  /** 指定範囲のテキストを置換する */
+  replaceRange: (from: number, to: number, text: string) => void;
+  /** ドキュメント全体を置換する */
+  replaceAll: (text: string) => void;
+  /** 現在の選択範囲を取得する */
+  getSelection: () => { from: number; to: number; text: string } | null;
 }
 
 interface CodeMirrorEditorProps {
@@ -16,6 +23,7 @@ interface CodeMirrorEditorProps {
   onChange: (doc: string) => void;
   livePreview: boolean;
   readOnly?: boolean;
+  onAIRequest?: ((req: { action: string; selectedText: string; selectionRange: { from: number; to: number } }) => void) | null;
 }
 
 const CodeMirrorEditor = forwardRef<CodeMirrorEditorHandle, CodeMirrorEditorProps>(function CodeMirrorEditor({
@@ -24,6 +32,7 @@ const CodeMirrorEditor = forwardRef<CodeMirrorEditorHandle, CodeMirrorEditorProp
   onChange,
   livePreview,
   readOnly = false,
+  onAIRequest,
 }, ref) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
@@ -53,7 +62,7 @@ const CodeMirrorEditor = forwardRef<CodeMirrorEditorHandle, CodeMirrorEditorProp
       }
     };
 
-    const state = createEditorState(initialDoc, guardedOnChange, livePreview, readOnly);
+    const state = createEditorState(initialDoc, guardedOnChange, livePreview, readOnly, onAIRequest);
     const view = new EditorView({
       state,
       parent: containerRef.current,
@@ -86,14 +95,55 @@ const CodeMirrorEditor = forwardRef<CodeMirrorEditorHandle, CodeMirrorEditorProp
     }
   }, [livePreview]);
 
+  // AI選択ツールチップの動的切り替え
+  const onAIRequestRef = useRef(onAIRequest);
+  onAIRequestRef.current = onAIRequest;
+
+  useEffect(() => {
+    const view = viewRef.current;
+    if (!view) return;
+    try {
+      view.dispatch({
+        effects: selectionTooltipCompartment.reconfigure(
+          onAIRequest
+            ? [aiRequestCallbackFacet.of(onAIRequest), selectionTooltipField]
+            : [],
+        ),
+      });
+    } catch {
+      // View may be in transition
+    }
+  }, [onAIRequest]);
+
   // 外部からカーソルをクリアしてプレビュー表示に戻すためのハンドル
   useImperativeHandle(ref, () => ({
     clearFocus: () => {
       const view = viewRef.current;
       if (!view) return;
-      // フォーカスを外す → focusChanged がトリガーされ、
-      // getCursorLines が空Setを返し、全行プレビュー表示になる
       view.contentDOM.blur();
+    },
+    replaceRange: (from: number, to: number, text: string) => {
+      const view = viewRef.current;
+      if (!view) return;
+      view.dispatch({
+        changes: { from, to, insert: text },
+        selection: { anchor: from + text.length },
+      });
+    },
+    replaceAll: (text: string) => {
+      const view = viewRef.current;
+      if (!view) return;
+      view.dispatch({
+        changes: { from: 0, to: view.state.doc.length, insert: text },
+        selection: { anchor: 0 },
+      });
+    },
+    getSelection: () => {
+      const view = viewRef.current;
+      if (!view) return null;
+      const { from, to } = view.state.selection.main;
+      if (from === to) return null;
+      return { from, to, text: view.state.sliceDoc(from, to) };
     },
   }), []);
 

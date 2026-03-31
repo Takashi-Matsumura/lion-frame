@@ -24,11 +24,21 @@ const ShortcutFooter = dynamic(
   () => import("@/components/business/editor/ShortcutFooter"),
   { ssr: false },
 );
+const EditorAIPanel = dynamic(
+  () => import("@/components/business/editor/EditorAIPanel"),
+  { ssr: false },
+);
 
 interface FloatingEditorContentProps {
   docId: string;
   docType?: DocType;
   readOnly?: boolean;
+}
+
+interface AIRequest {
+  action: string;
+  selectedText?: string;
+  selectionRange?: { from: number; to: number };
 }
 
 export default function FloatingEditorContent({
@@ -41,6 +51,9 @@ export default function FloatingEditorContent({
   const [viewMode, setViewMode] = useState<ViewMode>("live");
   const [saving, setSaving] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const [aiEnabled, setAiEnabled] = useState(false);
+  const [aiPanelExpanded, setAiPanelExpanded] = useState(false);
+  const [aiPendingRequest, setAiPendingRequest] = useState<AIRequest | null>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const editorRef = useRef<CodeMirrorEditorHandle>(null);
   const { resolvedTheme } = useTheme();
@@ -91,6 +104,27 @@ export default function FloatingEditorContent({
     return () => {
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     };
+  }, []);
+
+  // AI利用可否チェック
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch("/api/ai/chat");
+        if (res.ok) {
+          const data = await res.json();
+          setAiEnabled(data.available === true);
+        }
+      } catch {
+        // AI利用不可
+      }
+    })();
+  }, []);
+
+  // AIパネルへのリクエスト送信
+  const handleAIRequest = useCallback((req: AIRequest) => {
+    setAiPanelExpanded(true);
+    setAiPendingRequest(req);
   }, []);
 
   // 閲覧モード: Escキーでエディタのフォーカスを外してプレビューに戻す
@@ -154,6 +188,8 @@ export default function FloatingEditorContent({
             setContent(newContent);
             handleChange(newContent);
           }}
+          aiEnabled={aiEnabled}
+          onAIRequest={handleAIRequest}
         />
       )}
 
@@ -166,10 +202,32 @@ export default function FloatingEditorContent({
             onChange={handleChange}
             livePreview={readOnly || viewMode === "live"}
             readOnly={readOnly}
+            onAIRequest={aiEnabled && !readOnly ? handleAIRequest : null}
           />
         </div>
       </div>
-      {!readOnly && <ShortcutFooter />}
+      {!readOnly && aiEnabled && aiPanelExpanded && (
+        <EditorAIPanel
+          expanded={aiPanelExpanded}
+          onToggle={() => setAiPanelExpanded((v) => !v)}
+          content={content}
+          onReplaceAll={(text) => {
+            editorRef.current?.replaceAll(text);
+          }}
+          onReplaceRange={(from, to, text) => {
+            editorRef.current?.replaceRange(from, to, text);
+          }}
+          pendingRequest={aiPendingRequest}
+          onRequestHandled={() => setAiPendingRequest(null)}
+        />
+      )}
+      {!readOnly && (
+        <ShortcutFooter
+          aiEnabled={aiEnabled}
+          aiPanelExpanded={aiPanelExpanded}
+          onAIToggle={() => setAiPanelExpanded((v) => !v)}
+        />
+      )}
 
       {!readOnly && (
         <div className="absolute bottom-7 right-3 text-[10px] text-muted-foreground">

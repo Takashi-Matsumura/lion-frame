@@ -15,15 +15,19 @@ import { obsidianTheme, obsidianHighlighting } from "./theme";
 import { livePreviewPlugin, tableDecorationField, editorFocusField, focusTracker } from "./live-preview";
 import { markdownKeymap } from "./keybindings";
 import { imeSupport } from "./ime-support";
+import { slashCommands } from "./slash-commands";
+import { selectionTooltipField, aiRequestCallbackFacet } from "./selection-tooltip";
 
 export const livePreviewCompartment = new Compartment();
 export const tablePreviewCompartment = new Compartment();
+export const selectionTooltipCompartment = new Compartment();
 
 export function createEditorState(
   doc: string,
   onChange: (doc: string) => void,
   livePreview: boolean = true,
-  readOnly: boolean = false
+  readOnly: boolean = false,
+  aiRequestCallback?: ((req: { action: string; selectedText: string; selectionRange: { from: number; to: number } }) => void) | null,
 ): EditorState {
   const extensions: Extension[] = [
     highlightSpecialChars(),
@@ -41,6 +45,12 @@ export function createEditorState(
     tablePreviewCompartment.of(livePreview ? tableDecorationField : []),
     livePreviewCompartment.of(livePreview ? livePreviewPlugin : []),
     imeSupport,
+    slashCommands,
+    selectionTooltipCompartment.of(
+      aiRequestCallback
+        ? [aiRequestCallbackFacet.of(aiRequestCallback), selectionTooltipField]
+        : [],
+    ),
     EditorView.updateListener.of((update) => {
       if (update.docChanged) {
         const content = update.state.doc.toString();

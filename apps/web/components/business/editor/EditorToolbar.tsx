@@ -1,13 +1,21 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState, useEffect, useCallback } from "react";
 import type { ViewMode } from "@/components/business/editor/types";
+
+interface AIRequest {
+  action: string;
+  selectedText?: string;
+  selectionRange?: { from: number; to: number };
+}
 
 interface ToolbarProps {
   viewMode: ViewMode;
   onViewModeChange: (mode: ViewMode) => void;
   content: string;
   onMediaInsert?: (markdown: string) => void;
+  aiEnabled?: boolean;
+  onAIRequest?: (req: AIRequest) => void;
 }
 
 function formatBytes(bytes: number): string {
@@ -20,9 +28,33 @@ export default function Toolbar({
   onViewModeChange,
   content,
   onMediaInsert,
+  aiEnabled = false,
+  onAIRequest,
 }: ToolbarProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  const [aiMenuOpen, setAiMenuOpen] = useState(false);
+  const aiMenuRef = useRef<HTMLDivElement>(null);
+
+  // メニュー外クリックで閉じる
+  useEffect(() => {
+    if (!aiMenuOpen) return;
+    const handleClick = (e: MouseEvent) => {
+      if (aiMenuRef.current && !aiMenuRef.current.contains(e.target as Node)) {
+        setAiMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [aiMenuOpen]);
+
+  const handleAIAction = useCallback(
+    (action: string) => {
+      setAiMenuOpen(false);
+      onAIRequest?.({ action });
+    },
+    [onAIRequest],
+  );
 
   const stats = useMemo(() => {
     const chars = content.length;
@@ -74,6 +106,45 @@ export default function Toolbar({
         </span>
       </div>
       <div className="toolbar-group">
+        {/* AI メニュー */}
+        {aiEnabled && onAIRequest && (
+          <div className="toolbar-ai-menu-wrapper" ref={aiMenuRef}>
+            <button
+              className={`toolbar-btn ${aiMenuOpen ? "active" : ""}`}
+              onClick={() => setAiMenuOpen((v) => !v)}
+              title="AIアシスト"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 2L2 7l10 5 10-5-10-5z" />
+                <path d="M2 17l10 5 10-5" />
+                <path d="M2 12l10 5 10-5" />
+              </svg>
+              <span className="toolbar-btn-label">AI</span>
+            </button>
+            {aiMenuOpen && (
+              <div className="toolbar-ai-dropdown">
+                <button
+                  className="toolbar-ai-dropdown-item"
+                  onClick={() => handleAIAction("proofread-all")}
+                >
+                  文書全体を校正
+                </button>
+                <button
+                  className="toolbar-ai-dropdown-item"
+                  onClick={() => handleAIAction("summarize-all")}
+                >
+                  要約を生成
+                </button>
+                <button
+                  className="toolbar-ai-dropdown-item"
+                  onClick={() => handleAIAction("suggest-structure")}
+                >
+                  構成を提案
+                </button>
+              </div>
+            )}
+          </div>
+        )}
         {/* メディアアップロード */}
         {onMediaInsert && (
           <>

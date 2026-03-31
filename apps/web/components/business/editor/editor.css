@@ -113,6 +113,49 @@
   display: inline;
 }
 
+/* Toolbar AI Dropdown */
+.toolbar-ai-menu-wrapper {
+  position: relative;
+}
+
+.toolbar-ai-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 4px;
+  min-width: 160px;
+  background: var(--editor-bg-primary);
+  border: 1px solid var(--editor-border-color);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  padding: 4px;
+  z-index: 50;
+}
+
+.editor-wrapper[data-theme="dark"] .toolbar-ai-dropdown {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+.toolbar-ai-dropdown-item {
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-family: var(--editor-font);
+  text-align: left;
+  border: none;
+  border-radius: 4px;
+  background: none;
+  color: var(--editor-text-normal);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.toolbar-ai-dropdown-item:hover {
+  background: var(--editor-accent);
+  color: #fff;
+}
+
 /* Editor Content Area */
 .editor-content {
   flex: 1;
@@ -262,3 +305,258 @@
 .shortcut-item { display: flex; align-items: center; gap: 4px; white-space: nowrap; }
 .shortcut-kbd { font-family: "SF Mono", "Fira Code", monospace; font-size: 11px; color: var(--editor-text-normal); background: var(--editor-bg-tertiary); border: 1px solid var(--editor-border-color); border-radius: 3px; padding: 0 4px; line-height: 18px; }
 .shortcut-label { font-size: 11px; color: var(--editor-text-faint); }
+
+/* ── Shortcut Footer AI Button ── */
+
+.shortcut-ai-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  padding: 2px 8px;
+  background: none;
+  border: 1px solid var(--editor-border-color);
+  border-radius: 4px;
+  color: var(--editor-text-muted);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.shortcut-ai-btn:hover {
+  background: var(--editor-bg-tertiary);
+  color: var(--editor-text-normal);
+  border-color: var(--editor-accent);
+}
+
+.shortcut-ai-btn.active {
+  background: var(--editor-accent);
+  color: #fff;
+  border-color: var(--editor-accent);
+}
+
+/* ── AI Assist Panel ── */
+
+.editor-ai-panel {
+  display: flex;
+  flex-direction: column;
+  max-height: 40%;
+  border-top: 1px solid var(--editor-border-color);
+  background: var(--editor-bg-secondary);
+  flex-shrink: 0;
+}
+
+.editor-ai-result {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px 14px;
+  min-height: 60px;
+  max-height: 200px;
+}
+
+.editor-ai-result-text {
+  font-family: var(--editor-font);
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--editor-text-normal);
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin: 0;
+}
+
+.editor-ai-cursor {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  background: var(--editor-accent);
+  margin-left: 1px;
+  vertical-align: text-bottom;
+  animation: editor-ai-blink 0.8s step-end infinite;
+}
+
+@keyframes editor-ai-blink {
+  50% { opacity: 0; }
+}
+
+.editor-ai-error {
+  font-size: 13px;
+  color: #dc2626;
+  padding: 4px 0;
+}
+
+.editor-ai-actions {
+  display: flex;
+  gap: 6px;
+  padding: 0 14px 8px;
+}
+
+.editor-ai-action-btn {
+  padding: 4px 12px;
+  font-size: 12px;
+  border: 1px solid var(--editor-border-color);
+  border-radius: 4px;
+  background: var(--editor-bg-primary);
+  color: var(--editor-text-normal);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.editor-ai-action-btn:hover {
+  background: var(--editor-bg-tertiary);
+}
+
+.editor-ai-action-primary {
+  background: var(--editor-accent);
+  color: #fff;
+  border-color: var(--editor-accent);
+}
+
+.editor-ai-action-primary:hover {
+  opacity: 0.9;
+  background: var(--editor-accent);
+}
+
+.editor-ai-input-row {
+  display: flex;
+  gap: 6px;
+  padding: 8px 14px;
+  border-top: 1px solid var(--editor-border-color);
+}
+
+.editor-ai-input {
+  flex: 1;
+  padding: 6px 10px;
+  font-size: 13px;
+  font-family: var(--editor-font);
+  border: 1px solid var(--editor-border-color);
+  border-radius: 6px;
+  background: var(--editor-bg-primary);
+  color: var(--editor-text-normal);
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.editor-ai-input:focus {
+  border-color: var(--editor-accent);
+}
+
+.editor-ai-input::placeholder {
+  color: var(--editor-text-faint);
+}
+
+.editor-ai-send-btn {
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 500;
+  border: none;
+  border-radius: 6px;
+  background: var(--editor-accent);
+  color: #fff;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+  white-space: nowrap;
+}
+
+.editor-ai-send-btn:hover:not(:disabled) {
+  opacity: 0.85;
+}
+
+.editor-ai-send-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.editor-ai-stop-btn {
+  background: #dc2626;
+}
+
+/* ── AI Selection Tooltip ── */
+
+.cm-ai-selection-bar {
+  display: flex;
+  gap: 2px;
+  padding: 4px;
+  background: var(--editor-bg-primary);
+  border: 1px solid var(--editor-border-color);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.editor-wrapper[data-theme="dark"] .cm-ai-selection-bar {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.cm-ai-selection-btn {
+  padding: 4px 10px;
+  font-size: 12px;
+  font-family: var(--editor-font);
+  border: none;
+  border-radius: 4px;
+  background: none;
+  color: var(--editor-text-normal);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.cm-ai-selection-btn:hover {
+  background: var(--editor-accent);
+  color: #fff;
+}
+
+.cm-editor .cm-tooltip {
+  z-index: 100;
+}
+
+/* ── Slash Commands Autocomplete ── */
+
+.cm-editor .cm-tooltip-autocomplete {
+  background: var(--editor-bg-primary) !important;
+  border: 1px solid var(--editor-border-color) !important;
+  border-radius: 8px !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12) !important;
+  padding: 4px !important;
+  min-width: 200px;
+}
+
+.editor-wrapper[data-theme="dark"] .cm-editor .cm-tooltip-autocomplete {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4) !important;
+}
+
+.cm-editor .cm-tooltip-autocomplete > ul {
+  font-family: var(--editor-font) !important;
+  max-height: 240px !important;
+}
+
+.cm-editor .cm-tooltip-autocomplete > ul > li {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 6px 10px !important;
+  border-radius: 4px !important;
+  line-height: 1.4 !important;
+}
+
+.cm-editor .cm-tooltip-autocomplete > ul > li[aria-selected] {
+  background: var(--editor-accent) !important;
+  color: #fff !important;
+}
+
+.cm-editor .cm-completionLabel {
+  font-size: 13px !important;
+  font-family: "SF Mono", "Fira Code", monospace !important;
+  color: var(--editor-text-normal);
+}
+
+.cm-editor .cm-completionDetail {
+  font-size: 12px !important;
+  color: var(--editor-text-muted) !important;
+  margin-left: 12px !important;
+  font-style: normal !important;
+}
+
+.cm-editor .cm-tooltip-autocomplete > ul > li[aria-selected] .cm-completionLabel,
+.cm-editor .cm-tooltip-autocomplete > ul > li[aria-selected] .cm-completionDetail {
+  color: #fff !important;
+}

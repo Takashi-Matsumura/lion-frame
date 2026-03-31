@@ -39,6 +39,9 @@ importers:
       '@auth/prisma-adapter':
         specifier: ^2.10.0
         version: 2.11.1(@prisma/client@6.19.2(prisma@6.19.2(typescript@5.9.3))(typescript@5.9.3))
+      '@codemirror/autocomplete':
+        specifier: ^6.20.1
+        version: 6.20.1
       '@codemirror/commands':
         specifier: ^6.10.3
         version: 6.10.3
