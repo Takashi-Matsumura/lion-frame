@@ -30,9 +30,11 @@ export function FloatingWindow({ language = "en" }: FloatingWindowProps) {
     restore,
     setPosition,
     setSize,
+    invertTheme,
   } = useFloatingWindowStore();
 
   const isMaximized = windowStatus === "maximized";
+  const themeClass = invertTheme ? "floating-window-inverted" : "";
 
   const windowRef = useRef<HTMLDivElement>(null);
   const isDraggingRef = useRef(false);
@@ -171,7 +173,7 @@ export function FloatingWindow({ language = "en" }: FloatingWindowProps) {
     return createPortal(
       <button
         type="button"
-        className="floating-window-inverted fixed bottom-4 left-4 z-[100] bg-card border border-border rounded-lg shadow-lg cursor-pointer hover:bg-accent transition-colors"
+        className={`${themeClass} fixed bottom-4 left-4 z-[100] bg-card border border-border rounded-lg shadow-lg cursor-pointer hover:bg-accent transition-colors`}
         onClick={restore}
       >
         <div className="px-4 py-2 flex items-center gap-2">
@@ -192,7 +194,7 @@ export function FloatingWindow({ language = "en" }: FloatingWindowProps) {
   const windowContent = (
     <div
       ref={windowRef}
-      className="floating-window-inverted fixed z-[100] bg-card border border-border rounded-lg shadow-[0_8px_32px_rgba(0,0,0,0.3),0_2px_8px_rgba(0,0,0,0.2)] flex flex-col overflow-hidden"
+      className={`${themeClass} fixed z-[100] bg-card border border-border rounded-lg shadow-[0_8px_32px_rgba(0,0,0,0.3),0_2px_8px_rgba(0,0,0,0.2)] flex flex-col overflow-hidden`}
       style={{
         left: isMaximized ? 0 : position.x,
         top: isMaximized ? 0 : position.y,

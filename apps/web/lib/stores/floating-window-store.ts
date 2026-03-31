@@ -24,6 +24,7 @@ interface OpenOptions {
   initialSize?: FloatingWindowSize;
   modal?: boolean;
   noPadding?: boolean;
+  invertTheme?: boolean;
 }
 
 // architecture-avoid-boolean-props: 3つのbooleanを単一のstatus型に統合
@@ -52,6 +53,9 @@ interface FloatingWindowStore {
   // パディングなし（エディタ等の全面表示用）
   noPadding: boolean;
 
+  // テーマ反転（アプリと逆のテーマを適用）
+  invertTheme: boolean;
+
   // アクション
   open: (options?: OpenOptions) => void;
   close: () => void;
@@ -77,6 +81,7 @@ export const useFloatingWindowStore = create<FloatingWindowStore>(
     content: null,
     modal: false,
     noPadding: false,
+    invertTheme: false,
 
     open: (options) => {
       set({
@@ -88,6 +93,7 @@ export const useFloatingWindowStore = create<FloatingWindowStore>(
         size: options?.initialSize ?? DEFAULT_SIZE,
         modal: options?.modal ?? false,
         noPadding: options?.noPadding ?? false,
+        invertTheme: options?.invertTheme ?? false,
       });
     },
 
@@ -99,6 +105,7 @@ export const useFloatingWindowStore = create<FloatingWindowStore>(
         prevSize: null,
         modal: false,
         noPadding: false,
+        invertTheme: false,
       });
     },
 

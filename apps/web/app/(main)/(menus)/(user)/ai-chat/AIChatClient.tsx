@@ -463,6 +463,7 @@ export function AIChatClient({ language, userName }: AIChatClientProps) {
       initialSize: { width: 700, height: 520 },
       initialPosition: { x: 200, y: 120 },
       modal: true,
+      invertTheme: true,
     });
   }, [floatingWindow, language, t.ragDialog.title]);
 
