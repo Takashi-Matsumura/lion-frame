@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect } from "react";
+import ProofreadReview, { type ProofreadItem } from "./ProofreadReview";
 
 type EditorAction =
   | "proofread"
@@ -13,18 +14,32 @@ type EditorAction =
   | "suggest-structure"
   | "freeform";
 
+// 選択範囲に対するアクション（インラインDiff表示対象）
+const INLINE_DIFF_ACTIONS = new Set<string>([
+  "proofread",
+  "rewrite",
+  "to-markdown",
+]);
+
 interface AIRequest {
   action: EditorAction;
   selectedText?: string;
   selectionRange?: { from: number; to: number };
 }
 
+interface InlineSuggestion {
+  from: number;
+  to: number;
+  original: string;
+  suggested: string;
+}
+
 interface EditorAIPanelProps {
   expanded: boolean;
   onToggle: () => void;
   content: string;
-  onReplaceAll: (text: string) => void;
   onReplaceRange: (from: number, to: number, text: string) => void;
+  onShowSuggestion: (suggestion: InlineSuggestion) => void;
   pendingRequest: AIRequest | null;
   onRequestHandled: () => void;
 }
@@ -33,8 +48,8 @@ export default function EditorAIPanel({
   expanded,
   onToggle,
   content,
-  onReplaceAll,
   onReplaceRange,
+  onShowSuggestion,
   pendingRequest,
   onRequestHandled,
 }: EditorAIPanelProps) {
@@ -43,11 +58,11 @@ export default function EditorAIPanel({
   const [streaming, setStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastRequest, setLastRequest] = useState<AIRequest | null>(null);
+  const [proofreadItems, setProofreadItems] = useState<ProofreadItem[] | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const resultRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // 外部からのリクエスト（選択アクション、ツールバーメニュー）を処理
   useEffect(() => {
     if (pendingRequest) {
       executeRequest(pendingRequest);
@@ -56,12 +71,11 @@ export default function EditorAIPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pendingRequest]);
 
-  // パネル展開時に入力にフォーカス
   useEffect(() => {
-    if (expanded && !streaming && !result) {
+    if (expanded && !streaming && !result && !proofreadItems) {
       inputRef.current?.focus();
     }
-  }, [expanded, streaming, result]);
+  }, [expanded, streaming, result, proofreadItems]);
 
   const executeRequest = useCallback(
     async (req: AIRequest) => {
@@ -72,6 +86,7 @@ export default function EditorAIPanel({
       setLastRequest(req);
       setResult("");
       setError(null);
+      setProofreadItems(null);
       setStreaming(true);
 
       const controller = new AbortController();
@@ -127,13 +142,35 @@ export default function EditorAIPanel({
               if (data.error) {
                 setError(data.error);
               }
-              if (data.done) {
-                // streaming complete
-              }
             } catch {
               // ignore parse errors
             }
           }
+        }
+
+        // ストリーミング完了後の処理
+        if (req.action === "proofread-all" && accumulated) {
+          const items = parseProofreadResult(accumulated);
+          if (items) {
+            setProofreadItems(items);
+            setResult("");
+          } else {
+            setError("校正結果の解析に失敗しました。もう一度お試しください。");
+            setResult("");
+          }
+        } else if (
+          INLINE_DIFF_ACTIONS.has(req.action) &&
+          req.selectionRange &&
+          accumulated
+        ) {
+          // 選択範囲アクション → インラインDiffとして表示
+          onShowSuggestion({
+            from: req.selectionRange.from,
+            to: req.selectionRange.to,
+            original: req.selectedText || "",
+            suggested: accumulated,
+          });
+          setResult("");
         }
       } catch (err) {
         if (err instanceof DOMException && err.name === "AbortError") {
@@ -146,7 +183,7 @@ export default function EditorAIPanel({
         abortRef.current = null;
       }
     },
-    [content, input, streaming],
+    [content, input, streaming, onShowSuggestion],
   );
 
   const handleSubmit = useCallback(
@@ -163,27 +200,6 @@ export default function EditorAIPanel({
     abortRef.current?.abort();
   }, []);
 
-  const handleReplace = useCallback(() => {
-    if (!result) return;
-    if (
-      lastRequest?.selectionRange &&
-      lastRequest.action !== "proofread-all" &&
-      lastRequest.action !== "summarize-all" &&
-      lastRequest.action !== "suggest-structure" &&
-      lastRequest.action !== "freeform"
-    ) {
-      onReplaceRange(
-        lastRequest.selectionRange.from,
-        lastRequest.selectionRange.to,
-        result,
-      );
-    } else {
-      onReplaceAll(result);
-    }
-    setResult("");
-    setLastRequest(null);
-  }, [result, lastRequest, onReplaceAll, onReplaceRange]);
-
   const handleCopy = useCallback(async () => {
     if (!result) return;
     await navigator.clipboard.writeText(result);
@@ -193,7 +209,24 @@ export default function EditorAIPanel({
     setResult("");
     setError(null);
     setLastRequest(null);
+    setProofreadItems(null);
+    proofreadSnapshotRef.current = null;
   }, []);
+
+  // 校正レビューで最初の「修正する」を押した時にスナップショットを保存
+  const proofreadSnapshotRef = useRef<string | null>(null);
+
+  const handleProofreadApply = useCallback(
+    (original: string, corrected: string) => {
+      if (!proofreadSnapshotRef.current) {
+        proofreadSnapshotRef.current = content;
+      }
+      const idx = content.indexOf(original);
+      if (idx === -1) return;
+      onReplaceRange(idx, idx + original.length, corrected);
+    },
+    [content, onReplaceRange],
+  );
 
   // 結果表示中にオートスクロール
   useEffect(() => {
@@ -204,16 +237,23 @@ export default function EditorAIPanel({
 
   if (!expanded) return null;
 
-  const isSelectionAction =
-    lastRequest?.selectionRange &&
-    lastRequest.action !== "proofread-all" &&
-    lastRequest.action !== "summarize-all" &&
-    lastRequest.action !== "suggest-structure" &&
-    lastRequest.action !== "freeform";
+  // 校正レビューモード
+  if (proofreadItems !== null) {
+    return (
+      <div className="editor-ai-panel">
+        <ProofreadReview
+          items={proofreadItems}
+          content={content}
+          onApply={handleProofreadApply}
+          onClose={handleClear}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="editor-ai-panel">
-      {/* 結果表示エリア */}
+      {/* 結果表示エリア（要約・構成提案・フリーフォームなど閲覧系のみ） */}
       {(result || error || streaming) && (
         <div className="editor-ai-result" ref={resultRef}>
           {error ? (
@@ -224,16 +264,9 @@ export default function EditorAIPanel({
         </div>
       )}
 
-      {/* アクションボタン */}
+      {/* アクションボタン（コピーとクリアのみ。置換ボタンなし） */}
       {result && !streaming && (
         <div className="editor-ai-actions">
-          <button
-            type="button"
-            className="editor-ai-action-btn editor-ai-action-primary"
-            onClick={handleReplace}
-          >
-            {isSelectionAction ? "選択範囲を置換" : "全体を置換"}
-          </button>
           <button
             type="button"
             className="editor-ai-action-btn"
@@ -281,5 +314,42 @@ export default function EditorAIPanel({
         )}
       </form>
     </div>
+  );
+}
+
+function parseProofreadResult(text: string): ProofreadItem[] | null {
+  try {
+    const parsed = JSON.parse(text.trim());
+    if (Array.isArray(parsed) && parsed.every(isProofreadItem)) {
+      return parsed;
+    }
+  } catch {
+    // fall through
+  }
+
+  const start = text.indexOf("[");
+  const end = text.lastIndexOf("]");
+  if (start === -1 || end === -1 || end <= start) return null;
+
+  try {
+    const jsonStr = text.slice(start, end + 1);
+    const parsed = JSON.parse(jsonStr);
+    if (Array.isArray(parsed) && parsed.every(isProofreadItem)) {
+      return parsed;
+    }
+  } catch {
+    // parse failed
+  }
+
+  return null;
+}
+
+function isProofreadItem(item: unknown): item is ProofreadItem {
+  if (!item || typeof item !== "object") return false;
+  const obj = item as Record<string, unknown>;
+  return (
+    typeof obj.original === "string" &&
+    typeof obj.corrected === "string" &&
+    typeof obj.reason === "string"
   );
 }

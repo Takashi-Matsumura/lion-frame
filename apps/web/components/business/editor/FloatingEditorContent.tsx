@@ -127,6 +127,17 @@ export default function FloatingEditorContent({
     setAiPendingRequest(req);
   }, []);
 
+  // インラインサジェスションの適用/却下
+  const handleSuggestionAction = useCallback(
+    (action: "accept" | "reject", suggestion: { from: number; to: number; original: string; suggested: string }) => {
+      if (action === "accept") {
+        editorRef.current?.replaceRange(suggestion.from, suggestion.to, suggestion.suggested);
+      }
+      editorRef.current?.clearSuggestion();
+    },
+    [],
+  );
+
   // 閲覧モード: Escキーでエディタのフォーカスを外してプレビューに戻す
   useEffect(() => {
     if (!readOnly) return;
@@ -203,6 +214,7 @@ export default function FloatingEditorContent({
             livePreview={readOnly || viewMode === "live"}
             readOnly={readOnly}
             onAIRequest={aiEnabled && !readOnly ? handleAIRequest : null}
+            onSuggestionAction={aiEnabled && !readOnly ? handleSuggestionAction : null}
           />
         </div>
       </div>
@@ -211,11 +223,11 @@ export default function FloatingEditorContent({
           expanded={aiPanelExpanded}
           onToggle={() => setAiPanelExpanded((v) => !v)}
           content={content}
-          onReplaceAll={(text) => {
-            editorRef.current?.replaceAll(text);
-          }}
           onReplaceRange={(from, to, text) => {
             editorRef.current?.replaceRange(from, to, text);
+          }}
+          onShowSuggestion={(suggestion) => {
+            editorRef.current?.showSuggestion(suggestion);
           }}
           pendingRequest={aiPendingRequest}
           onRequestHandled={() => setAiPendingRequest(null)}

@@ -2,19 +2,20 @@
 
 import { useEffect, useRef, useCallback, useImperativeHandle, forwardRef } from "react";
 import { EditorView } from "@codemirror/view";
-import { createEditorState, livePreviewCompartment, tablePreviewCompartment, selectionTooltipCompartment } from "@/components/business/editor/codemirror/setup";
+import { createEditorState, livePreviewCompartment, tablePreviewCompartment, selectionTooltipCompartment, inlineSuggestionCompartment } from "@/components/business/editor/codemirror/setup";
 import { livePreviewPlugin, tableDecorationField } from "@/components/business/editor/codemirror/live-preview";
 import { selectionTooltipField, aiRequestCallbackFacet } from "@/components/business/editor/codemirror/selection-tooltip";
+import { addSuggestionEffect, clearSuggestionEffect, suggestionCallbackFacet, type InlineSuggestion } from "@/components/business/editor/codemirror/inline-suggestion";
 
 export interface CodeMirrorEditorHandle {
-  /** カーソル選択をクリアしてプレビュー表示に戻す */
   clearFocus: () => void;
-  /** 指定範囲のテキストを置換する */
   replaceRange: (from: number, to: number, text: string) => void;
-  /** ドキュメント全体を置換する */
   replaceAll: (text: string) => void;
-  /** 現在の選択範囲を取得する */
   getSelection: () => { from: number; to: number; text: string } | null;
+  /** エディタ内にインラインサジェスションを表示する */
+  showSuggestion: (suggestion: InlineSuggestion) => void;
+  /** インラインサジェスションをクリアする */
+  clearSuggestion: () => void;
 }
 
 interface CodeMirrorEditorProps {
@@ -24,6 +25,7 @@ interface CodeMirrorEditorProps {
   livePreview: boolean;
   readOnly?: boolean;
   onAIRequest?: ((req: { action: string; selectedText: string; selectionRange: { from: number; to: number } }) => void) | null;
+  onSuggestionAction?: ((action: "accept" | "reject", suggestion: InlineSuggestion) => void) | null;
 }
 
 const CodeMirrorEditor = forwardRef<CodeMirrorEditorHandle, CodeMirrorEditorProps>(function CodeMirrorEditor({
@@ -33,6 +35,7 @@ const CodeMirrorEditor = forwardRef<CodeMirrorEditorHandle, CodeMirrorEditorProp
   livePreview,
   readOnly = false,
   onAIRequest,
+  onSuggestionAction,
 }, ref) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
@@ -62,7 +65,7 @@ const CodeMirrorEditor = forwardRef<CodeMirrorEditorHandle, CodeMirrorEditorProp
       }
     };
 
-    const state = createEditorState(initialDoc, guardedOnChange, livePreview, readOnly, onAIRequest);
+    const state = createEditorState(initialDoc, guardedOnChange, livePreview, readOnly, onAIRequest, onSuggestionAction);
     const view = new EditorView({
       state,
       parent: containerRef.current,
@@ -115,6 +118,23 @@ const CodeMirrorEditor = forwardRef<CodeMirrorEditorHandle, CodeMirrorEditorProp
     }
   }, [onAIRequest]);
 
+  // インラインサジェスションコールバックの動的切り替え
+  useEffect(() => {
+    const view = viewRef.current;
+    if (!view) return;
+    try {
+      view.dispatch({
+        effects: inlineSuggestionCompartment.reconfigure(
+          onSuggestionAction
+            ? suggestionCallbackFacet.of(onSuggestionAction)
+            : [],
+        ),
+      });
+    } catch {
+      // View may be in transition
+    }
+  }, [onSuggestionAction]);
+
   // 外部からカーソルをクリアしてプレビュー表示に戻すためのハンドル
   useImperativeHandle(ref, () => ({
     clearFocus: () => {
@@ -144,6 +164,25 @@ const CodeMirrorEditor = forwardRef<CodeMirrorEditorHandle, CodeMirrorEditorProp
       const { from, to } = view.state.selection.main;
       if (from === to) return null;
       return { from, to, text: view.state.sliceDoc(from, to) };
+    },
+    showSuggestion: (suggestion: InlineSuggestion) => {
+      const view = viewRef.current;
+      if (!view) return;
+      view.dispatch({
+        effects: addSuggestionEffect.of(suggestion),
+      });
+      // サジェスション位置にスクロール
+      view.dispatch({
+        selection: { anchor: suggestion.from },
+        scrollIntoView: true,
+      });
+    },
+    clearSuggestion: () => {
+      const view = viewRef.current;
+      if (!view) return;
+      view.dispatch({
+        effects: clearSuggestionEffect.of(undefined),
+      });
     },
   }), []);
 

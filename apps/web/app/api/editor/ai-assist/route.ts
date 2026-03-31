@@ -26,7 +26,24 @@ const ACTION_SYSTEM_PROMPTS: Record<Exclude<EditorAction, "freeform">, string> =
   continue:
     "あなたはプロのライターです。ユーザーが選択したテキストの続きを、同じ文体・トーン・マークダウン記法で自然に書いてください。続きのテキストのみを返してください。",
   "proofread-all":
-    "あなたはプロの校正者です。以下のドキュメント全体の誤字脱字・文法ミス・不自然な表現を修正してください。修正後のドキュメント全体を返してください。マークダウン記法はそのまま維持してください。",
+    `あなたはプロの校正者です。以下のドキュメントの誤字脱字・文法ミス・不自然な表現を見つけ、修正案を提示してください。
+
+必ず以下のJSON配列形式のみで回答してください。説明文やマークダウンは不要です。
+修正箇所がない場合は空配列 [] を返してください。
+
+[
+  {
+    "original": "修正前のテキスト（ドキュメント内の完全一致する部分）",
+    "corrected": "修正後のテキスト",
+    "reason": "修正理由（簡潔に）"
+  }
+]
+
+重要なルール:
+- "original" はドキュメント内に完全一致するテキストを正確に記載すること
+- マークダウン記法（#, *, \`, - など）が含まれる場合はそのまま記載すること
+- 内容の変更や追加は行わず、誤字脱字・文法のみを対象にすること
+- JSON以外のテキストは一切出力しないこと`,
   "summarize-all":
     "あなたは要約の専門家です。以下のドキュメント全体を簡潔に要約してください。要約のみを返してください。",
   "suggest-structure":
@@ -72,8 +89,10 @@ export async function POST(request: Request) {
 
     // ドキュメントコンテキストをシステムプロンプトに追加
     // コンテキストサイズ超過を防ぐため、ドキュメントが長い場合は切り詰める
-    // 日本語は1文字≒1-2トークン。安全側で文字数ベースの制限を適用
-    const MAX_DOC_CHARS = 6000;
+    // ローカルLLMはコンテキストが小さい（4096トークン等）ため、厳しめの制限が必要
+    // クラウドAPIは余裕があるため緩めに設定
+    const isLocalProvider = config.provider === "local";
+    const MAX_DOC_CHARS = isLocalProvider ? 2000 : 8000;
     const trimmedDoc =
       documentContent.length > MAX_DOC_CHARS
         ? documentContent.slice(0, MAX_DOC_CHARS) + "\n\n...（ドキュメントが長いため省略）"
@@ -94,6 +113,21 @@ export async function POST(request: Request) {
       { role: "system", content: systemPrompt },
       { role: "user", content: userContent },
     ];
+
+    // ローカルLLMの場合、コンテキスト超過を事前検知
+    // 日本語テキストは概ね1文字≒1トークンで推定
+    if (isLocalProvider) {
+      const estimatedTokens = systemPrompt.length + userContent.length;
+      const LOCAL_CONTEXT_LIMIT = 3500; // 4096から応答用500トークン分を差し引き
+      if (estimatedTokens > LOCAL_CONTEXT_LIMIT) {
+        return NextResponse.json(
+          {
+            error: `ドキュメントが長すぎるため処理できません（推定 ${estimatedTokens} トークン / 上限 ${LOCAL_CONTEXT_LIMIT} トークン）。より短い範囲を選択するか、クラウドAIプロバイダに切り替えてください。`,
+          },
+          { status: 400 },
+        );
+      }
+    }
 
     await AuditService.log({
       action: "EDITOR_AI_ASSIST",

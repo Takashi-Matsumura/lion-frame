@@ -336,6 +336,10 @@
   border-color: var(--editor-accent);
 }
 
+.shortcut-ai-btn.active .shortcut-label {
+  color: #fff;
+}
+
 /* ── AI Assist Panel ── */
 
 .editor-ai-panel {
@@ -469,6 +473,307 @@
 
 .editor-ai-stop-btn {
   background: #dc2626;
+}
+
+/* ── AI Restore Bar ── */
+
+.editor-ai-restore-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 14px;
+  background: rgba(234, 179, 8, 0.1);
+  border-bottom: 1px solid rgba(234, 179, 8, 0.3);
+  font-size: 12px;
+  color: #a16207;
+}
+
+.editor-wrapper[data-theme="dark"] .editor-ai-restore-bar {
+  background: rgba(234, 179, 8, 0.08);
+  border-bottom-color: rgba(234, 179, 8, 0.2);
+  color: #fbbf24;
+}
+
+.editor-ai-restore-btn {
+  padding: 3px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  border: 1px solid rgba(234, 179, 8, 0.5);
+  border-radius: 4px;
+  background: rgba(234, 179, 8, 0.15);
+  color: #a16207;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.editor-wrapper[data-theme="dark"] .editor-ai-restore-btn {
+  color: #fbbf24;
+  border-color: rgba(234, 179, 8, 0.4);
+  background: rgba(234, 179, 8, 0.1);
+}
+
+.editor-ai-restore-btn:hover {
+  background: rgba(234, 179, 8, 0.25);
+}
+
+/* ── Proofread Review ── */
+
+.proofread-review {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.proofread-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--editor-border-color);
+}
+
+.proofread-progress {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--editor-text-normal);
+}
+
+.proofread-stats {
+  font-size: 12px;
+  color: var(--editor-text-muted);
+}
+
+.proofread-diff {
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.proofread-diff-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.proofread-diff-label {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 3px;
+  line-height: 1.4;
+}
+
+.proofread-diff-label-del {
+  background: rgba(220, 38, 38, 0.12);
+  color: #dc2626;
+}
+
+.proofread-diff-label-ins {
+  background: rgba(22, 163, 74, 0.12);
+  color: #16a34a;
+}
+
+.proofread-diff-text {
+  font-size: 13px;
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.proofread-diff-del {
+  color: #dc2626;
+  text-decoration: line-through;
+  text-decoration-color: rgba(220, 38, 38, 0.4);
+}
+
+.proofread-diff-ins {
+  color: #16a34a;
+}
+
+.editor-wrapper[data-theme="dark"] .proofread-diff-label-del {
+  background: rgba(248, 113, 113, 0.15);
+  color: #f87171;
+}
+
+.editor-wrapper[data-theme="dark"] .proofread-diff-label-ins {
+  background: rgba(74, 222, 128, 0.15);
+  color: #4ade80;
+}
+
+.editor-wrapper[data-theme="dark"] .proofread-diff-del {
+  color: #f87171;
+  text-decoration-color: rgba(248, 113, 113, 0.4);
+}
+
+.editor-wrapper[data-theme="dark"] .proofread-diff-ins {
+  color: #4ade80;
+}
+
+.proofread-reason {
+  font-size: 12px;
+  color: var(--editor-text-muted);
+  padding: 4px 0 0 0;
+  font-style: italic;
+}
+
+.proofread-warning {
+  padding: 4px 14px 0;
+  font-size: 12px;
+  color: #d97706;
+}
+
+.proofread-footer {
+  display: flex;
+  gap: 6px;
+  padding: 8px 14px;
+  border-top: 1px solid var(--editor-border-color);
+}
+
+.proofread-apply-all {
+  border-style: dashed !important;
+}
+
+.proofread-complete {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  font-size: 13px;
+  color: var(--editor-text-normal);
+}
+
+.proofread-complete-icon {
+  color: #16a34a;
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.editor-wrapper[data-theme="dark"] .proofread-complete-icon {
+  color: #4ade80;
+}
+
+/* ── Inline Suggestion (Copilot-style diff) ── */
+
+.cm-suggestion-highlight {
+  background: rgba(234, 179, 8, 0.15);
+  border-bottom: 2px solid rgba(234, 179, 8, 0.5);
+}
+
+.editor-wrapper[data-theme="dark"] .cm-suggestion-highlight {
+  background: rgba(234, 179, 8, 0.1);
+  border-bottom-color: rgba(234, 179, 8, 0.4);
+}
+
+.cm-inline-suggestion {
+  margin: 4px 0 8px 0;
+  padding: 8px 12px;
+  background: var(--editor-bg-secondary);
+  border: 1px solid var(--editor-border-color);
+  border-left: 3px solid var(--editor-accent);
+  border-radius: 0 6px 6px 0;
+  font-family: var(--editor-font);
+}
+
+.cm-suggestion-del-row,
+.cm-suggestion-ins-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 3px 0;
+}
+
+.cm-suggestion-label {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 3px;
+  line-height: 1.5;
+}
+
+.cm-suggestion-label-del {
+  background: rgba(220, 38, 38, 0.12);
+  color: #dc2626;
+}
+
+.cm-suggestion-label-ins {
+  background: rgba(22, 163, 74, 0.12);
+  color: #16a34a;
+}
+
+.editor-wrapper[data-theme="dark"] .cm-suggestion-label-del {
+  background: rgba(248, 113, 113, 0.15);
+  color: #f87171;
+}
+
+.editor-wrapper[data-theme="dark"] .cm-suggestion-label-ins {
+  background: rgba(74, 222, 128, 0.15);
+  color: #4ade80;
+}
+
+.cm-suggestion-text {
+  font-size: 13px;
+  line-height: 1.5;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+.cm-suggestion-text-del {
+  color: #dc2626;
+  text-decoration: line-through;
+  text-decoration-color: rgba(220, 38, 38, 0.4);
+}
+
+.cm-suggestion-text-ins {
+  color: #16a34a;
+}
+
+.editor-wrapper[data-theme="dark"] .cm-suggestion-text-del {
+  color: #f87171;
+  text-decoration-color: rgba(248, 113, 113, 0.4);
+}
+
+.editor-wrapper[data-theme="dark"] .cm-suggestion-text-ins {
+  color: #4ade80;
+}
+
+.cm-suggestion-buttons {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--editor-border-color);
+}
+
+.cm-suggestion-btn {
+  padding: 4px 14px;
+  font-size: 12px;
+  font-weight: 500;
+  font-family: var(--editor-font);
+  border: 1px solid var(--editor-border-color);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.cm-suggestion-btn-accept {
+  background: var(--editor-accent);
+  color: #fff;
+  border-color: var(--editor-accent);
+}
+
+.cm-suggestion-btn-accept:hover {
+  opacity: 0.85;
+}
+
+.cm-suggestion-btn-reject {
+  background: var(--editor-bg-primary);
+  color: var(--editor-text-normal);
+}
+
+.cm-suggestion-btn-reject:hover {
+  background: var(--editor-bg-tertiary);
 }
 
 /* ── AI Selection Tooltip ── */

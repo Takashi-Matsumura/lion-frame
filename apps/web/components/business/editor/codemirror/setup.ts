@@ -17,6 +17,9 @@ import { markdownKeymap } from "./keybindings";
 import { imeSupport } from "./ime-support";
 import { slashCommands } from "./slash-commands";
 import { selectionTooltipField, aiRequestCallbackFacet } from "./selection-tooltip";
+import { inlineSuggestionField, suggestionCallbackFacet } from "./inline-suggestion";
+
+export const inlineSuggestionCompartment = new Compartment();
 
 export const livePreviewCompartment = new Compartment();
 export const tablePreviewCompartment = new Compartment();
@@ -28,6 +31,7 @@ export function createEditorState(
   livePreview: boolean = true,
   readOnly: boolean = false,
   aiRequestCallback?: ((req: { action: string; selectedText: string; selectionRange: { from: number; to: number } }) => void) | null,
+  suggestionCallback?: ((action: "accept" | "reject", suggestion: { from: number; to: number; original: string; suggested: string }) => void) | null,
 ): EditorState {
   const extensions: Extension[] = [
     highlightSpecialChars(),
@@ -49,6 +53,12 @@ export function createEditorState(
     selectionTooltipCompartment.of(
       aiRequestCallback
         ? [aiRequestCallbackFacet.of(aiRequestCallback), selectionTooltipField]
+        : [],
+    ),
+    inlineSuggestionField,
+    inlineSuggestionCompartment.of(
+      suggestionCallback
+        ? suggestionCallbackFacet.of(suggestionCallback)
         : [],
     ),
     EditorView.updateListener.of((update) => {
