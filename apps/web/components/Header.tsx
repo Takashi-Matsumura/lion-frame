@@ -141,6 +141,7 @@ function HeaderInner({
   const isEvaluationRag = pathname === "/admin/evaluation-rag";
   const isCalendarManagement = pathname === "/admin/calendar-management";
   const isKioskManager = pathname === "/kiosk-manager";
+  const isBackup = pathname === "/admin/backup";
   const isAiSettings =
     pathname === "/admin/ai-settings";
 
@@ -321,6 +322,17 @@ function HeaderInner({
       active: kioskManagerTab === tab.id,
     })) || [];
 
+  // バックアップタブ（レジストリから取得）
+  const backupTab = searchParams.get("tab") || "core";
+  const registryBackupTabs = getTabsByMenuPath("/admin/backup");
+  const backupTabs =
+    registryBackupTabs?.map((tab) => ({
+      name: language === "ja" ? tab.nameJa : tab.name,
+      icon: tab.icon,
+      path: `/admin/backup?tab=${tab.id}`,
+      active: backupTab === tab.id,
+    })) || [];
+
   // AI設定タブ
   const aiSettingsTab = searchParams.get("tab") || "general";
   const aiSettingsTabs: TabItem[] = [
@@ -464,6 +476,7 @@ function HeaderInner({
           "Calendar Management Tabs",
         )}
       {isKioskManager && renderTabs(kioskManagerTabs, "Kiosk Manager Tabs")}
+      {isBackup && renderTabs(backupTabs, "Backup Tabs")}
       {isAiSettings &&
         renderTabs(aiSettingsTabs, "AI Settings Tabs")}
       <PageGuideSheet

@@ -37,6 +37,12 @@ export const nfcCardModule: AppModule = {
       isImplemented: true,
     },
   ],
+  backupProvider: {
+    name: "NFC Card Backup",
+    nameJa: "NFCカードバックアップ",
+    description: "Backup and restore NFC card registration data",
+    descriptionJa: "NFCカード登録データのバックアップとリストア",
+  },
   services: [
     {
       id: "nfcCardApi",

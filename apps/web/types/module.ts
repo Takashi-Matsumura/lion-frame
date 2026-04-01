@@ -110,6 +110,24 @@ export interface AppModule {
 
   /** このモジュールが提供するMCPサーバー */
   mcpServer?: McpServer;
+
+  /** アドオンバックアップ機能（このモジュールが独自バックアップを提供する場合） */
+  backupProvider?: AddonBackupProvider;
+}
+
+/**
+ * アドオンバックアップ機能
+ * アドオンモジュールが独自のバックアップ/リストア機能を提供する場合に定義
+ */
+export interface AddonBackupProvider {
+  /** 表示名（英語） */
+  name: string;
+  /** 表示名（日本語） */
+  nameJa: string;
+  /** 説明文（英語） */
+  description?: string;
+  /** 説明文（日本語） */
+  descriptionJa?: string;
 }
 
 /**

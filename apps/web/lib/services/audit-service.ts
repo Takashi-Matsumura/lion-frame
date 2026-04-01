@@ -77,7 +77,10 @@ export type AuditAction =
   | "WORKFLOW_CANCEL"
   // BACKUP
   | "BACKUP_CREATE"
-  | "BACKUP_RESTORE";
+  | "BACKUP_RESTORE"
+  // ADDON BACKUP
+  | "NFC_CARD_BACKUP_CREATE"
+  | "NFC_CARD_BACKUP_RESTORE";
 
 export interface AuditLogInput {
   action: AuditAction;

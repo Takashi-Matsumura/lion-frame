@@ -55,6 +55,10 @@ export const backupTranslations = {
     preRestoreBackup: "Downloading current data backup before restore...",
     invalidFile: "Invalid backup file",
     loadingPreview: "Loading preview...",
+
+    // Addon tab
+    addonEmpty: "No addon modules with backup capability",
+    addonEmptyDescription: "Addon modules that support backup will appear here when enabled",
   },
   ja: {
     title: "バックアップ",
@@ -112,6 +116,10 @@ export const backupTranslations = {
     preRestoreBackup: "リストア前に現在のデータをバックアップ中...",
     invalidFile: "無効なバックアップファイルです",
     loadingPreview: "プレビューを読み込み中...",
+
+    // Addon tab
+    addonEmpty: "バックアップ対応のアドオンモジュールがありません",
+    addonEmptyDescription: "バックアップをサポートするアドオンモジュールが有効化されると、ここに表示されます",
   },
 } as const;
 

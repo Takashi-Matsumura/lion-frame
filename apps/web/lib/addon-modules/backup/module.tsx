@@ -5,8 +5,28 @@
  * 中小企業の管理者が手動で実行する想定。
  */
 
+import { FaDatabase, FaPuzzlePiece } from "react-icons/fa";
 import { getMenuIcon, getModuleIcon } from "@/lib/modules/icons";
-import type { AppModule } from "@/types/module";
+import type { AppModule, AppTab } from "@/types/module";
+
+const backupTabs: AppTab[] = [
+  {
+    id: "core",
+    name: "Core",
+    nameJa: "コア",
+    icon: <FaDatabase className="w-5 h-5" />,
+    order: 1,
+    enabled: true,
+  },
+  {
+    id: "addon",
+    name: "Addon",
+    nameJa: "アドオン",
+    icon: <FaPuzzlePiece className="w-5 h-5" />,
+    order: 2,
+    enabled: true,
+  },
+];
 
 export const backupModule: AppModule = {
   id: "backup",
@@ -33,6 +53,7 @@ export const backupModule: AppModule = {
       description: "Backup and restore data",
       descriptionJa: "データのバックアップとリストア",
       isImplemented: true,
+      tabs: backupTabs,
     },
   ],
   services: [
