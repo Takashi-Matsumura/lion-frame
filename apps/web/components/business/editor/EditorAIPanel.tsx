@@ -22,7 +22,7 @@ const INLINE_DIFF_ACTIONS = new Set<string>([
 ]);
 
 interface AIRequest {
-  action: EditorAction;
+  action: string;
   selectedText?: string;
   selectionRange?: { from: number; to: number };
 }

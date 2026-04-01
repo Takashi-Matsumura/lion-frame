@@ -61,6 +61,7 @@ export type AuditAction =
   | "ORG_CONTEXT_TOGGLE"
   | "PAGE_GUIDE_EDIT"
   | "PAGE_GUIDE_REVERT"
+  | "EDITOR_AI_ASSIST"
   // TAG
   | "TAG_CREATE"
   | "TAG_UPDATE"
@@ -73,7 +74,10 @@ export type AuditAction =
   | "WORKFLOW_SUBMIT"
   | "WORKFLOW_APPROVE"
   | "WORKFLOW_REJECT"
-  | "WORKFLOW_CANCEL";
+  | "WORKFLOW_CANCEL"
+  // BACKUP
+  | "BACKUP_CREATE"
+  | "BACKUP_RESTORE";
 
 export interface AuditLogInput {
   action: AuditAction;

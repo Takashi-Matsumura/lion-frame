@@ -26,7 +26,7 @@ export default function ProofreadReview({
   const [skippedCount, setSkippedCount] = useState(0);
 
   const isFinished = currentIndex >= items.length;
-  const current = !isFinished ? items[currentIndex] : null;
+  const current = items[currentIndex] ?? null;
 
   // 原文がドキュメント内に存在するか確認
   const existsInDoc = current ? content.includes(current.original) : false;
@@ -105,14 +105,14 @@ export default function ProofreadReview({
       <div className="proofread-diff">
         <div className="proofread-diff-row">
           <span className="proofread-diff-label proofread-diff-label-del">原文</span>
-          <span className="proofread-diff-text proofread-diff-del">{current.original}</span>
+          <span className="proofread-diff-text proofread-diff-del">{current?.original}</span>
         </div>
         <div className="proofread-diff-row">
           <span className="proofread-diff-label proofread-diff-label-ins">修正</span>
-          <span className="proofread-diff-text proofread-diff-ins">{current.corrected}</span>
+          <span className="proofread-diff-text proofread-diff-ins">{current?.corrected}</span>
         </div>
         <div className="proofread-reason">
-          {current.reason}
+          {current?.reason}
         </div>
       </div>
 
