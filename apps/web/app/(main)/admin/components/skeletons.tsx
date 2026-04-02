@@ -159,38 +159,37 @@ export function AnnouncementsTabSkeleton() {
  */
 export function ModulesTabSkeletonContent() {
   return (
-    <div className="flex-1 overflow-y-auto p-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {Array.from({ length: 6 }).map((_, i) => (
-          <Card key={i}>
-            <CardHeader className="pb-3">
-              {/* トグル + バッジ */}
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <Skeleton className="h-5 w-9 rounded-full" />
-                  <Skeleton className="h-4 w-8" />
+    <div className="flex-1 overflow-y-auto">
+      <table className="w-full">
+        <thead>
+          <tr className="border-b">
+            <th className="h-10 px-4 text-left"><Skeleton className="h-4 w-16" /></th>
+            <th className="h-10 px-2 text-left"><Skeleton className="h-4 w-10" /></th>
+            <th className="h-10 px-2 text-center"><Skeleton className="h-4 w-8 mx-auto" /></th>
+            <th className="h-10 px-2 text-center"><Skeleton className="h-4 w-10 mx-auto" /></th>
+            <th className="h-10 px-2 text-center"><Skeleton className="h-4 w-10 mx-auto" /></th>
+          </tr>
+        </thead>
+        <tbody>
+          {Array.from({ length: 8 }).map((_, i) => (
+            <tr key={i} className="border-b">
+              <td className="p-2 pl-4">
+                <div className="flex items-center gap-2.5">
+                  <Skeleton className="w-8 h-8 rounded-lg shrink-0" />
+                  <div>
+                    <Skeleton className="h-4 w-24 mb-1" />
+                    <Skeleton className="h-3 w-16" />
+                  </div>
                 </div>
-                <Skeleton className="h-5 w-12 rounded-full" />
-              </div>
-              {/* アイコン + テキスト */}
-              <div className="flex items-start gap-3">
-                <Skeleton className="w-10 h-10 rounded-lg" />
-                <div>
-                  <Skeleton className="h-5 w-28 mb-1" />
-                  <Skeleton className="h-4 w-20" />
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <Skeleton className="h-4 w-full mb-2" />
-              <div className="flex items-center gap-4 mt-3">
-                <Skeleton className="h-4 w-20" />
-                <Skeleton className="h-4 w-20" />
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+              </td>
+              <td className="p-2"><Skeleton className="h-5 w-12 rounded-full" /></td>
+              <td className="p-2"><Skeleton className="h-5 w-14 rounded-full mx-auto" /></td>
+              <td className="p-2"><Skeleton className="h-4 w-6 mx-auto" /></td>
+              <td className="p-2"><Skeleton className="h-4 w-6 mx-auto" /></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
