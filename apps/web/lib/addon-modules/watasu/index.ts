@@ -1,0 +1,1 @@
+export { watasuModule } from "./module";

@@ -14,6 +14,16 @@ export default auth(async (req) => {
     return NextResponse.next();
   }
 
+  // /watasu/ 送信者UIおよび公開APIは認証不要
+  if (
+    (pathname.startsWith("/watasu/") && !pathname.startsWith("/watasu/api/")) ||
+    pathname === "/api/watasu/join" ||
+    pathname.startsWith("/api/watasu/upload") ||
+    pathname.startsWith("/api/watasu/thumbnail/")
+  ) {
+    return NextResponse.next();
+  }
+
   const session = req.auth;
 
   // Reverse proxy support: construct correct redirect base URL

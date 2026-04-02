@@ -12,6 +12,7 @@ import { handsonModule } from "@/lib/addon-modules/handson";
 import { healthCheckupModule } from "@/lib/addon-modules/health-checkup";
 import { workflowModule } from "@/lib/addon-modules/workflow";
 import { backupModule } from "@/lib/addon-modules/backup";
+import { watasuModule } from "@/lib/addon-modules/watasu";
 // キオスクモジュール
 import { eventAttendanceModule } from "@/lib/kiosk-modules/event-attendance";
 // 外部アドオンモジュール
@@ -148,6 +149,7 @@ export const moduleRegistry: ModuleRegistry = {
   "nfc-card": nfcCardModule,
   pdf: pdfModule,
   backup: backupModule,
+  watasu: watasuModule,
   // キオスクモジュール
   "event-attendance": eventAttendanceModule,
   // 外部アドオンモジュール（addons.ts から自動登録）
