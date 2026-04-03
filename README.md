@@ -39,7 +39,7 @@ http://localhost:3000
 フレーム基盤（認証 / 通知 / 監査ログ / i18n / Prisma）
     │
     ├── コアモジュール ─── system / ai / organization / schedule
-    ├── アドオンモジュール ─ editor / forms / health-checkup / pdf / nfc-card / workflow
+    ├── アドオンモジュール ─ editor / forms / health-checkup / pdf / nfc-card / workflow / watasu / backup / handson
     └── キオスクモジュール ─ event-attendance
 ```
 
@@ -66,6 +66,9 @@ http://localhost:3000
 | pdf | PDFテンプレート・エクスポート |
 | nfc-card | NFCカード管理 |
 | workflow | 申請・承認ワークフロー（サンプル） |
+| watasu | モバイル転送 — スマートフォンからPCへ画像を安全に転送（🔑鍵付き・12時間有効期限） |
+| backup | システムバックアップ・リストア |
+| handson | ハンズオン教材管理 |
 
 ### キオスク
 
