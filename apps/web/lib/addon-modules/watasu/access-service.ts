@@ -2,6 +2,9 @@ import { prisma } from "@/lib/prisma";
 import { AuditService } from "@/lib/services/audit-service";
 import type { AccessKey, Role } from "@prisma/client";
 
+/** アクセス有効期限: 12時間 */
+const ACCESS_TTL_MS = 12 * 60 * 60 * 1000;
+
 export interface EmployeeAccessInfo {
   employeeId: string;
   employeeName: string;
@@ -9,6 +12,7 @@ export interface EmployeeAccessInfo {
   sectionName: string | null;
   userId: string | null;
   hasAccess: boolean;
+  expiresAt: string | null;
 }
 
 export class WatasuAccessService {
@@ -23,7 +27,6 @@ export class WatasuAccessService {
 
     if (existing) return existing;
 
-    // 自動生成
     const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     const key = `WATASU-${Array.from({ length: 16 }, () => chars[Math.floor(Math.random() * chars.length)]).join("")}`;
 
@@ -55,6 +58,7 @@ export class WatasuAccessService {
 
   /**
    * 部門メンバー一覧 + モバイル転送アクセス状態を取得
+   * activatedAt から12時間経過したものは期限切れとして自動削除
    */
   static async getEmployeesWithAccessStatus(
     userId: string,
@@ -62,8 +66,6 @@ export class WatasuAccessService {
   ): Promise<EmployeeAccessInfo[]> {
     const accessKey = await this.getOrCreateSystemAccessKey();
 
-    // MANAGER: 自分が管理する部門のメンバーのみ
-    // ADMIN: 全社員
     let employees;
 
     if (role === "ADMIN") {
@@ -76,7 +78,6 @@ export class WatasuAccessService {
         orderBy: [{ department: { name: "asc" } }, { name: "asc" }],
       });
     } else {
-      // MANAGER/EXECUTIVE: 自分の Employee → managedDepartments
       const user = await prisma.user.findUnique({ where: { id: userId } });
       if (!user?.email) return [];
 
@@ -104,7 +105,6 @@ export class WatasuAccessService {
       });
     }
 
-    // 各社員の User アカウントと UserAccessKey を一括取得
     const emails = employees
       .map((e) => e.email)
       .filter((e): e is string => !!e);
@@ -121,25 +121,47 @@ export class WatasuAccessService {
         userId: { in: userIds },
         accessKeyId: accessKey.id,
       },
-      select: { userId: true },
+      select: { userId: true, activatedAt: true, id: true },
     });
-    const accessSet = new Set(existingAccess.map((a) => a.userId));
+
+    // 期限切れを自動削除
+    const now = new Date();
+    const expiredIds: string[] = [];
+    const activeAccess = new Map<string, Date>();
+
+    for (const access of existingAccess) {
+      const expiresAt = new Date(access.activatedAt.getTime() + ACCESS_TTL_MS);
+      if (expiresAt <= now) {
+        expiredIds.push(access.id);
+      } else {
+        activeAccess.set(access.userId, expiresAt);
+      }
+    }
+
+    if (expiredIds.length > 0) {
+      await prisma.userAccessKey.deleteMany({
+        where: { id: { in: expiredIds } },
+      });
+    }
 
     return employees.map((emp) => {
       const uid = emp.email ? emailToUserId.get(emp.email) ?? null : null;
+      const expiresAt = uid ? activeAccess.get(uid) ?? null : null;
       return {
         employeeId: emp.id,
         employeeName: emp.name,
         departmentName: emp.department.name,
         sectionName: emp.section?.name ?? null,
         userId: uid,
-        hasAccess: uid ? accessSet.has(uid) : false,
+        hasAccess: expiresAt !== null,
+        expiresAt: expiresAt?.toISOString() ?? null,
       };
     });
   }
 
   /**
    * アクセスの ON/OFF トグル
+   * ON: activatedAt を現在時刻にリセット（12時間カウント開始）
    */
   static async toggleAccess(
     targetUserId: string,
@@ -149,7 +171,6 @@ export class WatasuAccessService {
     const accessKey = await this.getOrCreateSystemAccessKey();
 
     if (enabled) {
-      // ON: UserAccessKey 作成 (既に存在する場合はスキップ)
       await prisma.userAccessKey.upsert({
         where: {
           userId_accessKeyId: {
@@ -157,14 +178,13 @@ export class WatasuAccessService {
             accessKeyId: accessKey.id,
           },
         },
-        update: {},
+        update: { activatedAt: new Date() },
         create: {
           userId: targetUserId,
           accessKeyId: accessKey.id,
         },
       });
     } else {
-      // OFF: UserAccessKey 削除
       await prisma.userAccessKey.deleteMany({
         where: {
           userId: targetUserId,

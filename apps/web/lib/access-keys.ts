@@ -51,6 +51,15 @@ export async function getUserAccessKeyPermissions(
         continue;
       }
 
+      // システムキー（部門委譲）: activatedAt + 12時間の期限チェック
+      if (accessKey.createdBy === "system" && !accessKey.targetUserId) {
+        const ttlMs = 12 * 60 * 60 * 1000;
+        const expiresAt = new Date(
+          userAccessKey.activatedAt.getTime() + ttlMs,
+        );
+        if (expiresAt < new Date()) continue;
+      }
+
       // 方法1: 後方互換性 - menuPaths JSON からパース
       if (accessKey.menuPaths) {
         try {

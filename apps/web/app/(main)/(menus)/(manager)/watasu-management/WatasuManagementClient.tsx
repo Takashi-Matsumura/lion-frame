@@ -34,6 +34,16 @@ interface EmployeeAccessInfo {
   sectionName: string | null;
   userId: string | null;
   hasAccess: boolean;
+  expiresAt: string | null;
+}
+
+function formatRemaining(expiresAt: string): string {
+  const ms = new Date(expiresAt).getTime() - Date.now();
+  if (ms <= 0) return "期限切れ";
+  const hours = Math.floor(ms / (60 * 60 * 1000));
+  const minutes = Math.floor((ms % (60 * 60 * 1000)) / (60 * 1000));
+  if (hours > 0) return `残り ${hours}時間${minutes}分`;
+  return `残り ${minutes}分`;
 }
 
 type AccessFilter = "all" | "enabled" | "disabled" | "no-account";
@@ -297,7 +307,11 @@ export function WatasuManagementClient({ language }: Props) {
                         <span
                           className={`text-xs ${emp.hasAccess ? "text-green-700 dark:text-green-400" : "text-muted-foreground"}`}
                         >
-                          {emp.hasAccess ? t.enabled : t.disabled}
+                          {emp.hasAccess && emp.expiresAt
+                            ? formatRemaining(emp.expiresAt)
+                            : emp.hasAccess
+                              ? t.enabled
+                              : t.disabled}
                         </span>
                       </div>
                     ) : (
