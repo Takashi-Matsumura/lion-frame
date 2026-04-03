@@ -508,7 +508,7 @@ export function AccessKeyManager({
             </div>
 
             {/* 右カラム: 権限ツリー */}
-            <div className="flex-1 min-w-0 flex flex-col space-y-2">
+            <div className="flex-1 min-w-0 flex flex-col space-y-2 self-stretch">
               <Label>
                 {t("Select Permissions to Grant", "付与する権限を選択")}
               </Label>
