@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Plus, Copy, Check, QrCode, X, Trash2 } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -77,6 +78,8 @@ export function WatasuClient({ language }: Props) {
   const [expandedChecks, setExpandedChecks] = useState<Set<string>>(new Set());
   const [remaining, setRemaining] = useState<Record<string, number>>({});
   const [closingId, setClosingId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const initialLoad = useRef(true);
 
   const fetchSandboxes = useCallback(async () => {
     try {
@@ -86,6 +89,11 @@ export function WatasuClient({ language }: Props) {
       setSandboxes(data.sandboxes);
     } catch {
       // ignore
+    } finally {
+      if (initialLoad.current) {
+        setLoading(false);
+        initialLoad.current = false;
+      }
     }
   }, []);
 
@@ -179,6 +187,34 @@ export function WatasuClient({ language }: Props) {
   }
 
   const activeSandbox = sandboxes.find((sb) => sb.id === selectedSandbox);
+
+  if (loading) {
+    return (
+      <div className="flex h-full">
+        <div className="w-full p-4">
+          <div className="flex items-center justify-between mb-4">
+            <Skeleton className="h-4 w-48" />
+            <Skeleton className="h-9 w-44 rounded-md" />
+          </div>
+          <div className="space-y-2">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="border rounded-lg p-3">
+                <div className="flex items-center justify-between">
+                  <Skeleton className="h-6 w-32" />
+                  <div className="flex items-center gap-2">
+                    <Skeleton className="h-6 w-6 rounded" />
+                    <Skeleton className="h-5 w-20 rounded-full" />
+                    <Skeleton className="h-5 w-16 rounded-full" />
+                    <Skeleton className="h-6 w-6 rounded" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-full">

@@ -1,0 +1,36 @@
+export const watasuManagementTranslations = {
+  en: {
+    title: "Watasu Management",
+    description: "Manage watasu access for your department members",
+    employeeName: "Employee",
+    department: "Department",
+    section: "Section",
+    access: "Access",
+    enabled: "Enabled",
+    disabled: "Disabled",
+    noAccount: "No account",
+    noEmployees: "No employees found",
+    loading: "Loading...",
+    filterAll: "All",
+    allSections: "All sections",
+    clearFilter: "Clear",
+  },
+  ja: {
+    title: "わたす管理",
+    description: "部門メンバーのわたすアクセスを管理",
+    employeeName: "社員名",
+    department: "部門",
+    section: "課",
+    access: "アクセス",
+    enabled: "有効",
+    disabled: "無効",
+    noAccount: "アカウントなし",
+    noEmployees: "該当する社員がいません",
+    loading: "読み込み中...",
+    filterAll: "全て",
+    allSections: "全課",
+    clearFilter: "クリア",
+  },
+} as const;
+
+export type Language = keyof typeof watasuManagementTranslations;

@@ -86,7 +86,8 @@ export type AuditAction =
   | "WATASU_SANDBOX_JOIN"
   | "WATASU_SANDBOX_CLOSE"
   | "WATASU_FILE_UPLOAD"
-  | "WATASU_FILE_DOWNLOAD";
+  | "WATASU_FILE_DOWNLOAD"
+  | "WATASU_ACCESS_TOGGLE";
 
 export interface AuditLogInput {
   action: AuditAction;
