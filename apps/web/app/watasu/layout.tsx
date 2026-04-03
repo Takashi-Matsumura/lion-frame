@@ -7,7 +7,7 @@
 import type { ReactNode } from "react";
 
 export const metadata = {
-  title: "Watasu",
+  title: "Mobile Transfer",
 };
 
 export const dynamic = "force-dynamic";

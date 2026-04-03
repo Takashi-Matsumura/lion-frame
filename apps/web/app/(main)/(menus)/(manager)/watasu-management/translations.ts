@@ -1,7 +1,7 @@
 export const watasuManagementTranslations = {
   en: {
-    title: "Watasu Management",
-    description: "Manage watasu access for your department members",
+    title: "Transfer Management",
+    description: "Manage mobile transfer access for your department members",
     employeeName: "Employee",
     department: "Department",
     section: "Section",
@@ -16,8 +16,8 @@ export const watasuManagementTranslations = {
     clearFilter: "Clear",
   },
   ja: {
-    title: "わたす管理",
-    description: "部門メンバーのわたすアクセスを管理",
+    title: "転送管理",
+    description: "部門メンバーのモバイル転送アクセスを管理",
     employeeName: "社員名",
     department: "部門",
     section: "課",

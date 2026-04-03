@@ -54,7 +54,7 @@ export class WatasuAccessService {
   }
 
   /**
-   * 部門メンバー一覧 + わたすアクセス状態を取得
+   * 部門メンバー一覧 + モバイル転送アクセス状態を取得
    */
   static async getEmployeesWithAccessStatus(
     userId: string,

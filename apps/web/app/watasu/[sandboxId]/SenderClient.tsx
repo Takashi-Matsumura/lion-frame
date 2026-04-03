@@ -195,7 +195,7 @@ export function SenderClient({ sandboxId }: { sandboxId: string }) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center p-6">
         <div className="w-full max-w-sm">
-          <h1 className="text-2xl font-bold text-center mb-1">わたす</h1>
+          <h1 className="text-2xl font-bold text-center mb-1">モバイル転送</h1>
           <p className="text-sm text-center text-muted-foreground mb-6">
             画像をPCへ安全に転送
           </p>

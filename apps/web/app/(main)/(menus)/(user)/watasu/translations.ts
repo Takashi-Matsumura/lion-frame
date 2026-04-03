@@ -1,6 +1,6 @@
 export const watasuTranslations = {
   en: {
-    title: "Watasu",
+    title: "Mobile Transfer",
     createSandbox: "Create Sandbox",
     creating: "Creating...",
     activeSandboxes: "Active Sandboxes",
@@ -36,7 +36,7 @@ export const watasuTranslations = {
     decodeFailed: "Cannot decode as image",
   },
   ja: {
-    title: "わたす",
+    title: "モバイル転送",
     createSandbox: "サンドボックスを作成",
     creating: "作成中...",
     activeSandboxes: "アクティブなサンドボックス",
