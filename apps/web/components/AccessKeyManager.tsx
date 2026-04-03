@@ -470,9 +470,9 @@ export function AccessKeyManager({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="flex-1 min-h-0 flex gap-6 py-2">
+          <div className="flex-1 min-h-0 flex gap-6 py-2 overflow-hidden">
             {/* 左カラム: キー名・対象ユーザ・有効期限 */}
-            <div className="flex-1 min-w-0 flex flex-col space-y-4">
+            <div className="flex-1 min-w-0 flex flex-col space-y-4 overflow-y-auto">
               <div className="space-y-2">
                 <Label>{t("Key Name", "キー名")}</Label>
                 <Input
@@ -508,7 +508,7 @@ export function AccessKeyManager({
             </div>
 
             {/* 右カラム: 権限ツリー */}
-            <div className="flex-1 min-w-0 flex flex-col space-y-2 self-stretch">
+            <div className="flex-1 min-w-0 flex flex-col space-y-2">
               <Label>
                 {t("Select Permissions to Grant", "付与する権限を選択")}
               </Label>
