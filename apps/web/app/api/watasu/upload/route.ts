@@ -6,6 +6,7 @@ import {
   getSandboxInfo,
 } from "@/lib/addon-modules/watasu/sandbox-store";
 import { checkFile } from "@/lib/addon-modules/watasu/security";
+import { AuditService } from "@/lib/services/audit-service";
 
 export async function POST(request: Request) {
   const token = request.headers.get("x-sandbox-token");
@@ -65,6 +66,22 @@ export async function POST(request: Request) {
         result.checks,
       );
     }
+
+    await AuditService.log({
+      action: "WATASU_FILE_UPLOAD",
+      category: "MODULE",
+      userId: sandbox.createdBy,
+      targetId: fileInfo.id,
+      targetType: "File",
+      details: {
+        pin: sandboxId,
+        fileName: fileInfo.name,
+        size: fileInfo.size,
+        mimeType: fileInfo.mimeType,
+        approved: result.approved,
+        reason: result.reason,
+      },
+    });
   }
 
   return Response.json(getSandboxInfo(sandbox, "sender"));

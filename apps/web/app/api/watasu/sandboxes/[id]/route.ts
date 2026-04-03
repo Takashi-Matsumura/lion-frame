@@ -5,6 +5,7 @@ import {
   getSandboxInfo,
   deleteSandboxById,
 } from "@/lib/addon-modules/watasu/sandbox-store";
+import { AuditService } from "@/lib/services/audit-service";
 
 export async function GET(
   request: Request,
@@ -54,6 +55,17 @@ export async function DELETE(
     return Response.json({ error: "Forbidden" }, { status: 403 });
   }
 
+  const fileCount = sandbox.files.length;
   deleteSandboxById(id);
+
+  await AuditService.log({
+    action: "WATASU_SANDBOX_CLOSE",
+    category: "MODULE",
+    userId: session.user.id,
+    targetId: id,
+    targetType: "Sandbox",
+    details: { pin: id, fileCount },
+  });
+
   return Response.json({ success: true });
 }

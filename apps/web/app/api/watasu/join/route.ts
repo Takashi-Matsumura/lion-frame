@@ -2,6 +2,7 @@ import {
   getSandbox,
   addJoinerToken,
 } from "@/lib/addon-modules/watasu/sandbox-store";
+import { AuditService } from "@/lib/services/audit-service";
 
 export async function POST(request: Request) {
   const body = await request.json();
@@ -17,6 +18,17 @@ export async function POST(request: Request) {
   }
 
   const joinerToken = addJoinerToken(sandboxId);
+
+  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || undefined;
+  await AuditService.log({
+    action: "WATASU_SANDBOX_JOIN",
+    category: "MODULE",
+    userId: sandbox.createdBy,
+    targetId: sandboxId,
+    targetType: "Sandbox",
+    details: { pin: sandboxId, senderIp: ip },
+    ipAddress: ip,
+  });
 
   return Response.json({ sandboxId, joinerToken, role: "sender" });
 }

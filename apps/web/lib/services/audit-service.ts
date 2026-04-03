@@ -80,7 +80,13 @@ export type AuditAction =
   | "BACKUP_RESTORE"
   // ADDON BACKUP
   | "NFC_CARD_BACKUP_CREATE"
-  | "NFC_CARD_BACKUP_RESTORE";
+  | "NFC_CARD_BACKUP_RESTORE"
+  // WATASU
+  | "WATASU_SANDBOX_CREATE"
+  | "WATASU_SANDBOX_JOIN"
+  | "WATASU_SANDBOX_CLOSE"
+  | "WATASU_FILE_UPLOAD"
+  | "WATASU_FILE_DOWNLOAD";
 
 export interface AuditLogInput {
   action: AuditAction;

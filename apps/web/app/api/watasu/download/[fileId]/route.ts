@@ -3,6 +3,7 @@ import { stat } from "node:fs/promises";
 import { Readable } from "node:stream";
 import { auth } from "@/auth";
 import { getSandbox, getFilePath } from "@/lib/addon-modules/watasu/sandbox-store";
+import { AuditService } from "@/lib/services/audit-service";
 
 export async function GET(
   request: Request,
@@ -40,6 +41,19 @@ export async function GET(
   if (!fileStat) {
     return Response.json({ error: "File not found on disk" }, { status: 404 });
   }
+
+  await AuditService.log({
+    action: "WATASU_FILE_DOWNLOAD",
+    category: "MODULE",
+    userId: session.user.id,
+    targetId: fileId,
+    targetType: "File",
+    details: {
+      pin: sandboxId,
+      fileName: fileInfo.name,
+      size: fileStat.size,
+    },
+  });
 
   const nodeStream = createReadStream(fileInfo.path);
   const webStream = Readable.toWeb(nodeStream) as ReadableStream;
