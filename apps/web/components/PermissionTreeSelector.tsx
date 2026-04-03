@@ -306,8 +306,10 @@ function ModuleNode({
   ) => void;
   t: (en: string, ja: string) => string;
 }) {
-  const menusWithTabs = module.menus.filter(
-    (menu) => menu.tabs && menu.tabs.length > 0,
+  // タブを持つメニュー or アクセスキーが必要なメニューを表示
+  const selectableMenus = module.menus.filter(
+    (menu) =>
+      (menu.tabs && menu.tabs.length > 0) || menu.requiredAccessKey,
   );
 
   // アクセスキーが必要なメニューが1つもない場合は選択不要
@@ -368,7 +370,7 @@ function ModuleNode({
       {/* メニュー一覧 */}
       {isExpanded && (
         <div className="border-t pl-6 py-1">
-          {menusWithTabs.map((menu) => (
+          {selectableMenus.map((menu) => (
             <MenuNode
               key={menu.id}
               menu={menu}
@@ -432,6 +434,7 @@ function MenuNode({
   t: (en: string, ja: string) => string;
 }) {
   const tabs = menu.tabs || [];
+  const hasTabs = tabs.length > 0;
   const menuSelected = isSelected("menu", moduleId, menu.path);
   const implicitlySelected = isImplicitlySelected(moduleId, menu.path);
 
@@ -442,17 +445,21 @@ function MenuNode({
     <div className="py-0.5">
       {/* メニューヘッダー */}
       <div className="flex items-center gap-2 p-2 rounded hover:bg-muted/50 transition-colors">
-        <button
-          type="button"
-          onClick={onToggle}
-          className="p-0.5 hover:bg-muted rounded"
-        >
-          {isExpanded ? (
-            <ChevronDown className="h-4 w-4 text-muted-foreground" />
-          ) : (
-            <ChevronRight className="h-4 w-4 text-muted-foreground" />
-          )}
-        </button>
+        {hasTabs ? (
+          <button
+            type="button"
+            onClick={onToggle}
+            className="p-0.5 hover:bg-muted rounded"
+          >
+            {isExpanded ? (
+              <ChevronDown className="h-4 w-4 text-muted-foreground" />
+            ) : (
+              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            )}
+          </button>
+        ) : (
+          <span className="w-5" />
+        )}
 
         <Checkbox
           checked={menuSelected || implicitlySelected}
