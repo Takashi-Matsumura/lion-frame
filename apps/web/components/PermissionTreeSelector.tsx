@@ -310,18 +310,24 @@ function ModuleNode({
     (menu) => menu.tabs && menu.tabs.length > 0,
   );
 
+  // アクセスキーが必要なメニューが1つもない場合は選択不要
+  const hasAccessKeyMenus = module.menus.some(
+    (menu) => menu.requiredAccessKey,
+  );
+
   const moduleSelected = isSelected("module", module.id);
   const moduleDisplayName = `${module.name} (${t("Module", "モジュール")})`;
   const moduleDisplayNameJa = `${module.nameJa} (モジュール)`;
 
   return (
-    <div className="rounded-lg border bg-card">
+    <div className={cn("rounded-lg border bg-card", !hasAccessKeyMenus && "opacity-50")}>
       {/* モジュールヘッダー */}
       <div className="flex items-center gap-2 p-2 hover:bg-muted/50 transition-colors">
         <button
           type="button"
           onClick={onToggleModule}
           className="p-0.5 hover:bg-muted rounded"
+          disabled={!hasAccessKeyMenus}
         >
           {isExpanded ? (
             <ChevronDown className="h-4 w-4 text-muted-foreground" />
@@ -341,6 +347,7 @@ function ModuleNode({
             )
           }
           className="data-[state=checked]:bg-primary"
+          disabled={!hasAccessKeyMenus}
         />
 
         <div className="flex items-center gap-2 flex-1 min-w-0">
