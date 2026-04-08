@@ -100,6 +100,30 @@ GUEST → USER → MANAGER → EXECUTIVE → ADMIN
 
 GUESTロールはログイン可能な一時的なゲストアカウントです。`/welcome` にリダイレクトされ、ゲストメニュー（AI体験など）のみ利用できます。
 
+## GitHub Actions
+
+### Claude Code Review（PR自動レビュー）
+
+PRが作成・更新されると、Claude CodeがCLAUDE.mdのプロジェクトルールに基づいて自動レビューを行います。
+
+**ワークフロー:** `.github/workflows/claude-review.yml`
+
+**機能:**
+- PR作成・更新時に自動レビュー（menuGroup/URLパスの一致、翻訳ルール、セキュリティなど7項目）
+- PRコメントで `@claude` と呼びかけると対話的なレビューが可能
+
+**セットアップ:**
+1. [Claude Code GitHub App](https://github.com/apps/claude) をリポジトリにインストール
+2. [Anthropic Console](https://console.anthropic.com/) でAPIキーを取得
+3. リポジトリの Settings → Secrets → Actions に `ANTHROPIC_API_KEY` を登録
+
+```bash
+# CLIで登録する場合
+gh secret set ANTHROPIC_API_KEY
+```
+
+> APIキーはClaude Maxプランとは別の従量課金です（Sonnet 4.6で1レビューあたり数円程度）。
+
 ## ドキュメント
 
 | ドキュメント | 内容 |
