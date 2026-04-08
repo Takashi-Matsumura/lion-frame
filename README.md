@@ -124,6 +124,50 @@ gh secret set ANTHROPIC_API_KEY
 
 > APIキーはClaude Maxプランとは別の従量課金です（Sonnet 4.6で1レビューあたり数円程度）。
 
+### ブランチ保護
+
+mainブランチには以下の保護ルールが設定されています。
+
+| ルール | 内容 |
+|--------|------|
+| PR必須 | mainへの直接pushは禁止。必ずPR経由で変更する |
+| force push禁止 | mainブランチの履歴改ざんを防止 |
+| 管理者バイパス | リポジトリ管理者は緊急時にルールをバイパス可能 |
+
+## 開発フロー
+
+mainブランチへの変更は必ずPR経由で行います。PRを作成するとClaude Codeが自動レビューを実行します。
+
+### 通常の開発
+
+```bash
+# 1. ブランチを作成
+git checkout -b feature/xxx
+
+# 2. 変更をコミット
+git add <files>
+git commit -m "feat: 新機能の説明"
+
+# 3. pushしてPRを作成
+git push -u origin feature/xxx
+gh pr create --title "feat: 新機能の説明" --body "変更内容の詳細"
+
+# 4. Claude Code が自動レビュー（30秒〜1分）
+#    PRコメントで @claude と呼びかけると対話も可能
+
+# 5. レビュー確認後、マージ
+gh pr merge
+```
+
+### 外部（クローン先）からの貢献
+
+LionFrameをクローンして派生プロジェクトを開発している場合、本家リポジトリへの変更提案は以下のフローで行います。
+
+1. クローン先でブランチを作成しPRを送信
+2. Claude Code が自動レビューを実行
+3. リポジトリ管理者がレビュー結果を確認
+4. 問題なければマージ
+
 ## ドキュメント
 
 | ドキュメント | 内容 |
