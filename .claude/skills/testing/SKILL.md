@@ -316,7 +316,7 @@ npm run test -- --testPathPatterns="api/ai"
 npm run test -- --watch
 
 # 単一ファイル
-pnpm --filter @lion-frame/web test -- __tests__/lib/modules/access-control.test.ts
+pnpm --filter @lionframe/web test -- __tests__/lib/modules/access-control.test.ts
 ```
 
 ## テスト追加の判断基準
