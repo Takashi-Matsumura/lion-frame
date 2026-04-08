@@ -1,0 +1,53 @@
+name: Claude Code Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, ready_for_review]
+  issue_comment:
+    types: [created]
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    if: |
+      (github.event_name == 'pull_request' && github.event.pull_request.draft == false) ||
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude'))
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: anthropics/claude-code-action@v1
+        with:
+          prompt: |
+            REPO: ${{ github.repository }}
+            PR: #${{ github.event.pull_request.number }}
+
+            このPRをレビューしてください。CLAUDE.mdのプロジェクトルールに基づいて以下を確認:
+
+            1. menuGroupとURLパスの一致
+            2. 共通UIコンポーネント（components/ui/）の使用
+            3. 翻訳ファイルの使用（ハードコード文字列の禁止）
+            4. ロール階層・アクセス制御の整合性
+            5. TypeScript型安全性
+            6. セキュリティ（OWASP Top 10）
+            7. コアモジュール・フレーム基盤の編集禁止ルール
+
+            問題がなければ「LGTM」と判定してください。
+            問題がある場合は具体的なファイル・行番号とともに指摘してください。
+
+          claude_args: |
+            --model claude-sonnet-4-6
+            --max-turns 10
+
+          track_progress: true
+          classify_inline_comments: true
+          include_fix_links: true
+
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
