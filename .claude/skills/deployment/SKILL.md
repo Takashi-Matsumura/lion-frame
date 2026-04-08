@@ -40,8 +40,8 @@ openssl rand -base64 48
 pnpm install
 
 # データベースを初期化
-pnpm --filter @lion-frame/web exec prisma db push
-pnpm --filter @lion-frame/web run db:seed
+pnpm --filter @lionframe/web exec prisma db push
+pnpm --filter @lionframe/web run db:seed
 
 # 開発サーバ起動
 pnpm dev

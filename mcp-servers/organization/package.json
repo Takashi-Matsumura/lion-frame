@@ -1,5 +1,5 @@
 {
-  "name": "@lion-frame/mcp-organization",
+  "name": "@lionframe/mcp-organization",
   "version": "1.0.0",
   "private": true,
   "description": "MCP server for organization data (read-only)",

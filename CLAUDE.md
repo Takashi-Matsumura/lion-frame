@@ -98,9 +98,9 @@ pnpm build                 # 全アプリのビルド
 pnpm test                  # 全アプリのテスト
 
 # Webアプリのみ
-pnpm --filter @lion-frame/web dev
-pnpm --filter @lion-frame/web build
-pnpm --filter @lion-frame/web test
+pnpm --filter @lionframe/web dev
+pnpm --filter @lionframe/web build
+pnpm --filter @lionframe/web test
 
 # Prisma（apps/web/で実行）
 cd apps/web && npx prisma studio

@@ -376,7 +376,7 @@ return {
 
 ```json
 {
-  "name": "@lion-frame/mcp-{module}",
+  "name": "@lionframe/mcp-{module}",
   "version": "1.0.0",
   "type": "module",
   "main": "dist/index.js",
