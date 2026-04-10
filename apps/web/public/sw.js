@@ -22,6 +22,7 @@ self.addEventListener("push", (event) => {
     icon: data.icon || "/next.svg",
     badge: "/next.svg",
     tag: data.tag || "lionframe-notification",
+    renotify: true,
     data: {
       url: data.url || "/dashboard",
     },
