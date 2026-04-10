@@ -1,14 +1,22 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useState } from "react";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { Card, CardContent } from "@/components/ui/card";
 import { PasswordChangeSection } from "./PasswordChangeSection";
-import { PushNotificationSection } from "./PushNotificationSection";
 import { TwoFactorSection } from "./TwoFactorSection";
 import type { settingsTranslations } from "./translations";
 import { UserAccessKeySection } from "./UserAccessKeySection";
+
+// Service Worker / Notification API 依存のためクライアント専用でレンダリング
+// （SSR 時と初回クライアントレンダリングで useState の初期値由来のツリー差分が
+//  sibling の Radix ID を drift させ、hydration mismatch を発生させるため）
+const PushNotificationSection = dynamic(
+  () => import("./PushNotificationSection").then((m) => m.PushNotificationSection),
+  { ssr: false },
+);
 
 type SettingsTranslations =
   | (typeof settingsTranslations)["en"]
