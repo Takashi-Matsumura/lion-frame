@@ -4,6 +4,7 @@ import type {
   Role,
 } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { PushService } from "@/lib/services/push-service";
 
 interface CreateNotificationInput {
   userId: string;
@@ -55,7 +56,7 @@ export class NotificationService {
   static async create(input: CreateNotificationInput) {
     const expiresAt = input.expiresAt ?? computeDefaultExpiry(input.type);
 
-    return prisma.notification.create({
+    const notification = await prisma.notification.create({
       data: {
         userId: input.userId,
         type: input.type,
@@ -75,6 +76,32 @@ export class NotificationService {
         expiresAt,
       },
     });
+
+    // ユーザの言語に応じたプッシュ通知を非同期送信
+    prisma.user
+      .findUnique({
+        where: { id: input.userId },
+        select: { language: true },
+      })
+      .then((user) => {
+        const isJa = user?.language === "ja";
+        const pushTitle =
+          isJa && input.titleJa ? input.titleJa : input.title;
+        const pushBody =
+          isJa && input.messageJa ? input.messageJa : input.message;
+        return PushService.sendToUser(input.userId, {
+          title: pushTitle,
+          body: pushBody,
+          url: input.actionUrl,
+          type: input.type,
+          tag: `notification-${notification.id}`,
+        });
+      })
+      .catch((err) => {
+        console.error("[NotificationService] Push failed:", err);
+      });
+
+    return notification;
   }
 
   /**
@@ -121,6 +148,16 @@ export class NotificationService {
           : undefined,
         expiresAt,
       })),
+    });
+
+    // 全対象ユーザにプッシュ通知を非同期送信
+    PushService.sendToUsers(userIds, {
+      title: input.title,
+      body: input.message,
+      url: input.actionUrl,
+      type: input.type,
+    }).catch((err) => {
+      console.error("[NotificationService] Broadcast push failed:", err);
     });
 
     return notifications;

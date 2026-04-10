@@ -43,6 +43,52 @@ export const settingsTranslations = {
       saveButton: "Save Language",
       saved: "Language preference saved successfully!",
     },
+    pushNotification: {
+      title: "Push Notifications",
+      description:
+        "Receive notifications even when the browser tab is closed",
+      subscribed: "Subscribed",
+      notSubscribed: "Not Subscribed",
+      subscribe: "Enable Push Notifications",
+      unsubscribe: "Disable Push Notifications",
+      notSupported:
+        "Push notifications are not supported in this browser",
+      permissionDenied:
+        "Notification permission was denied. Please enable it in your browser settings.",
+      success: "Push notifications enabled!",
+      unsubscribeSuccess: "Push notifications disabled.",
+      error: "Failed to set up push notifications",
+      sendTest: "Send test notification",
+      testSent: "Test notification sent! Check your OS notification center.",
+      testError: "Failed to send test notification",
+      browserGuide: {
+        toggleLabel: "Setup guide for each OS and browser",
+        commonNote:
+          "Push notifications do not work in Incognito / Private Browsing mode. Please use a regular window.",
+        macos: {
+          title: "macOS",
+          systemNote:
+            "First, open System Settings > Notifications and make sure your browser has notifications allowed.",
+          chrome:
+            "Chrome: Click the lock icon in the address bar > Site settings > Notifications > Allow",
+          safari:
+            "Safari: Safari > Settings > Websites > Notifications > Allow for this site",
+          edge: "Edge: Click the lock icon in the address bar > Permissions for this site > Notifications > Allow",
+          firefox:
+            "Firefox: Click the shield/lock icon in the address bar > Connection secure > More information > Permissions > Notifications",
+        },
+        windows: {
+          title: "Windows",
+          systemNote:
+            "Windows 11: Settings > System > Notifications — make sure your browser's notifications are on. Also check Focus Assist settings.",
+          chrome:
+            "Chrome: Click the lock icon in the address bar > Site settings > Notifications > Allow",
+          edge: "Edge: Click the lock icon in the address bar > Permissions for this site > Notifications > Allow",
+          firefox:
+            "Firefox: Click the shield icon in the address bar > Site information > Notifications",
+        },
+      },
+    },
     passwordChange: {
       title: "Password",
       description: "Change your password",
@@ -102,6 +148,52 @@ export const settingsTranslations = {
       current: "現在の言語",
       saveButton: "言語を保存",
       saved: "言語設定が正常に保存されました！",
+    },
+    pushNotification: {
+      title: "プッシュ通知",
+      description:
+        "ブラウザのタブを閉じていても通知を受け取れます",
+      subscribed: "購読中",
+      notSubscribed: "未購読",
+      subscribe: "プッシュ通知を有効にする",
+      unsubscribe: "プッシュ通知を無効にする",
+      notSupported:
+        "このブラウザではプッシュ通知がサポートされていません",
+      permissionDenied:
+        "通知の許可が拒否されています。ブラウザの設定から有効にしてください。",
+      success: "プッシュ通知が有効になりました！",
+      unsubscribeSuccess: "プッシュ通知を無効にしました。",
+      error: "プッシュ通知の設定に失敗しました",
+      sendTest: "テスト通知を送信",
+      testSent: "テスト通知を送信しました！OSの通知センターを確認してください。",
+      testError: "テスト通知の送信に失敗しました",
+      browserGuide: {
+        toggleLabel: "OS・ブラウザごとの設定方法",
+        commonNote:
+          "シークレットモード（プライベートブラウジング）ではプッシュ通知は動作しません。通常のウィンドウでご利用ください。",
+        macos: {
+          title: "macOS",
+          systemNote:
+            "まず「システム設定 > 通知」を開き、使用するブラウザが「通知を許可」になっていることを確認してください。",
+          chrome:
+            "Chrome: アドレスバー左の🔒アイコン → 「サイトの設定」 → 「通知」を「許可」に変更",
+          safari:
+            "Safari: メニュー「Safari」 → 「設定...」 → 「Webサイト」タブ → 「通知」で対象サイトを「許可」に",
+          edge: "Edge: アドレスバー左の🔒アイコン → 「このサイトのアクセス許可」 → 「通知」を「許可」に変更",
+          firefox:
+            "Firefox: アドレスバー左の盾/鍵アイコン → 「接続は安全です」 → 「詳細情報」 → 「サイト別設定」 → 「通知」",
+        },
+        windows: {
+          title: "Windows",
+          systemNote:
+            "Windows 11: 「設定 > システム > 通知」でブラウザの通知がオンになっていることを確認してください。「集中モード（Focus Assist）」の設定もご確認ください。",
+          chrome:
+            "Chrome: アドレスバー左の🔒アイコン → 「サイトの設定」 → 「通知」を「許可」に変更",
+          edge: "Edge: アドレスバー左の🔒アイコン → 「このサイトのアクセス許可」 → 「通知」を「許可」に変更",
+          firefox:
+            "Firefox: アドレスバー左の盾アイコン → 「サイト情報」 → 「通知」",
+        },
+      },
     },
     passwordChange: {
       title: "パスワード",

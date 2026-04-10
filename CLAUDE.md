@@ -113,7 +113,11 @@ cd apps/web && npx prisma db push && pnpm db:seed
 | カテゴリ | モデル |
 |---------|--------|
 | 認証 | Account, Session, User, VerificationToken |
-| 通知・監査 | AuditLog, Notification, Announcement |
+| 通知・監査 | AuditLog, Notification, Announcement, PushSubscription |
+
+> **通知システム（3層構造）:** (1) 通知センター（ヘッダーのベル、30秒ポーリング、DB永続化）、(2) Sonnerトースト（明示呼び出しのみ）、(3) Web Pushプッシュ通知（OSレベル、タブ外配信可）。`NotificationService.create/broadcast` を呼ぶと自動的にプッシュも送信される（購読済みユーザのみ）ため、新機能実装時にプッシュ対応の追加コードは不要。詳細は `.claude/skills/notifications/SKILL.md` を参照。
+> **Web Pushの要件:** `NEXT_PUBLIC_VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` 環境変数必須（`npx web-push generate-vapid-keys`で生成）、本番はHTTPS必須（localhostは例外）、シークレット/プライベートブラウジングでは動作しない。Service Workerは `apps/web/public/sw.js`。
+> **プッシュ通知のハマりどころ:** ①シークレットモード非対応、②Chromeは `Notification.requestPermission()` の明示呼び出し必須、③`navigator.serviceWorker.ready` でSW active待機必須、④macOSシステム設定で通知許可必須、⑤一度denyされるとダイアログ再表示不可（ブラウザのサイト設定からリセット）、⑥`NEXT_PUBLIC_*` 変更後は開発サーバ再起動必須、⑦Prismaのdrift警告時は `prisma db execute --stdin` でSQL直接実行が安全。
 | アクセス制御 | Permission, AccessKey, AccessKeyPermission, UserAccessKey |
 | 組織 | Organization, Department, Section, Course, Employee, PositionMaster |
 | 履歴 | EmployeeHistory, OrganizationHistory, ChangeLog |

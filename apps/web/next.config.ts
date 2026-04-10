@@ -60,7 +60,7 @@ const nextConfig: NextConfig = {
       bodySizeLimit: "2mb",
     },
   },
-  serverExternalPackages: ["pdf-parse", "pdfjs-dist", "sharp"],
+  serverExternalPackages: ["pdf-parse", "pdfjs-dist", "sharp", "web-push"],
   images: {
     remotePatterns: [
       {

@@ -1,8 +1,9 @@
 "use client";
 
-import { Check } from "lucide-react";
+import { BellRing, Check } from "lucide-react";
 import { useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
+import { usePushSubscription } from "@/lib/hooks/use-push-subscription";
 import { notificationTranslations } from "@/lib/i18n/notifications";
 import { useNotificationStore } from "@/lib/stores/notification-store";
 import { NotificationEmptyState } from "./NotificationEmptyState";
@@ -22,6 +23,13 @@ export function NotificationDropdown({ language }: NotificationDropdownProps) {
     markAllAsRead,
     fetchNotifications,
   } = useNotificationStore();
+  const {
+    isSupported: pushSupported,
+    isSubscribed: pushSubscribed,
+    isLoading: pushLoading,
+    subscribe: pushSubscribe,
+    unsubscribe: pushUnsubscribe,
+  } = usePushSubscription();
 
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -92,6 +100,25 @@ export function NotificationDropdown({ language }: NotificationDropdownProps) {
           </div>
         )}
       </div>
+
+      {/* Push notification toggle */}
+      {pushSupported && (
+        <div className="border-t px-4 py-2">
+          <button
+            type="button"
+            className="flex items-center gap-2 w-full text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+            onClick={pushSubscribed ? pushUnsubscribe : pushSubscribe}
+            disabled={pushLoading}
+          >
+            <BellRing className="h-3.5 w-3.5" />
+            <span>
+              {pushSubscribed
+                ? t.pushNotification.disable
+                : t.pushNotification.enable}
+            </span>
+          </button>
+        </div>
+      )}
     </div>
   );
 }

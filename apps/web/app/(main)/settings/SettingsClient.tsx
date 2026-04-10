@@ -5,6 +5,7 @@ import { useCallback, useState } from "react";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { Card, CardContent } from "@/components/ui/card";
 import { PasswordChangeSection } from "./PasswordChangeSection";
+import { PushNotificationSection } from "./PushNotificationSection";
 import { TwoFactorSection } from "./TwoFactorSection";
 import type { settingsTranslations } from "./translations";
 import { UserAccessKeySection } from "./UserAccessKeySection";
@@ -70,6 +71,15 @@ export function SettingsClient({
               <LanguageSwitcher
                 currentLanguage={language}
                 translations={t.language}
+              />
+            </CardContent>
+          </Card>
+
+          {/* Push Notifications */}
+          <Card>
+            <CardContent className="pt-6">
+              <PushNotificationSection
+                translations={t.pushNotification}
               />
             </CardContent>
           </Card>

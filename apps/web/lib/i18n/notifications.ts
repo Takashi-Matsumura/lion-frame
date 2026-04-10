@@ -37,6 +37,13 @@ export const notificationTranslations = {
     // Errors
     fetchError: "Failed to load notifications",
     updateError: "Failed to update notification",
+
+    // Push notifications
+    pushNotification: {
+      enable: "Enable push notifications",
+      disable: "Disable push notifications",
+      notSupported: "Not supported",
+    },
   },
   ja: {
     // Header
@@ -76,6 +83,13 @@ export const notificationTranslations = {
     // Errors
     fetchError: "通知の読み込みに失敗しました",
     updateError: "通知の更新に失敗しました",
+
+    // Push notifications
+    pushNotification: {
+      enable: "プッシュ通知を有効にする",
+      disable: "プッシュ通知を無効にする",
+      notSupported: "非対応",
+    },
   },
 } as const;
 
