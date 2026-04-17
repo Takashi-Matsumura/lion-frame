@@ -8,7 +8,8 @@ export type AuditCategory =
   | "MODULE"
   | "TAG"
   | "USAGE"
-  | "WORKFLOW";
+  | "WORKFLOW"
+  | "OIDC";
 
 // 監査ログのアクション
 export type AuditAction =
@@ -87,7 +88,19 @@ export type AuditAction =
   | "WATASU_SANDBOX_CLOSE"
   | "WATASU_FILE_UPLOAD"
   | "WATASU_FILE_DOWNLOAD"
-  | "WATASU_ACCESS_TOGGLE";
+  | "WATASU_ACCESS_TOGGLE"
+  // OIDC
+  | "OIDC_AUTHORIZE"
+  | "OIDC_AUTHORIZE_DENIED"
+  | "OIDC_CONSENT_GRANT"
+  | "OIDC_TOKEN_ISSUE"
+  | "OIDC_TOKEN_REUSE_DETECTED"
+  | "OIDC_USERINFO_ACCESS"
+  | "OIDC_CLIENT_CREATE"
+  | "OIDC_CLIENT_UPDATE"
+  | "OIDC_CLIENT_DELETE"
+  | "OIDC_CLIENT_SECRET_REGENERATE"
+  | "OIDC_CLEANUP";
 
 export interface AuditLogInput {
   action: AuditAction;

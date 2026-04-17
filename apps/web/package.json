@@ -60,6 +60,7 @@
     "exceljs": "^4.4.0",
     "highlight.js": "^11.11.1",
     "html2canvas": "^1.4.1",
+    "jose": "^6.2.2",
     "jspdf": "^4.2.1",
     "katex": "^0.16.28",
     "lucide-react": "^0.575.0",

@@ -1411,3 +1411,99 @@ model HandsonLog {
   @@index([participantId])
   @@index([sessionId, createdAt])
 }
+
+// ========================================
+// OIDC Provider
+// ========================================
+
+model OIDCClient {
+  id               String   @id @default(cuid())
+  clientId         String   @unique
+  clientSecretHash String
+  name             String
+  description      String?
+  redirectUris     String[] @default([])
+  allowedScopes    String[] @default(["openid", "profile", "email"])
+  allowedRoles     Role[]   @default([USER, MANAGER, EXECUTIVE, ADMIN])
+  enabled          Boolean  @default(true)
+  autoApprove      Boolean  @default(false)
+  createdBy        String
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  authCodes    OIDCAuthCode[]
+  accessTokens OIDCAccessToken[]
+  consents     OIDCConsent[]
+  authRequests OIDCAuthRequest[]
+
+  @@index([enabled])
+}
+
+model OIDCAuthRequest {
+  id                  String   @id @default(cuid())
+  clientId            String
+  redirectUri         String
+  scope               String
+  state               String?
+  nonce               String?
+  codeChallenge       String
+  codeChallengeMethod String
+  responseType        String
+  expiresAt           DateTime
+  createdAt           DateTime @default(now())
+
+  client OIDCClient @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt])
+}
+
+model OIDCAuthCode {
+  id                  String    @id @default(cuid())
+  clientId            String
+  userId              String
+  redirectUri         String
+  scope               String
+  nonce               String?
+  codeChallenge       String
+  codeChallengeMethod String
+  twoFactorUsed       Boolean   @default(false)
+  usedAt              DateTime?
+  expiresAt           DateTime
+  createdAt           DateTime  @default(now())
+
+  client OIDCClient @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt])
+  @@index([clientId, userId])
+}
+
+model OIDCAccessToken {
+  id         String    @id @default(cuid())
+  clientId   String
+  userId     String
+  scope      String
+  tokenHash  String    @unique
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+
+  client OIDCClient @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+  @@index([expiresAt])
+}
+
+model OIDCConsent {
+  id           String    @id @default(cuid())
+  clientId     String
+  userId       String
+  scope        String
+  autoApproved Boolean   @default(false)
+  grantedAt    DateTime  @default(now())
+  revokedAt    DateTime?
+
+  client OIDCClient @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@unique([clientId, userId])
+  @@index([userId])
+}
