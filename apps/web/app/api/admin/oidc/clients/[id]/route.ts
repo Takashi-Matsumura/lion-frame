@@ -1,31 +1,39 @@
 import type { Role } from "@prisma/client";
-import { apiHandler } from "@/lib/api/api-handler";
-import { ApiError } from "@/lib/api/api-error";
+import { NextResponse } from "next/server";
+import { ApiError, requireAdmin } from "@/lib/api";
 import { AuditService } from "@/lib/services/audit-service";
 import { OIDCClientService } from "@/lib/services/oidc/client-service";
 
-function extractIdFromUrl(request: Request): string {
-  const { pathname } = new URL(request.url);
-  const segments = pathname.split("/").filter(Boolean);
-  // /api/admin/oidc/clients/[id]
-  const id = segments[segments.length - 1];
-  if (!id) throw ApiError.badRequest("id is required");
-  return id;
+function toErrorResponse(error: unknown): NextResponse {
+  if (error instanceof ApiError) {
+    return NextResponse.json(error.toJSON(), { status: error.status });
+  }
+  console.error("[OIDC admin/clients/[id]]", error);
+  return NextResponse.json({ error: "Internal server error" }, { status: 500 });
 }
 
-export const GET = apiHandler(
-  async (request) => {
-    const id = extractIdFromUrl(request);
+export async function GET(
+  _request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  try {
+    await requireAdmin();
+    const { id } = await params;
     const client = await OIDCClientService.getById(id);
     if (!client) throw ApiError.notFound("OIDC client not found");
-    return { client };
-  },
-  { admin: true },
-);
+    return NextResponse.json({ client });
+  } catch (error) {
+    return toErrorResponse(error);
+  }
+}
 
-export const PATCH = apiHandler(
-  async (request, session) => {
-    const id = extractIdFromUrl(request);
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  try {
+    const session = await requireAdmin();
+    const { id } = await params;
     const body = (await request.json()) as {
       name?: string;
       description?: string | null;
@@ -41,7 +49,6 @@ export const PATCH = apiHandler(
 
     try {
       const client = await OIDCClientService.update(id, body);
-
       await AuditService.log({
         action: "OIDC_CLIENT_UPDATE",
         category: "OIDC",
@@ -50,21 +57,26 @@ export const PATCH = apiHandler(
         targetType: "OIDCClient",
         details: { changes: body },
       });
-
-      return { client };
+      return NextResponse.json({ client });
     } catch (error) {
       if (error instanceof Error && error.message.includes("redirect_uri")) {
         throw ApiError.badRequest(error.message);
       }
       throw error;
     }
-  },
-  { admin: true },
-);
+  } catch (error) {
+    return toErrorResponse(error);
+  }
+}
 
-export const DELETE = apiHandler(
-  async (request, session) => {
-    const id = extractIdFromUrl(request);
+export async function DELETE(
+  _request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  try {
+    const session = await requireAdmin();
+    const { id } = await params;
+
     const existing = await OIDCClientService.getById(id);
     if (!existing) throw ApiError.notFound("OIDC client not found");
 
@@ -79,7 +91,8 @@ export const DELETE = apiHandler(
       details: { clientId: existing.clientId, name: existing.name },
     });
 
-    return { ok: true };
-  },
-  { admin: true },
-);
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    return toErrorResponse(error);
+  }
+}

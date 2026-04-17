@@ -1,15 +1,15 @@
-import { apiHandler } from "@/lib/api/api-handler";
-import { ApiError } from "@/lib/api/api-error";
+import { NextResponse } from "next/server";
+import { ApiError, requireAdmin } from "@/lib/api";
 import { AuditService } from "@/lib/services/audit-service";
 import { OIDCClientService } from "@/lib/services/oidc/client-service";
 
-export const POST = apiHandler(
-  async (request, session) => {
-    const { pathname } = new URL(request.url);
-    const segments = pathname.split("/").filter(Boolean);
-    // /api/admin/oidc/clients/[id]/regenerate-secret
-    const id = segments[segments.length - 2];
-    if (!id) throw ApiError.badRequest("id is required");
+export async function POST(
+  _request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  try {
+    const session = await requireAdmin();
+    const { id } = await params;
 
     const existing = await OIDCClientService.getById(id);
     if (!existing) throw ApiError.notFound("OIDC client not found");
@@ -25,10 +25,18 @@ export const POST = apiHandler(
       details: { clientId: result.client.clientId },
     });
 
-    return {
+    return NextResponse.json({
       client: result.client,
       clientSecret: result.clientSecret,
-    };
-  },
-  { admin: true },
-);
+    });
+  } catch (error) {
+    if (error instanceof ApiError) {
+      return NextResponse.json(error.toJSON(), { status: error.status });
+    }
+    console.error("[OIDC regenerate-secret]", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 },
+    );
+  }
+}

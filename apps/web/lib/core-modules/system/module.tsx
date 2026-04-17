@@ -156,6 +156,9 @@ export const systemModule: AppModule = {
       icon: getMenuIcon("auditLogs", "system"),
       allowAccessKey: true,
     },
+    // Issue #6: OIDC Provider 機能の管理メニュー。
+    // LionFrame 本体の認証基盤拡張としてコアモジュールに組み込む。
+    // 派生プロジェクトで業務メニューを追加する場合は addon-modules/ を使用すること。
     {
       id: "oidcClients",
       moduleId: "system",

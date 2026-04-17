@@ -226,7 +226,7 @@ export async function verifyAccessToken(
     const key = await findKeyByKid(kid);
     if (!key) return null;
 
-    const { payload } = await jwtVerify(token, key.privateKey, {
+    const { payload } = await jwtVerify(token, key.publicKey, {
       issuer: getIssuer(),
       algorithms: OIDC_SUPPORTED_SIGNING_ALGS as unknown as string[],
     });

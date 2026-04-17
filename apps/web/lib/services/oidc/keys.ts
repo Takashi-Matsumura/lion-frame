@@ -23,6 +23,7 @@ interface LoadedKey {
   kid: string;
   status: KeyStatus;
   privateKey: SigningKey;
+  publicKey: SigningKey;
   publicJwk: JWK;
 }
 
@@ -57,11 +58,16 @@ async function loadKeys(): Promise<LoadedKey[]> {
         `OIDC_SIGNING_KEYS entry is missing required fields (kid/privateJwk/publicJwk)`,
       );
     }
+    // 署名用は privateJwk、検証用は publicJwk から別々に import する。
+    // Web Crypto API では CryptoKey に keyUsages が紐づいており、
+    // sign 用のキーでは verify できないため両方必要（レビュー指摘）。
     const privateKey = await importJWK(entry.privateJwk, "RS256");
+    const publicKey = await importJWK(entry.publicJwk, "RS256");
     loaded.push({
       kid: entry.kid,
       status: entry.status ?? "active",
       privateKey: privateKey as SigningKey,
+      publicKey: publicKey as SigningKey,
       publicJwk: { ...entry.publicJwk, kid: entry.kid, alg: "RS256", use: "sig" },
     });
   }
