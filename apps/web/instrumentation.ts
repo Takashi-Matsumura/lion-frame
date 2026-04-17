@@ -9,5 +9,10 @@ export async function register() {
       "@/lib/core-modules/system/services/dependency-cron"
     );
     startDependencyCron();
+
+    const { startOidcCleanupCron } = await import(
+      "@/lib/services/oidc/cleanup"
+    );
+    startOidcCleanupCron();
   }
 }

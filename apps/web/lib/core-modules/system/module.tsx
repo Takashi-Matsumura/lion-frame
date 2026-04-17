@@ -1,5 +1,5 @@
 import { FaBullhorn, FaInfoCircle, FaUsers } from "react-icons/fa";
-import { Settings2 } from "lucide-react";
+import { KeyRound, Settings2 } from "lucide-react";
 import type { AppModule, AppTab } from "@/types/module";
 import { getMenuIcon } from "@/lib/modules/icons";
 
@@ -155,6 +155,24 @@ export const systemModule: AppModule = {
       descriptionJa: "監査ログを表示します",
       icon: getMenuIcon("auditLogs", "system"),
       allowAccessKey: true,
+    },
+    // Issue #6: OIDC Provider 機能の管理メニュー。
+    // LionFrame 本体の認証基盤拡張としてコアモジュールに組み込む。
+    // 派生プロジェクトで業務メニューを追加する場合は addon-modules/ を使用すること。
+    {
+      id: "oidcClients",
+      moduleId: "system",
+      name: "OIDC Clients",
+      nameJa: "OIDC クライアント",
+      path: "/admin/oidc/clients",
+      menuGroup: "admin",
+      requiredRoles: ["ADMIN"],
+      enabled: true,
+      order: 87,
+      description: "Manage OpenID Connect relying parties",
+      descriptionJa: "OIDC 連携アプリ（クライアント）を管理します",
+      icon: <KeyRound className="w-5 h-5 flex-shrink-0" />,
+      allowAccessKey: false,
     },
     {
       id: "adminPanel",

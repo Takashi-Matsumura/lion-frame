@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/prisma";
 
 // 監査ログのカテゴリ
+// 注: "OIDC" は Issue #6 で LionFrame 本体の認証基盤拡張（OIDC Provider 機能）として
+// フレームに組み込まれたカテゴリ。派生プロジェクトでは追加せず、既存カテゴリを利用する。
 export type AuditCategory =
   | "AUTH"
   | "USER_MANAGEMENT"
@@ -8,7 +10,8 @@ export type AuditCategory =
   | "MODULE"
   | "TAG"
   | "USAGE"
-  | "WORKFLOW";
+  | "WORKFLOW"
+  | "OIDC";
 
 // 監査ログのアクション
 export type AuditAction =
@@ -87,7 +90,19 @@ export type AuditAction =
   | "WATASU_SANDBOX_CLOSE"
   | "WATASU_FILE_UPLOAD"
   | "WATASU_FILE_DOWNLOAD"
-  | "WATASU_ACCESS_TOGGLE";
+  | "WATASU_ACCESS_TOGGLE"
+  // OIDC（Issue #6 でフレーム本体の認証基盤拡張として追加）
+  | "OIDC_AUTHORIZE"
+  | "OIDC_AUTHORIZE_DENIED"
+  | "OIDC_CONSENT_GRANT"
+  | "OIDC_TOKEN_ISSUE"
+  | "OIDC_TOKEN_REUSE_DETECTED"
+  | "OIDC_USERINFO_ACCESS"
+  | "OIDC_CLIENT_CREATE"
+  | "OIDC_CLIENT_UPDATE"
+  | "OIDC_CLIENT_DELETE"
+  | "OIDC_CLIENT_SECRET_REGENERATE"
+  | "OIDC_CLEANUP";
 
 export interface AuditLogInput {
   action: AuditAction;
