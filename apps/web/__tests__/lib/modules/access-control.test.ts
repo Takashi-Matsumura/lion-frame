@@ -95,10 +95,18 @@ describe("access-control", () => {
         expect(canAccessMenu(menu, "ADMIN", [])).toBe(false);
       });
 
-      it("requiredRoles が空の場合、全ロールがアクセス可能", () => {
-        const menu = createMockMenu({ requiredRoles: [] });
+      it("requiredRoles が空の場合、menuGroup の階層に含まれるロールはアクセス可能", () => {
+        // menuGroup="guest" は ROLE_HIERARCHY で全ロールが包含される
+        const menu = createMockMenu({ requiredRoles: [], menuGroup: "guest" });
         expect(canAccessMenu(menu, "USER", [])).toBe(true);
         expect(canAccessMenu(menu, "GUEST", [])).toBe(true);
+      });
+
+      it("menuGroup='user' のメニューには GUEST はアクセス不可（GUEST ロール仕様）", () => {
+        // requiredRoles が空でも、menuGroup による階層制御が優先される
+        const menu = createMockMenu({ requiredRoles: [], menuGroup: "user" });
+        expect(canAccessMenu(menu, "USER", [])).toBe(true);
+        expect(canAccessMenu(menu, "GUEST", [])).toBe(false);
       });
 
       it("requiredRoles に含まれるロールのみアクセス可能", () => {
@@ -311,8 +319,9 @@ describe("access-control", () => {
       expect(canAccessMenu(menu, "ADMIN", [], undefined, undefined, [])).toBe(true);
     });
 
-    it("requiredRoles が未定義の場合、全ロールがアクセス可能", () => {
-      const menu = createMockMenu(); // requiredRoles なし
+    it("requiredRoles が未定義の場合、menuGroup の階層に含まれるロールはアクセス可能", () => {
+      // menuGroup="guest" は全ロールを包含するため GUEST/ADMIN ともに true
+      const menu = createMockMenu({ menuGroup: "guest" });
       expect(canAccessMenu(menu, "GUEST", [])).toBe(true);
       expect(canAccessMenu(menu, "ADMIN", [])).toBe(true);
     });
