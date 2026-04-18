@@ -7,15 +7,21 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { sanitizeCallbackUrl } from "@/lib/services/safe-redirect";
 import { verifyTotpTranslations } from "./translations";
 
 interface VerifyTotpClientProps {
   language: "en" | "ja";
+  callbackUrl?: string | null;
 }
 
-export function VerifyTotpClient({ language }: VerifyTotpClientProps) {
+export function VerifyTotpClient({
+  language,
+  callbackUrl,
+}: VerifyTotpClientProps) {
   const t = verifyTotpTranslations[language];
   const router = useRouter();
+  const redirectTo = sanitizeCallbackUrl(callbackUrl, "/dashboard");
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -34,7 +40,7 @@ export function VerifyTotpClient({ language }: VerifyTotpClientProps) {
         });
 
         if (response.ok) {
-          router.push("/dashboard");
+          router.push(redirectTo);
           router.refresh();
         } else {
           const data = await response.json();
@@ -46,7 +52,7 @@ export function VerifyTotpClient({ language }: VerifyTotpClientProps) {
         setIsLoading(false);
       }
     },
-    [code, router, t],
+    [code, router, t, redirectTo],
   );
 
   const handleLogout = useCallback(async () => {

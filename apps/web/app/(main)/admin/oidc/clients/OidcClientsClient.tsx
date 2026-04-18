@@ -1,19 +1,28 @@
 "use client";
 
 import type { OIDCClient, Role } from "@prisma/client";
+import { MoreHorizontal } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LocaleDateTime } from "@/components/ui/locale-date";
+import { PageSkeleton } from "@/components/ui/page-skeleton";
 import {
   Table,
   TableBody,
@@ -199,50 +208,60 @@ export function OidcClientsClient({ language }: OidcClientsClientProps) {
     }
   };
 
+  if (loading) {
+    return <PageSkeleton />;
+  }
+
   return (
     <div className="space-y-6">
       <Card>
         <CardHeader className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-          <div>
-            <CardTitle>{t.title}</CardTitle>
-            <CardDescription className="mt-1">
-              {t.description}
-            </CardDescription>
-          </div>
-          <Button onClick={handleOpenCreate}>{t.createButton}</Button>
+          <CardDescription className="max-w-3xl">
+            {t.description}
+          </CardDescription>
+          <Button onClick={handleOpenCreate} className="shrink-0">
+            {t.createButton}
+          </Button>
         </CardHeader>
         <CardContent>
-          {loading ? (
-            <div className="text-sm text-muted-foreground">...</div>
-          ) : clients.length === 0 ? (
+          {clients.length === 0 ? (
             <EmptyState message={t.empty} />
           ) : (
-            <Table>
+            <Table className="table-fixed">
               <TableHeader>
                 <TableRow>
-                  <TableHead>{t.name}</TableHead>
-                  <TableHead>{t.clientId}</TableHead>
-                  <TableHead>{t.redirectUris}</TableHead>
-                  <TableHead>{t.scopes}</TableHead>
-                  <TableHead>{t.roles}</TableHead>
-                  <TableHead>{t.status}</TableHead>
-                  <TableHead>{t.createdAt}</TableHead>
-                  <TableHead></TableHead>
+                  <TableHead className="w-[22%]">{t.name}</TableHead>
+                  <TableHead className="w-[28%]">{t.clientId}</TableHead>
+                  <TableHead className="w-[20%]">{t.redirectUris}</TableHead>
+                  <TableHead className="w-[15%]">{t.roles}</TableHead>
+                  <TableHead className="w-[10%]">{t.status}</TableHead>
+                  <TableHead className="w-[5%]" />
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {clients.map((c) => (
-                  <TableRow key={c.id}>
-                    <TableCell className="font-medium">
-                      {c.name}
+                  <TableRow key={c.id} className="align-top">
+                    <TableCell>
+                      <div className="font-medium break-words">{c.name}</div>
                       {c.description && (
-                        <div className="text-xs text-muted-foreground">
+                        <div className="text-xs text-muted-foreground break-words mt-0.5">
                           {c.description}
                         </div>
                       )}
+                      <div className="text-xs text-muted-foreground mt-1">
+                        <LocaleDateTime
+                          date={c.createdAt}
+                          locale={language === "ja" ? "ja-JP" : "en-US"}
+                        />
+                      </div>
                     </TableCell>
-                    <TableCell className="font-mono text-xs">
-                      {c.clientId}
+                    <TableCell>
+                      <div className="font-mono text-xs break-all">
+                        {c.clientId}
+                      </div>
+                      <div className="text-xs font-mono text-muted-foreground break-all mt-1">
+                        {c.allowedScopes.join(" ")}
+                      </div>
                     </TableCell>
                     <TableCell className="text-xs">
                       <ul className="space-y-0.5">
@@ -253,50 +272,56 @@ export function OidcClientsClient({ language }: OidcClientsClientProps) {
                         ))}
                       </ul>
                     </TableCell>
-                    <TableCell className="text-xs font-mono">
-                      {c.allowedScopes.join(" ")}
+                    <TableCell className="text-xs">
+                      <div className="flex flex-wrap gap-1">
+                        {(c.allowedRoles as Role[]).map((r) => (
+                          <Badge key={r} variant="secondary" className="text-[10px]">
+                            {r}
+                          </Badge>
+                        ))}
+                      </div>
                     </TableCell>
                     <TableCell className="text-xs">
-                      {(c.allowedRoles as Role[]).join(", ")}
-                    </TableCell>
-                    <TableCell className="text-xs">
-                      <div>{c.enabled ? t.enabled : t.disabled}</div>
+                      <Badge
+                        className={
+                          c.enabled
+                            ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+                            : "bg-muted text-muted-foreground"
+                        }
+                      >
+                        {c.enabled ? t.enabled : t.disabled}
+                      </Badge>
                       {c.autoApprove && (
-                        <div className="text-muted-foreground">
+                        <div className="text-muted-foreground mt-1">
                           {t.autoApprove}
                         </div>
                       )}
                     </TableCell>
-                    <TableCell className="text-xs">
-                      <LocaleDateTime
-                        date={c.createdAt}
-                        locale={language === "ja" ? "ja-JP" : "en-US"}
-                      />
-                    </TableCell>
                     <TableCell>
-                      <div className="flex flex-col gap-1">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleOpenEdit(c)}
-                        >
-                          {t.editButton}
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setRegenerateTarget(c)}
-                        >
-                          {t.regenerateSecretButton}
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => setDeleteTarget(c)}
-                        >
-                          {t.deleteButton}
-                        </Button>
-                      </div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => handleOpenEdit(c)}>
+                            {t.editButton}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => setRegenerateTarget(c)}
+                          >
+                            {t.regenerateSecretButton}
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            variant="destructive"
+                            onClick={() => setDeleteTarget(c)}
+                          >
+                            {t.deleteButton}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </TableCell>
                   </TableRow>
                 ))}
