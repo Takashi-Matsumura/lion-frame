@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { useCallback, useState } from "react";
 import { RiLoginBoxLine } from "react-icons/ri";
@@ -8,6 +8,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { sanitizeCallbackUrl } from "@/lib/services/safe-redirect";
 
 const translations = {
   en: {
@@ -41,6 +42,11 @@ export function CredentialsLoginForm({
   language = "ja",
 }: CredentialsLoginFormProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const callbackUrl = sanitizeCallbackUrl(
+    searchParams?.get("callbackUrl"),
+    "/",
+  );
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -73,7 +79,7 @@ export function CredentialsLoginForm({
       if (result?.error) {
         setError(t.loginError);
       } else if (result?.ok) {
-        router.push("/");
+        router.push(callbackUrl);
         router.refresh();
       }
     } catch (err) {

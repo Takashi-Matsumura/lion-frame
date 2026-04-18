@@ -14,7 +14,11 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export default async function VerifyTotpPage() {
+export default async function VerifyTotpPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ callbackUrl?: string }>;
+}) {
   const session = await auth();
 
   // Redirect to login if not authenticated
@@ -28,6 +32,12 @@ export default async function VerifyTotpPage() {
   }
 
   const language = await getLanguage();
+  const { callbackUrl } = await searchParams;
 
-  return <VerifyTotpClient language={language as "en" | "ja"} />;
+  return (
+    <VerifyTotpClient
+      language={language as "en" | "ja"}
+      callbackUrl={callbackUrl}
+    />
+  );
 }

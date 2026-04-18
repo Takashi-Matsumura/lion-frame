@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import NextAuth from "next-auth";
 import { authConfig } from "@/auth.config";
 import { verifySignedValue } from "@/lib/services/cookie-signer";
+import { sanitizeCallbackUrl } from "@/lib/services/safe-redirect";
 
 const { auth } = NextAuth(authConfig);
 
@@ -74,7 +75,10 @@ export default auth(async (req) => {
           ? await verifySignedValue(verified.value)
           : null;
         if (verifiedUserId !== session.user.id) {
-          return NextResponse.redirect(redirectUrl("/auth/verify-totp"));
+          const target = redirectUrl("/auth/verify-totp");
+          const cb = req.nextUrl.searchParams.get("callbackUrl");
+          if (cb) target.searchParams.set("callbackUrl", cb);
+          return NextResponse.redirect(target);
         }
       }
       // Check if password change is required
@@ -82,6 +86,14 @@ export default auth(async (req) => {
         return NextResponse.redirect(
           redirectUrl("/settings?passwordReset=true"),
         );
+      }
+      // callbackUrl 優先（OIDC authorize 経由などで指定されたリダイレクト先）
+      const callbackUrl = sanitizeCallbackUrl(
+        req.nextUrl.searchParams.get("callbackUrl"),
+        "",
+      );
+      if (callbackUrl) {
+        return NextResponse.redirect(redirectUrl(callbackUrl));
       }
       // GUEST users go to welcome page instead of dashboard
       if (session.user.role === "GUEST") {
@@ -131,7 +143,12 @@ export default auth(async (req) => {
       ? await verifySignedValue(verified.value)
       : null;
     if (verifiedUserId !== session.user.id) {
-      return NextResponse.redirect(redirectUrl("/auth/verify-totp"));
+      const target = redirectUrl("/auth/verify-totp");
+      target.searchParams.set(
+        "callbackUrl",
+        `${pathname}${req.nextUrl.search}`,
+      );
+      return NextResponse.redirect(target);
     }
   }
 
