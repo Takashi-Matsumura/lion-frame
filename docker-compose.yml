@@ -30,6 +30,14 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    # apps/web/.env を env_file として読み込み、OIDC_SIGNING_KEYS や VAPID キー
+    # など Next.js アプリ側で設定済みの秘匿情報をそのままコンテナに渡す。
+    # Compose の優先順位上、environment に明記したキー（DB URL / AUTH_URL /
+    # OIDC_ISSUER など、コンテナ内ネットワーク前提で上書きが必要なもの）は
+    # env_file より強い。
+    env_file:
+      - path: ./apps/web/.env
+        required: false
     environment:
       NODE_ENV: development
       DATABASE_URL: postgresql://lionframe:lionframe@postgres:5432/lionframe?schema=public
@@ -38,14 +46,11 @@ services:
       # 生成例: openssl rand -base64 32
       AUTH_SECRET: ${AUTH_SECRET:-dev-secret-change-me}
       OIDC_ISSUER: http://localhost:3030
-      OIDC_SIGNING_KEYS: ${OIDC_SIGNING_KEYS:-}
       RAG_BACKEND_URL: http://airag-backend:8000
       LLM_BASE_URL: ${LLM_BASE_URL:-http://host.docker.internal:8080}
       NEXT_PUBLIC_APP_NAME: LionFrame
       NEXT_PUBLIC_APP_DESCRIPTION: Modular framework for back-office operations
       NEXT_PUBLIC_APP_DESCRIPTION_JA: バックオフィス業務を支援するモジュラーフレームワーク
-      NEXT_PUBLIC_VAPID_PUBLIC_KEY: ${NEXT_PUBLIC_VAPID_PUBLIC_KEY:-}
-      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
       NEXT_PUBLIC_WEBAUTHN_RP_ID: localhost
       NEXT_PUBLIC_WEBAUTHN_RP_NAME: LionFrame
       WEBAUTHN_ORIGIN: http://localhost:3030
