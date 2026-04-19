@@ -115,10 +115,13 @@ export const authConfig = {
 
       return true;
     },
-    async jwt({ token, user, trigger }) {
-      // サインイン時にビルドIDを記録
+    async jwt({ token, user, account, trigger }) {
+      // サインイン時にビルドIDと認証方法を記録
       if (user) {
         token.buildId = process.env.NEXT_BUILD_ID || "dev";
+        if (account?.provider) {
+          token.authMethod = account.provider;
+        }
       }
       // 初回ログイン時またはセッション更新時にDBからユーザ情報を取得
       if (user || trigger === "update" || !token.role) {
@@ -157,6 +160,7 @@ export const authConfig = {
           (token.twoFactorEnabled as boolean) || false;
         session.user.mustChangePassword =
           (token.mustChangePassword as boolean) || false;
+        session.user.authMethod = token.authMethod as string | undefined;
       }
       // Expose buildId for middleware validation
       (session as unknown as Record<string, unknown>).buildId = token.buildId;

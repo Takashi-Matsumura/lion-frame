@@ -9,6 +9,7 @@ declare module "next-auth" {
       language: string;
       twoFactorEnabled: boolean;
       mustChangePassword: boolean;
+      authMethod?: string;
       name?: string | null;
       email?: string | null;
       image?: string | null;
@@ -19,5 +20,12 @@ declare module "next-auth" {
     role: Role;
     language?: string;
     twoFactorEnabled?: boolean;
+    authMethod?: string;
+  }
+}
+
+declare module "next-auth/jwt" {
+  interface JWT {
+    authMethod?: string;
   }
 }

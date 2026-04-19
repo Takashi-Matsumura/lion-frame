@@ -68,8 +68,11 @@ export default auth(async (req) => {
         response.cookies.delete("__Secure-authjs.session-token");
         return response;
       }
-      // Check if 2FA is required
-      if (session.user.twoFactorEnabled) {
+      // Check if 2FA is required (skip when signed in via passkey/WebAuthn)
+      if (
+        session.user.twoFactorEnabled &&
+        session.user.authMethod !== "webauthn"
+      ) {
         const verified = req.cookies.get("2fa_verified");
         const verifiedUserId = verified?.value
           ? await verifySignedValue(verified.value)
@@ -109,8 +112,11 @@ export default auth(async (req) => {
     if (!session) {
       return NextResponse.redirect(redirectUrl("/login"));
     }
-    // If 2FA is not enabled or already verified, redirect to dashboard
-    if (!session.user.twoFactorEnabled) {
+    // If 2FA is not enabled, or signed in via passkey, or already verified, redirect to dashboard
+    if (
+      !session.user.twoFactorEnabled ||
+      session.user.authMethod === "webauthn"
+    ) {
       return NextResponse.redirect(redirectUrl("/dashboard"));
     }
     const verified = req.cookies.get("2fa_verified");
@@ -136,8 +142,11 @@ export default auth(async (req) => {
     return NextResponse.redirect(redirectUrl("/login"));
   }
 
-  // Check 2FA verification for protected routes
-  if (session.user.twoFactorEnabled) {
+  // Check 2FA verification for protected routes (skip when signed in via passkey)
+  if (
+    session.user.twoFactorEnabled &&
+    session.user.authMethod !== "webauthn"
+  ) {
     const verified = req.cookies.get("2fa_verified");
     const verifiedUserId = verified?.value
       ? await verifySignedValue(verified.value)

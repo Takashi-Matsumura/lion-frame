@@ -5,6 +5,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Copy,
+  KeyRound,
   RefreshCw,
   Search,
   Trash2,
@@ -12,6 +13,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import { useCallback, useEffect, useState } from "react";
+import { UserPasskeyDialog } from "@/components/admin/UserPasskeyDialog";
 import { UserRoleChanger } from "@/components/UserRoleChanger";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -112,6 +114,9 @@ export function UsersTab({ language, currentUserId }: UsersTabProps) {
     null,
   );
   const [organizations, setOrganizations] = useState<OrganizationOption[]>([]);
+
+  // パスキー管理の状態
+  const [passkeyUser, setPasskeyUser] = useState<AdminUser | null>(null);
 
   // 退職者アカウント管理の状態
   const [candidateTab, setCandidateTab] = useState<"create" | "retired">(
@@ -847,6 +852,25 @@ export function UsersTab({ language, currentUserId }: UsersTabProps) {
                                       <Button
                                         variant="ghost"
                                         size="icon"
+                                        className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                                        onClick={() => setPasskeyUser(user)}
+                                      >
+                                        <KeyRound className="h-4 w-4" />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>
+                                        {t("Manage Passkeys", "パスキー管理")}
+                                      </p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
                                         className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
                                         onClick={() => openDeleteModal(user)}
                                       >
@@ -882,6 +906,17 @@ export function UsersTab({ language, currentUserId }: UsersTabProps) {
           )}
         </CardContent>
       </Card>
+
+      {/* パスキー管理ダイアログ */}
+      <UserPasskeyDialog
+        language={language}
+        userId={passkeyUser?.id ?? ""}
+        userLabel={passkeyUser?.name || passkeyUser?.email || ""}
+        open={!!passkeyUser}
+        onOpenChange={(open) => {
+          if (!open) setPasskeyUser(null);
+        }}
+      />
 
       {/* 削除確認モーダル（DELETE入力式） */}
       <DeleteConfirmDialog
