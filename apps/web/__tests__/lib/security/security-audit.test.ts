@@ -15,20 +15,6 @@ function readSource(relativePath: string): string {
 }
 
 describe("セキュリティ静的検証", () => {
-  describe("監査ログからのPII除去", () => {
-    it("auth.config.ts の監査ログに email が含まれていないこと", () => {
-      const source = readSource("auth.config.ts");
-      // auditLog.create の details 内に email が存在しないことを確認
-      const auditLogMatch = source.match(
-        /auditLog[\s\S]*?\.create\([\s\S]*?details:\s*JSON\.stringify\(\{([\s\S]*?)\}\)/,
-      );
-      expect(auditLogMatch).not.toBeNull();
-      if (auditLogMatch) {
-        expect(auditLogMatch[1]).not.toContain("email");
-      }
-    });
-  });
-
   describe("セキュリティヘッダー", () => {
     it("next.config.ts に必須セキュリティヘッダーが設定されていること", () => {
       const source = readSource("next.config.ts");

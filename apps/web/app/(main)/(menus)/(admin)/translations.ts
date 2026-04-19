@@ -13,7 +13,7 @@ export const adminTranslations = {
     authentication: "Authentication:",
     authValue: "NextAuth.js v5",
     provider: "Provider:",
-    providerValue: "Google OAuth",
+    providerValue: "Credentials / Passkey (WebAuthn)",
   },
   ja: {
     title: "管理画面",
@@ -30,6 +30,6 @@ export const adminTranslations = {
     authentication: "認証:",
     authValue: "NextAuth.js v5",
     provider: "プロバイダ:",
-    providerValue: "Google OAuth",
+    providerValue: "Credentials / Passkey (WebAuthn)",
   },
 } as const;

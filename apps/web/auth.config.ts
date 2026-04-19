@@ -1,8 +1,5 @@
-import { PrismaAdapter } from "@auth/prisma-adapter";
 import type { Role } from "@prisma/client";
 import type { NextAuthConfig } from "next-auth";
-import GitHub from "next-auth/providers/github";
-import Google from "next-auth/providers/google";
 import { prisma } from "@/lib/prisma";
 
 // Warn if AUTH_SECRET is weak or missing
@@ -17,104 +14,18 @@ if (
   );
 }
 
-// Lightweight auth config for middleware (Edge Runtime compatible)
+// Lightweight auth config for middleware (Edge Runtime compatible).
+// 認証方式は Credentials（email+password）と WebAuthn（passkey）のみ。
+// Credentials+JWT 戦略のみのため PrismaAdapter は不要。
 export const authConfig = {
-  // Type assertion needed due to version mismatch between @auth/prisma-adapter and next-auth
-  adapter: PrismaAdapter(prisma) as NextAuthConfig["adapter"],
   secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET,
-  providers: [
-    Google({
-      clientId: process.env.GOOGLE_CLIENT_ID,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      ...(process.env.NODE_ENV === "development" && {
-        authorization: {
-          params: {
-            prompt: "select_account",
-          },
-        },
-      }),
-    }),
-    GitHub({
-      clientId: process.env.GITHUB_CLIENT_ID,
-      clientSecret: process.env.GITHUB_CLIENT_SECRET,
-    }),
-  ],
+  providers: [],
   useSecureCookies: process.env.NODE_ENV === "production",
   session: {
     strategy: "jwt",
     maxAge: 8 * 60 * 60, // 8時間
   },
   callbacks: {
-    async signIn({ user, account }) {
-      // OAuth プロバイダー（Google/GitHub）でのサインイン時
-      if (
-        (account?.provider === "google" || account?.provider === "github") &&
-        user.email
-      ) {
-        // 既存のユーザを検索
-        const existingUser = await prisma.user.findUnique({
-          where: { email: user.email },
-        });
-
-        if (existingUser) {
-          // 既存のアカウントリンクをチェック
-          const existingAccount = await prisma.account.findUnique({
-            where: {
-              provider_providerAccountId: {
-                provider: account.provider,
-                providerAccountId: account.providerAccountId,
-              },
-            },
-          });
-
-          // アカウントリンクが存在しない場合、作成
-          if (!existingAccount) {
-            await prisma.account.create({
-              data: {
-                userId: existingUser.id,
-                type: account.type,
-                provider: account.provider,
-                providerAccountId: account.providerAccountId,
-                refresh_token: account.refresh_token,
-                access_token: account.access_token,
-                expires_at: account.expires_at,
-                token_type: account.token_type,
-                scope: account.scope,
-                id_token: account.id_token,
-                session_state: account.session_state as
-                  | string
-                  | null
-                  | undefined,
-              },
-            });
-          }
-
-          // 最終サインイン日時を更新
-          await prisma.user.update({
-            where: { id: existingUser.id },
-            data: { lastSignInAt: new Date() },
-          });
-
-          // ログイン成功を監査ログに記録
-          await prisma.auditLog
-            .create({
-              data: {
-                action: "LOGIN_SUCCESS",
-                category: "AUTH",
-                userId: existingUser.id,
-                details: JSON.stringify({
-                  provider: account.provider,
-                }),
-              },
-            })
-            .catch((err) => {
-              console.error("[Auth] Failed to create audit log:", err);
-            });
-        }
-      }
-
-      return true;
-    },
     async jwt({ token, user, account, trigger }) {
       // サインイン時にビルドIDと認証方法を記録
       if (user) {

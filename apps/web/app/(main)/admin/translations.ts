@@ -12,7 +12,7 @@ export const adminTranslations = {
     authentication: "Authentication:",
     authValue: "NextAuth.js v5",
     provider: "Provider:",
-    providerValue: "Credentials / Google OAuth / GitHub OAuth",
+    providerValue: "Credentials / Passkey (WebAuthn)",
   },
   ja: {
     title: "システム環境管理",
@@ -28,6 +28,6 @@ export const adminTranslations = {
     authentication: "認証:",
     authValue: "NextAuth.js v5",
     provider: "プロバイダ:",
-    providerValue: "Credentials / Google OAuth / GitHub OAuth",
+    providerValue: "Credentials / Passkey (WebAuthn)",
   },
 } as const;
