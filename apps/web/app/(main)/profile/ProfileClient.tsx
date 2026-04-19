@@ -16,7 +16,6 @@ interface ProfileClientProps {
     image: string | null;
     role: Role;
     lastSignInAt: Date | null;
-    twoFactorEnabled: boolean;
   };
   language: "en" | "ja";
   translations: ProfileTranslations;
@@ -101,20 +100,6 @@ export function ProfileClient({
                       },
                     )
                   : t.never}
-              </span>
-            </div>
-            <div className="flex justify-between py-3">
-              <span className="text-muted-foreground font-medium">
-                {t.twoFactorAuth}
-              </span>
-              <span
-                className={`px-3 py-1 rounded-full text-sm font-medium ${
-                  user.twoFactorEnabled
-                    ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-                    : "bg-muted text-muted-foreground"
-                }`}
-              >
-                {user.twoFactorEnabled ? t.enabled : t.disabled}
               </span>
             </div>
           </div>

@@ -157,7 +157,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     clientId: client.clientId,
     scope: row.scope,
     nonce: row.nonce,
-    twoFactorUsed: row.twoFactorUsed,
+    mfaUsed: row.mfaUsed,
     authTime: row.createdAt,
   });
   const access = await issueAccessToken({

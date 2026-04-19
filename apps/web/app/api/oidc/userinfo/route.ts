@@ -41,14 +41,10 @@ async function handle(request: Request): Promise<NextResponse> {
     return oidcBearerError("invalid_token", "user not found");
   }
 
-  // access token 経由なので twoFactorUsed は token 発行時点のものを再現できない
-  // → `lion:two_factor` は現在の 2FA 設定を基に最小限のフラグで返す
-  //   （ID Token の方が正確。UserInfo は「現時点のプロフィール」を返す意味合い）
-  const claims = buildUserClaims(
-    user,
-    verified.scope,
-    user.twoFactorEnabled,
-  );
+  // `lion:mfa_used` は認証イベント情報のため ID Token 専用（OIDC Core 準拠）
+  // UserInfo は「現時点のプロフィール」を返す責務に限定
+  const claims = buildUserClaims(user, verified.scope, false);
+  delete claims["lion:mfa_used"];
 
   await AuditService.log({
     action: "OIDC_USERINFO_ACCESS",

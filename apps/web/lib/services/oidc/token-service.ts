@@ -102,13 +102,13 @@ interface IdTokenClaims {
   name?: string;
   picture?: string;
   "lion:role"?: string;
-  "lion:two_factor"?: boolean;
+  "lion:mfa_used"?: boolean;
 }
 
 export function buildUserClaims(
   user: User,
   scope: string,
-  twoFactorUsed: boolean,
+  mfaUsed: boolean,
 ): {
   sub: string;
   email?: string;
@@ -116,7 +116,7 @@ export function buildUserClaims(
   name?: string;
   picture?: string;
   "lion:role"?: string;
-  "lion:two_factor"?: boolean;
+  "lion:mfa_used"?: boolean;
 } {
   const scopes = new Set(scope.split(/\s+/).filter(Boolean));
   const claims: ReturnType<typeof buildUserClaims> = { sub: user.id };
@@ -128,7 +128,7 @@ export function buildUserClaims(
     if (user.name) claims.name = user.name;
     if (user.image) claims.picture = user.image;
     claims["lion:role"] = user.role;
-    claims["lion:two_factor"] = twoFactorUsed;
+    claims["lion:mfa_used"] = mfaUsed;
   }
   return claims;
 }
@@ -139,12 +139,12 @@ export async function issueIdToken(input: {
   clientId: string; // OIDC client_id（外部向け）
   scope: string;
   nonce?: string | null;
-  twoFactorUsed: boolean;
+  mfaUsed: boolean;
   authTime?: Date;
 }): Promise<string> {
   const key = await getActiveSigningKey();
   const now = Math.floor(Date.now() / 1000);
-  const userClaims = buildUserClaims(input.user, input.scope, input.twoFactorUsed);
+  const userClaims = buildUserClaims(input.user, input.scope, input.mfaUsed);
   const payload: IdTokenClaims = {
     ...userClaims,
     sub: input.user.id,

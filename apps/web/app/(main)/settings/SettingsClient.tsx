@@ -7,7 +7,6 @@ import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { Card, CardContent } from "@/components/ui/card";
 import { PasskeySection } from "./PasskeySection";
 import { PasswordChangeSection } from "./PasswordChangeSection";
-import { TwoFactorSection } from "./TwoFactorSection";
 import type { settingsTranslations } from "./translations";
 import { UserAccessKeySection } from "./UserAccessKeySection";
 
@@ -26,30 +25,21 @@ type SettingsTranslations =
 interface SettingsClientProps {
   language: "en" | "ja";
   translations: SettingsTranslations;
-  twoFactorEnabled: boolean;
   mustChangePassword: boolean;
 }
 
 export function SettingsClient({
   language,
   translations: t,
-  twoFactorEnabled: initialTwoFactorEnabled,
   mustChangePassword: initialMustChangePassword,
 }: SettingsClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const activeTab = (searchParams.get("tab") as "basic" | "keys") || "basic";
   const passwordReset = searchParams.get("passwordReset") === "true";
-  const [twoFactorEnabled, setTwoFactorEnabled] = useState(
-    initialTwoFactorEnabled,
-  );
   const [mustChangePassword, setMustChangePassword] = useState(
     initialMustChangePassword,
   );
-
-  const handleTwoFactorStatusChange = useCallback(() => {
-    setTwoFactorEnabled((prev) => !prev);
-  }, []);
 
   const handlePasswordChanged = useCallback(() => {
     setMustChangePassword(false);
@@ -89,17 +79,6 @@ export function SettingsClient({
             <CardContent className="pt-6">
               <PushNotificationSection
                 translations={t.pushNotification}
-              />
-            </CardContent>
-          </Card>
-
-          {/* Two-Factor Authentication */}
-          <Card>
-            <CardContent className="pt-6">
-              <TwoFactorSection
-                isEnabled={twoFactorEnabled}
-                translations={t.twoFactor}
-                onStatusChange={handleTwoFactorStatusChange}
               />
             </CardContent>
           </Card>

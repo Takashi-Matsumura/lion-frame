@@ -66,8 +66,8 @@ export const DELETE = apiHandler(async (request, session) => {
   );
   if (!canRemove) {
     throw ApiError.conflict(
-      "Cannot remove the last passkey when no password or 2FA is set",
-      "パスワードも 2FA も設定されていないため、最後のパスキーは削除できません",
+      "Cannot remove the last passkey when no password is set",
+      "パスワードが設定されていないため、最後のパスキーは削除できません",
     );
   }
 

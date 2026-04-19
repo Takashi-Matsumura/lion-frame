@@ -42,7 +42,7 @@ export const OIDC_SUPPORTED_CLAIMS = [
   "name",
   "picture",
   "lion:role",
-  "lion:two_factor",
+  "lion:mfa_used",
 ] as const;
 
 // Cookie 名: OIDC 認可リクエスト handle

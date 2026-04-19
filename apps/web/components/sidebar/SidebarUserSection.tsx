@@ -53,10 +53,8 @@ export function SidebarUserSection({
     setTheme(theme === "dark" ? "light" : "dark");
   }, [theme, setTheme]);
 
-  const handleSignOut = useCallback(async () => {
+  const handleSignOut = useCallback(() => {
     setSigningOut(true);
-    // Clear 2FA verification cookie before signing out
-    await fetch("/api/auth/signout-2fa", { method: "POST" });
     signOut({ redirectTo: "/login" });
   }, []);
 

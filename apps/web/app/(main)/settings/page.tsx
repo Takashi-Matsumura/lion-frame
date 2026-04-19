@@ -25,11 +25,9 @@ export default async function SettingsPage() {
   const language = await getLanguage();
   const t = settingsTranslations[language];
 
-  // Get user's 2FA status and forcePasswordChange flag
   const user = await prisma.user.findUnique({
     where: { email: session.user.email ?? "" },
     select: {
-      twoFactorEnabled: true,
       forcePasswordChange: true,
     },
   });
@@ -38,7 +36,6 @@ export default async function SettingsPage() {
     <SettingsClient
       language={language}
       translations={t}
-      twoFactorEnabled={user?.twoFactorEnabled ?? false}
       mustChangePassword={user?.forcePasswordChange ?? false}
     />
   );

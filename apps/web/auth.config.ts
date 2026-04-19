@@ -131,7 +131,6 @@ export const authConfig = {
             id: true,
             role: true,
             language: true,
-            twoFactorEnabled: true,
             forcePasswordChange: true,
           },
         });
@@ -139,8 +138,6 @@ export const authConfig = {
           token.id = dbUser.id;
           token.role = dbUser.role;
           token.language = dbUser.language;
-          token.twoFactorEnabled = dbUser.twoFactorEnabled;
-
           token.mustChangePassword = dbUser.forcePasswordChange;
         } else if (user) {
           // フォールバック: DBにない場合はuserオブジェクトから取得
@@ -156,8 +153,6 @@ export const authConfig = {
         session.user.id = token.id as string;
         session.user.role = token.role as Role;
         session.user.language = (token.language as string) || "en";
-        session.user.twoFactorEnabled =
-          (token.twoFactorEnabled as boolean) || false;
         session.user.mustChangePassword =
           (token.mustChangePassword as boolean) || false;
         session.user.authMethod = token.authMethod as string | undefined;

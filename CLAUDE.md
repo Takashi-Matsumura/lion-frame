@@ -166,7 +166,7 @@ cd apps/web && npx prisma db push && pnpm db:seed
 > **グループ年度管理・アーカイブ:** 公式グループに`fiscalYear`（Int?、年度）と`archivedAt`（DateTime?、アーカイブ日時）を追加。3パターン: **年度限定**（fiscalYear設定、年度末にアーカイブ）、**常設**（fiscalYear=null、期限なく継続）、**毎年度**（「次年度へ引継ぎ」でメンバーごとコピー後、旧年度をアーカイブ）。アーカイブ済みグループは読み取り専用（編集・メンバー操作・削除不可）。常設グループの「グループ解散」はスナップショット自動保存+アーカイブ。API: `/api/groups/fiscal-years`（年度一覧）、`/api/groups/[id]/archive`（POST=アーカイブ/解散、DELETE=解除）、`/api/groups/[id]/carryover`（次年度引継ぎ）、`/api/groups/[id]/snapshot`（常設グループの年度スナップショット保存）。
 > **グループメンバー所属スナップショット:** `GroupMember`に`snapshotPosition`/`snapshotDepartment`/`snapshotSection`を追加。アーカイブ・スナップショット実行時にメンバーの当時の所属情報を文字列として保存。表示時はスナップショットデータがあれば優先表示（異動後も当時の所属が正しく表示される）。
 > **GUESTロール:** 一時的なゲストアカウント。ログイン可能だが、`menuGroup: "guest"` のメニューのみアクセス可。ダッシュボードではなく `/welcome` にリダイレクト。`/settings` と `/profile` は利用不可、代わりに `/guest-profile` でゲスト専用プロフィール（言語設定のみ）を提供。言語設定はDBではなくCookie（`lionframe-language`）に保存（ブラウザごとに独立）。middlewareで `/welcome` と `/guest-profile` 以外の全ルートをブロック。`canAccessMenu` は `ROLE_HIERARCHY` に基づき `menuGroup` をチェックするため、`requiredRoles` 未指定のメニューもGUESTには表示されない。シードユーザー: `guest@lionframe.local` / `guest`。
-> **バックアップモジュール:** ADMIN専用のアドオンモジュール。コアモジュールデータ（組織構造・社員・履歴・ユーザー・アクセス制御・システム設定）をJSON形式でバックアップ・リストアする。バックアップファイルはブラウザにダウンロードのみ（サーバー保存なし）。リストアは全置換方式（トランザクション内で既存データ削除→バックアップデータ挿入）。リストア前に自動で現在のデータのバックアップをダウンロード。バックアップ履歴はメタデータのみ`SystemSetting`（key: `backup_history`）に保存（最大50件）。User のpassword/twoFactorSecret/braveApiKeyは除外。Employee自己参照（supervisor/deputy）は2パス挿入で対応。リストア時の現在ADMINユーザーはセッション保護。API: `/api/backup/export`（GET）、`/api/backup/history`（GET）、`/api/backup/preview`（POST）、`/api/backup/restore`（POST）。ページ: `/admin/backup`（3タブ: バックアップ作成・履歴・リストア）。
+> **バックアップモジュール:** ADMIN専用のアドオンモジュール。コアモジュールデータ（組織構造・社員・履歴・ユーザー・アクセス制御・システム設定）をJSON形式でバックアップ・リストアする。バックアップファイルはブラウザにダウンロードのみ（サーバー保存なし）。リストアは全置換方式（トランザクション内で既存データ削除→バックアップデータ挿入）。リストア前に自動で現在のデータのバックアップをダウンロード。バックアップ履歴はメタデータのみ`SystemSetting`（key: `backup_history`）に保存（最大50件）。User のpassword/braveApiKeyは除外。Employee自己参照（supervisor/deputy）は2パス挿入で対応。リストア時の現在ADMINユーザーはセッション保護。API: `/api/backup/export`（GET）、`/api/backup/history`（GET）、`/api/backup/preview`（POST）、`/api/backup/restore`（POST）。ページ: `/admin/backup`（3タブ: バックアップ作成・履歴・リストア）。
 
 ## 重要なルール
 
@@ -255,7 +255,7 @@ Next.js 15のmiddlewareはEdge Runtimeで動作するため、認証設定を分
 | `apps/web/auth.ts` | Node.js | APIルート用（Credentialsプロバイダ） |
 | `apps/web/middleware.ts` | Edge | auth.config.tsを使用 |
 
-OAuth認証は管理画面（システム情報タブ）で個別に有効化/無効化できます。
+OAuth認証（Google/GitHub）は管理画面（システム情報タブ）に有効化トグルを残していますが、**ログイン画面の OAuth ボタンは非表示化済み**です。社内設置時のセットアップ負担（内部ドメイン・HTTPS 必須・OAuth Console 登録）を避けるため、現在は Credentials（メール+パスワード）とパスキー（WebAuthn）の 2 系統で運用します。OAuth を復活させたい場合は `apps/web/app/(main)/login/page.tsx` に `OAuthButtons` を戻してください。
 
 ## 派生プロジェクト向け運用方針
 

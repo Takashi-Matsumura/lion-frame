@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import NextAuth from "next-auth";
 import { authConfig } from "@/auth.config";
-import { verifySignedValue } from "@/lib/services/cookie-signer";
 import { sanitizeCallbackUrl } from "@/lib/services/safe-redirect";
 
 const { auth } = NextAuth(authConfig);
@@ -68,22 +67,6 @@ export default auth(async (req) => {
         response.cookies.delete("__Secure-authjs.session-token");
         return response;
       }
-      // Check if 2FA is required (skip when signed in via passkey/WebAuthn)
-      if (
-        session.user.twoFactorEnabled &&
-        session.user.authMethod !== "webauthn"
-      ) {
-        const verified = req.cookies.get("2fa_verified");
-        const verifiedUserId = verified?.value
-          ? await verifySignedValue(verified.value)
-          : null;
-        if (verifiedUserId !== session.user.id) {
-          const target = redirectUrl("/auth/verify-totp");
-          const cb = req.nextUrl.searchParams.get("callbackUrl");
-          if (cb) target.searchParams.set("callbackUrl", cb);
-          return NextResponse.redirect(target);
-        }
-      }
       // Check if password change is required
       if (session.user.mustChangePassword) {
         return NextResponse.redirect(
@@ -107,28 +90,6 @@ export default auth(async (req) => {
     return NextResponse.next();
   }
 
-  // 2FA verification page - allow access if logged in but not verified
-  if (pathname === "/auth/verify-totp") {
-    if (!session) {
-      return NextResponse.redirect(redirectUrl("/login"));
-    }
-    // If 2FA is not enabled, or signed in via passkey, or already verified, redirect to dashboard
-    if (
-      !session.user.twoFactorEnabled ||
-      session.user.authMethod === "webauthn"
-    ) {
-      return NextResponse.redirect(redirectUrl("/dashboard"));
-    }
-    const verified = req.cookies.get("2fa_verified");
-    const verifiedUserId = verified?.value
-      ? await verifySignedValue(verified.value)
-      : null;
-    if (verifiedUserId === session.user.id) {
-      return NextResponse.redirect(redirectUrl("/dashboard"));
-    }
-    return NextResponse.next();
-  }
-
   // Build ID validation: invalidate sessions from previous deployments
   if (session && hasBuildIdMismatch(session)) {
     const response = NextResponse.redirect(redirectUrl("/login?reason=system-update"));
@@ -140,25 +101,6 @@ export default auth(async (req) => {
   // Protected routes - require authentication
   if (!session) {
     return NextResponse.redirect(redirectUrl("/login"));
-  }
-
-  // Check 2FA verification for protected routes (skip when signed in via passkey)
-  if (
-    session.user.twoFactorEnabled &&
-    session.user.authMethod !== "webauthn"
-  ) {
-    const verified = req.cookies.get("2fa_verified");
-    const verifiedUserId = verified?.value
-      ? await verifySignedValue(verified.value)
-      : null;
-    if (verifiedUserId !== session.user.id) {
-      const target = redirectUrl("/auth/verify-totp");
-      target.searchParams.set(
-        "callbackUrl",
-        `${pathname}${req.nextUrl.search}`,
-      );
-      return NextResponse.redirect(target);
-    }
   }
 
   // Check if password change is required for protected routes

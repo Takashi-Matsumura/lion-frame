@@ -59,8 +59,6 @@ model User {
   systemPrompt  String?
   orgContextEnabled Boolean  @default(true)
   lastSignInAt  DateTime?
-  twoFactorEnabled Boolean    @default(false)
-  twoFactorSecret  String?
   forcePasswordChange Boolean @default(false)
   passwordExpiresAt   DateTime?
   accounts      Account[]
@@ -1489,7 +1487,7 @@ model OIDCAuthCode {
   nonce               String?
   codeChallenge       String
   codeChallengeMethod String
-  twoFactorUsed       Boolean   @default(false)
+  mfaUsed             Boolean   @default(false)
   usedAt              DateTime?
   expiresAt           DateTime
   createdAt           DateTime  @default(now())
