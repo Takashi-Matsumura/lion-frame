@@ -277,9 +277,6 @@ export function AuditLogsClient({ language }: AuditLogsClientProps) {
                   <SelectItem value="PROFILE_IMAGE_DELETE">
                     {t.actionProfileImageDelete}
                   </SelectItem>
-                  <SelectItem value="OAUTH_TOGGLE">
-                    {t.actionOauthToggle}
-                  </SelectItem>
                   <SelectItem value="AI_CONFIG_UPDATE">
                     {t.actionAiConfigUpdate}
                   </SelectItem>

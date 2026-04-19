@@ -83,60 +83,6 @@ describe("監査ログ契約テスト", () => {
   });
 
   // ----------------------------------------------------------
-  // OAuth Toggle
-  // ----------------------------------------------------------
-  describe("OAuth toggle", () => {
-    it("Google OAuth切替成功時に OAUTH_TOGGLE ログが記録される", async () => {
-      mockAuth.mockResolvedValue(adminSession);
-      mockPrisma.systemSetting.upsert.mockResolvedValue({});
-
-      const { POST } = require("@/app/api/admin/google-oauth/route");
-      const response = await POST(
-        createJsonRequest("http://localhost:3000/api/admin/google-oauth", {
-          enabled: true,
-        }),
-      );
-
-      expect(response.status).toBe(200);
-      expect(mockAuditLog).toHaveBeenCalledWith(
-        expect.objectContaining({
-          action: "OAUTH_TOGGLE",
-          category: "SYSTEM_SETTING",
-          details: expect.objectContaining({ provider: "google" }),
-        }),
-      );
-    });
-
-    it("OAuth切替で認証なしの場合ログが記録されない", async () => {
-      mockAuth.mockResolvedValue(null);
-
-      const { POST } = require("@/app/api/admin/google-oauth/route");
-      const response = await POST(
-        createJsonRequest("http://localhost:3000/api/admin/google-oauth", {
-          enabled: true,
-        }),
-      );
-
-      expect(response.status).toBe(401);
-      expect(mockAuditLog).not.toHaveBeenCalled();
-    });
-
-    it("OAuth切替でバリデーションエラーの場合ログが記録されない", async () => {
-      mockAuth.mockResolvedValue(adminSession);
-
-      const { POST } = require("@/app/api/admin/google-oauth/route");
-      const response = await POST(
-        createJsonRequest("http://localhost:3000/api/admin/google-oauth", {
-          enabled: "not-boolean",
-        }),
-      );
-
-      expect(response.status).toBe(400);
-      expect(mockAuditLog).not.toHaveBeenCalled();
-    });
-  });
-
-  // ----------------------------------------------------------
   // AccessKey CRUD
   // ----------------------------------------------------------
   describe("AccessKey CRUD", () => {

@@ -55,8 +55,8 @@ export const POST = apiHandler(async (request, session) => {
       throw new ApiError(
         400,
         "BAD_REQUEST",
-        "No password set for this account. Use OAuth to sign in.",
-        "このアカウントにはパスワードが設定されていません。OAuthでログインしてください。",
+        "No password set for this account. Contact your administrator.",
+        "このアカウントにはパスワードが設定されていません。管理者にお問い合わせください。",
       );
     }
 

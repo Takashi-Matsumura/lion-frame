@@ -6,12 +6,6 @@ import { Separator } from "@/components/ui/separator";
 import { getLanguage } from "@/lib/i18n/get-language";
 import { loginTranslations } from "./translations";
 
-// NOTE: Google / GitHub の OAuth ログインは、社内設置時のセットアップ負担
-// （内部ドメイン準備・HTTPS 必須・OAuth Console 登録）が大きいため、
-// ログイン画面からは非表示にしている。Provider 本体・管理画面のトグル・
-// API ルート・環境変数はそのまま温存しているので、将来 UI を復活させる際は
-// `<OAuthButtons />` の呼び出しと SystemSetting の読み込みを戻すだけで良い。
-
 export default async function LoginPage({
   searchParams,
 }: {

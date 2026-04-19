@@ -112,7 +112,7 @@ cd apps/web && npx prisma db push && pnpm db:seed
 
 | カテゴリ | モデル |
 |---------|--------|
-| 認証 | Account, Session, User, VerificationToken |
+| 認証 | User, WebAuthnCredential |
 | 通知・監査 | AuditLog, Notification, Announcement, PushSubscription |
 
 > **通知システム（3層構造）:** (1) 通知センター（ヘッダーのベル、30秒ポーリング、DB永続化）、(2) Sonnerトースト（明示呼び出しのみ）、(3) Web Pushプッシュ通知（OSレベル、タブ外配信可）。`NotificationService.create/broadcast` を呼ぶと自動的にプッシュも送信される（購読済みユーザのみ）ため、新機能実装時にプッシュ対応の追加コードは不要。詳細は `.claude/skills/notifications/SKILL.md` を参照。
@@ -255,7 +255,7 @@ Next.js 15のmiddlewareはEdge Runtimeで動作するため、認証設定を分
 | `apps/web/auth.ts` | Node.js | APIルート用（Credentialsプロバイダ） |
 | `apps/web/middleware.ts` | Edge | auth.config.tsを使用 |
 
-OAuth認証（Google/GitHub）は管理画面（システム情報タブ）に有効化トグルを残していますが、**ログイン画面の OAuth ボタンは非表示化済み**です。社内設置時のセットアップ負担（内部ドメイン・HTTPS 必須・OAuth Console 登録）を避けるため、現在は Credentials（メール+パスワード）とパスキー（WebAuthn）の 2 系統で運用します。OAuth を復活させたい場合は `apps/web/app/(main)/login/page.tsx` に `OAuthButtons` を戻してください。
+認証方式は **Credentials（メール+パスワード）** と **パスキー（WebAuthn）** の 2 系統のみ。OAuth（Google/GitHub）は完全に廃止しました（社内設置時のセットアップ負担と、email 一致だけで他人のアカウントにリンクされる実装上のリスクが理由）。将来復活させる場合は本家の PR 履歴から該当コミットを参照・復元してください。また、Credentials+JWT 戦略のみのため `@auth/prisma-adapter` は未使用で、`Account` / `Session` / `VerificationToken` モデルも削除済みです。
 
 ## 派生プロジェクト向け運用方針
 
