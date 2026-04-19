@@ -40,9 +40,11 @@ jest.mock("jose", () => ({
   },
 }));
 
-const mockGetSigningKeyStatus = jest.fn(() =>
+import type { SigningKeyStatus } from "@/lib/services/oidc/types";
+
+const mockGetSigningKeyStatus = jest.fn<Promise<SigningKeyStatus>, []>(() =>
   Promise.resolve({
-    ok: true as const,
+    ok: true,
     activeKid: "k1",
     keyCount: 1,
     statusCounts: { active: 1, next: 0, retired: 0 },
@@ -426,11 +428,11 @@ describe("Authorize エンドポイント契約", () => {
   it("OIDC_SIGNING_KEYS 未設定で server_error を redirect + 監査ログ", async () => {
     mockPrisma.oIDCClient.findUnique.mockResolvedValue(validClient());
     mockGetSigningKeyStatus.mockResolvedValueOnce({
-      ok: false as unknown as true,
-      reason: "not_set" as unknown as never,
+      ok: false,
+      reason: "not_set",
       message:
         "OIDC_SIGNING_KEYS is not set. Generate keys with `node apps/web/scripts/generate-oidc-keys.mjs` and add them to .env.",
-    } as never);
+    });
 
     const { GET } = require("@/app/api/oidc/authorize/route");
     const res = await GET(makeRequest(validParams));

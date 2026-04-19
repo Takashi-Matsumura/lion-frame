@@ -7,6 +7,9 @@
 //   - 検証（token 再利用検知等）は kid で直接 lookup
 
 import { type JWK, importJWK } from "jose";
+import type { SigningKeyStatus } from "./types";
+
+export type { SigningKeyStatus } from "./types";
 
 type SigningKey = CryptoKey | Uint8Array;
 
@@ -103,19 +106,6 @@ export async function findKeyByKid(kid: string): Promise<LoadedKey | null> {
 export function __resetKeyCacheForTest(): void {
   cachedKeys = null;
 }
-
-export type SigningKeyStatus =
-  | {
-      ok: true;
-      activeKid: string;
-      keyCount: number;
-      statusCounts: Record<KeyStatus, number>;
-    }
-  | {
-      ok: false;
-      reason: "not_set" | "invalid" | "no_active";
-      message: string;
-    };
 
 /**
  * 環境変数ベースの署名鍵の健全性を確認する。

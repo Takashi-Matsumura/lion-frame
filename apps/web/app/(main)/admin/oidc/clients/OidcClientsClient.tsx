@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import type { SigningKeyStatus } from "@/lib/services/oidc/types";
 import {
   Card,
   CardContent,
@@ -42,19 +43,6 @@ import { oidcClientsTranslations } from "./translations";
 interface OidcClientsClientProps {
   language: "en" | "ja";
 }
-
-type SigningKeyStatus =
-  | {
-      ok: true;
-      activeKid: string;
-      keyCount: number;
-      statusCounts: Record<"active" | "next" | "retired", number>;
-    }
-  | {
-      ok: false;
-      reason: "not_set" | "invalid" | "no_active";
-      message: string;
-    };
 
 function parseRedirectUris(input: string): string[] {
   return input
