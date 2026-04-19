@@ -11,6 +11,7 @@ import {
   OIDC_SUPPORTED_RESPONSE_TYPES,
 } from "@/lib/services/oidc/constants";
 import { oidcErrorRedirect } from "@/lib/services/oidc/errors";
+import { getSigningKeyStatus } from "@/lib/services/oidc/keys";
 import { signValue } from "@/lib/services/cookie-signer";
 import { checkRateLimit, getClientIp } from "@/lib/services/rate-limiter";
 
@@ -180,6 +181,29 @@ export async function GET(request: Request): Promise<NextResponse> {
 
   if (!clientRow) {
     return jsonError("invalid_client", "Client not found");
+  }
+
+  // 署名鍵プレフライト: 鍵未設定なら token endpoint 到達前に失敗させる。
+  // これが無いと RP のコールバックで token 500 になり切り分けが困難になる。
+  const keyStatus = await getSigningKeyStatus();
+  if (!keyStatus.ok) {
+    console.error(
+      `[OIDC] authorize aborted: signing keys unusable (${keyStatus.reason}): ${keyStatus.message}`,
+    );
+    await AuditService.log({
+      action: "OIDC_AUTHORIZE_SERVER_ERROR",
+      category: "OIDC",
+      targetId: clientRow.id,
+      targetType: "OIDCClient",
+      details: { reason: keyStatus.reason, message: keyStatus.message },
+      ipAddress: ip,
+    });
+    return oidcErrorRedirect(
+      redirectUri,
+      "server_error",
+      "OIDC signing keys are not configured on the provider",
+      state ?? undefined,
+    );
   }
 
   // セッション確認

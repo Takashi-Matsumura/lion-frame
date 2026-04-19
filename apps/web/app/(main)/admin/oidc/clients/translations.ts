@@ -79,6 +79,15 @@ export const oidcClientsTranslations = {
     deleteError: "Failed to delete OIDC client",
     regenerateError: "Failed to regenerate secret",
     validationError: "Please fill in all required fields",
+
+    // Signing keys warning
+    signingKeysWarningTitle: "OIDC signing keys are not configured",
+    signingKeysWarningNotSet:
+      "OIDC_SIGNING_KEYS is not set. Clients cannot obtain ID tokens until keys are generated. Run `node apps/web/scripts/generate-oidc-keys.mjs` and add the output to the provider's .env, then restart the app.",
+    signingKeysWarningInvalid:
+      "OIDC_SIGNING_KEYS is set but not usable. Details:",
+    signingKeysWarningNoActive:
+      "No signing key has status=\"active\". Generate a new key with status=active via generate-oidc-keys.mjs.",
   },
   ja: {
     title: "OIDC クライアント",
@@ -153,6 +162,15 @@ export const oidcClientsTranslations = {
     deleteError: "OIDC クライアントの削除に失敗しました",
     regenerateError: "シークレットの再生成に失敗しました",
     validationError: "必須項目を入力してください",
+
+    // Signing keys warning
+    signingKeysWarningTitle: "OIDC 署名鍵が設定されていません",
+    signingKeysWarningNotSet:
+      "OIDC_SIGNING_KEYS が未設定です。このままではクライアントは ID トークンを取得できません。`node apps/web/scripts/generate-oidc-keys.mjs` を実行し、出力を Provider 側の .env に追記してアプリを再起動してください。",
+    signingKeysWarningInvalid:
+      "OIDC_SIGNING_KEYS は設定されていますが使用できない状態です。詳細:",
+    signingKeysWarningNoActive:
+      "status=\"active\" の鍵がありません。generate-oidc-keys.mjs で active 状態の鍵を生成してください。",
   },
 };
 

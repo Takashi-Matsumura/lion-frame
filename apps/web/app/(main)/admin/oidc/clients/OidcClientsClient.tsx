@@ -1,11 +1,13 @@
 "use client";
 
 import type { OIDCClient, Role } from "@prisma/client";
-import { MoreHorizontal } from "lucide-react";
+import { AlertTriangle, MoreHorizontal } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import type { SigningKeyStatus } from "@/lib/services/oidc/types";
 import {
   Card,
   CardContent,
@@ -73,6 +75,7 @@ export function OidcClientsClient({ language }: OidcClientsClientProps) {
   const t = oidcClientsTranslations[language];
   const [clients, setClients] = useState<OIDCClient[]>([]);
   const [loading, setLoading] = useState(true);
+  const [keyStatus, setKeyStatus] = useState<SigningKeyStatus | null>(null);
 
   const [formOpen, setFormOpen] = useState(false);
   const [formInitial, setFormInitial] = useState<ClientFormValues | undefined>();
@@ -104,6 +107,19 @@ export function OidcClientsClient({ language }: OidcClientsClientProps) {
   useEffect(() => {
     void loadClients();
   }, [loadClients]);
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const res = await fetch("/api/admin/oidc/signing-keys");
+        if (!res.ok) return;
+        const data = (await res.json()) as { status: SigningKeyStatus };
+        setKeyStatus(data.status);
+      } catch {
+        // 取得失敗時は警告を出さず沈黙（API 障害は別の経路で検知される）
+      }
+    })();
+  }, []);
 
   const handleOpenCreate = () => {
     setFormInitial(undefined);
@@ -212,8 +228,24 @@ export function OidcClientsClient({ language }: OidcClientsClientProps) {
     return <PageSkeleton />;
   }
 
+  const keyWarningBody =
+    keyStatus && !keyStatus.ok
+      ? keyStatus.reason === "not_set"
+        ? t.signingKeysWarningNotSet
+        : keyStatus.reason === "no_active"
+          ? t.signingKeysWarningNoActive
+          : `${t.signingKeysWarningInvalid} ${keyStatus.message}`
+      : null;
+
   return (
     <div className="space-y-6">
+      {keyWarningBody && (
+        <Alert variant="destructive">
+          <AlertTriangle />
+          <AlertTitle>{t.signingKeysWarningTitle}</AlertTitle>
+          <AlertDescription>{keyWarningBody}</AlertDescription>
+        </Alert>
+      )}
       <Card>
         <CardHeader className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
           <CardDescription className="max-w-3xl">
