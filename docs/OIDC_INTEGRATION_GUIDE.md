@@ -2,7 +2,7 @@
 
 LionFrame を OpenID Connect Provider (OP) として使い、社内アプリ（Relying Party, RP）から認証・RBAC を再利用する方法を解説します。
 
-> 対象読者: 社内アプリを開発し、LionFrame のアカウント・2FA・ロール（ADMIN/EXECUTIVE/MANAGER/USER）を利用したい開発者。
+> 対象読者: 社内アプリを開発し、LionFrame のアカウント・パスキー MFA・ロール（ADMIN/EXECUTIVE/MANAGER/USER）を利用したい開発者。
 
 ---
 
@@ -205,19 +205,22 @@ Access Token を使って最新のプロフィールを取得:
 const ui = await fetch(`${ISSUER}/api/oidc/userinfo`, {
   headers: { Authorization: `Bearer ${access_token}` },
 }).then((r) => r.json());
-// { sub, email, name, "lion:role": "MANAGER", "lion:two_factor": true, ... }
+// { sub, email, name, "lion:role": "MANAGER", ... }
+// ※ `lion:mfa_used` は認証イベント情報のため ID Token のみ（UserInfo には含まれない）
 ```
 
 ---
 
 ## 4. カスタムクレームの活用
 
-`profile` スコープを要求すると ID Token / UserInfo に以下が含まれます:
+`profile` スコープを要求すると ID Token に以下が含まれます:
 
-| クレーム | 型 | 説明 |
-|----------|-----|------|
-| `lion:role` | string | `GUEST` / `USER` / `MANAGER` / `EXECUTIVE` / `ADMIN` |
-| `lion:two_factor` | boolean | 2FA で認証されたセッションか |
+| クレーム | 型 | 配信経路 | 説明 |
+|----------|-----|---------|------|
+| `lion:role` | string | ID Token / UserInfo | `GUEST` / `USER` / `MANAGER` / `EXECUTIVE` / `ADMIN` |
+| `lion:mfa_used` | boolean | **ID Token のみ** | パスキー（WebAuthn）で認証されたセッションか |
+
+`lion:mfa_used` は認証イベント情報のため ID Token 専用（OIDC Core 準拠）。UserInfo にはプロフィール情報のみを含め、認証時刻依存のフラグは返しません。
 
 ### RBAC 判定例
 
@@ -228,17 +231,16 @@ if (["MANAGER", "EXECUTIVE", "ADMIN"].includes(role)) {
   // マネージャー権限相当の画面を表示
 }
 
-if (!payload["lion:two_factor"] && sensitivePage) {
-  // 2FA 未認証ユーザには機密画面を出さない
-  return res.status(403).send("2FA required");
+if (!payload["lion:mfa_used"] && sensitivePage) {
+  // パスキー未使用（パスワードのみ）のユーザには機密画面を出さない
+  return res.status(403).send("Passkey authentication required");
 }
 ```
 
-> **注意**: `lion:two_factor` の扱いは ID Token と UserInfo で意味が少し違います。
-> - **ID Token**: そのログイン時に 2FA を通ったかを示す（token 発行時の状態）
-> - **UserInfo**: 現在のユーザの 2FA 設定状態を示す（いつ呼んでも同じ）
->
-> 認証時刻依存の判定（機密画面の表示可否など）は **ID Token の値**を使ってください。
+> **注意**: `lion:mfa_used` は **ID Token 発行時点**のログインイベントに紐づく値です。
+> - LionFrame の MFA は現在パスキー（WebAuthn）のみ。パスキーログイン時は `true`、パスワードのみのログイン時は `false`。
+> - UserInfo は「現時点のプロフィール」だけを返すため、`lion:mfa_used` は含みません。
+> - 認証イベントに基づく判定（機密画面の表示可否など）は **ID Token の値**を使ってください。
 
 ---
 
@@ -269,7 +271,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           image: profile.picture,
           // Auth.js のセッションに流すなら session callback で拾う
           role: profile["lion:role"],
-          twoFactor: profile["lion:two_factor"],
+          mfaUsed: profile["lion:mfa_used"],
         };
       },
     },
@@ -278,13 +280,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     async jwt({ token, profile }) {
       if (profile) {
         token.role = profile["lion:role"];
-        token.twoFactor = profile["lion:two_factor"];
+        token.mfaUsed = profile["lion:mfa_used"];
       }
       return token;
     },
     async session({ session, token }) {
       session.user.role = token.role as string;
-      session.user.twoFactor = token.twoFactor as boolean;
+      session.user.mfaUsed = token.mfaUsed as boolean;
       return session;
     },
   },
@@ -346,7 +348,7 @@ async def callback(request):
 ### 推奨
 
 - [ ] 本番は HTTPS 必須（ブラウザの `Secure` cookie も忘れず）
-- [ ] `lion:two_factor=false` の場合は機密画面をブロック
+- [ ] `lion:mfa_used=false` の場合は機密画面をブロック（パスワードのみログインは MFA 相当ではない）
 - [ ] 定期的に `userinfo` を呼ぶか、expires_in に合わせて再ログイン
 - [ ] ログアウト時に RP 側セッションと LionFrame 側セッション Cookie を両方クリア
 - [ ] 社内 LAN 外からのアクセスを RP 側でもファイアウォール / プロキシで遮断

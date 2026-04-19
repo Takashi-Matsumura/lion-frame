@@ -56,11 +56,15 @@ AUTH_URL=http://localhost:3000
 DATABASE_URL="postgresql://lionframe:lionframe@localhost:5433/lionframe?schema=public"
 NEXT_PUBLIC_APP_NAME="LionFrame"
 
-# OAuth（オプション - 管理画面で有効化）
-GOOGLE_CLIENT_ID=<Google OAuthクライアントID>
-GOOGLE_CLIENT_SECRET=<Google OAuthクライアントシークレット>
-GITHUB_CLIENT_ID=<GitHub OAuthクライアントID>
-GITHUB_CLIENT_SECRET=<GitHub OAuthクライアントシークレット>
+# WebAuthn / Passkey（本番は必ず設定）
+NEXT_PUBLIC_WEBAUTHN_RP_ID=<本番ドメイン（例: example.com）。未指定時は AUTH_URL のホスト名>
+NEXT_PUBLIC_WEBAUTHN_RP_NAME="LionFrame"
+WEBAUTHN_ORIGIN=<AUTH_URL と一致させる。複数ならカンマ区切り>
+
+# Web Push（プッシュ通知用 VAPID 鍵）
+# 生成: npx web-push generate-vapid-keys
+NEXT_PUBLIC_VAPID_PUBLIC_KEY=<公開鍵>
+VAPID_PRIVATE_KEY=<秘密鍵>
 ```
 
 ## 本番環境デプロイ
@@ -213,9 +217,10 @@ lsof -i :3000  # Next.js開発サーバ
 本番デプロイ時:
 
 - [ ] `.env` に本番用の `AUTH_SECRET` を生成・設定
-- [ ] `AUTH_URL` を本番ドメインに変更
+- [ ] `AUTH_URL` を本番ドメインに変更（HTTPS 必須、WebAuthn 要件）
 - [ ] `DATABASE_URL` を本番DBに変更
-- [ ] OAuth設定が必要な場合はクライアントID/シークレットを設定
+- [ ] `NEXT_PUBLIC_WEBAUTHN_RP_ID` を本番ドメインで設定、`WEBAUTHN_ORIGIN` も揃える
+- [ ] VAPID 鍵（`NEXT_PUBLIC_VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY`）を生成・設定
 - [ ] `docker compose -f docker-compose.prod.yml up -d` で起動
 - [ ] ヘルスチェックで正常動作を確認
 - [ ] 管理画面でOpenLDAP設定を確認（必要な場合）
