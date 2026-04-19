@@ -9,9 +9,10 @@ import {
   requireRole,
 } from "./auth-guard";
 
-type HandlerFn<T = unknown> = (
+type HandlerFn<T = unknown, Ctx = unknown> = (
   request: Request,
   session: Session,
+  context: Ctx,
 ) => Promise<T>;
 
 interface ApiHandlerOptions {
@@ -37,18 +38,22 @@ interface ApiHandlerOptions {
  *   return { items };
  * }, { admin: true });
  *
- * export const POST = apiHandler(async (req, session) => {
- *   const body = await req.json();
- *   const item = await prisma.item.create({ data: body });
- *   return { item };
- * }, { admin: true, successStatus: 201 });
+ * // Dynamic routes can receive Next.js route context as the third argument.
+ * export const DELETE = apiHandler<
+ *   { success: true },
+ *   { params: Promise<{ id: string }> }
+ * >(async (req, session, { params }) => {
+ *   const { id } = await params;
+ *   await prisma.item.delete({ where: { id } });
+ *   return { success: true };
+ * });
  * ```
  */
-export function apiHandler<T>(
-  handler: HandlerFn<T>,
+export function apiHandler<T, Ctx = unknown>(
+  handler: HandlerFn<T, Ctx>,
   options: ApiHandlerOptions = {},
-): (request: Request) => Promise<NextResponse> {
-  return async (request: Request) => {
+): (request: Request, context?: Ctx) => Promise<NextResponse> {
+  return async (request: Request, context?: Ctx) => {
     try {
       let session: Session;
 
@@ -66,7 +71,7 @@ export function apiHandler<T>(
         session = await requireAuth();
       }
 
-      const result = await handler(request, session);
+      const result = await handler(request, session, context as Ctx);
       return NextResponse.json(result, {
         status: options.successStatus ?? 200,
       });

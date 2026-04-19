@@ -9,6 +9,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import { Input } from "@/components/ui/input";
 
 type Credential = {
@@ -31,6 +32,7 @@ type PasskeyTranslations = {
   saveNickname: string;
   cancel: string;
   delete: string;
+  deleteTitle: string;
   confirmDelete: string;
   lastUsedAt: string;
   createdAt: string;
@@ -70,6 +72,10 @@ export function PasskeySection({
   const [nickname, setNickname] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingNickname, setEditingNickname] = useState("");
+  const [targetCredential, setTargetCredential] = useState<Credential | null>(
+    null,
+  );
+  const [deleting, setDeleting] = useState(false);
   const [message, setMessage] = useState<{
     type: "success" | "error";
     text: string;
@@ -137,31 +143,34 @@ export function PasskeySection({
     }
   }, [nickname, t, loadCredentials]);
 
-  const handleDelete = useCallback(
-    async (credential: Credential) => {
-      if (!confirm(t.confirmDelete)) return;
-      setBusy(true);
-      setMessage(null);
-      try {
-        const res = await fetch(
-          `/api/user/webauthn/credentials/${credential.id}`,
-          { method: "DELETE" },
-        );
-        if (res.status === 409) {
-          setMessage({ type: "error", text: t.lastPasskeyBlocked });
-          return;
-        }
-        if (!res.ok) throw new Error("delete");
-        setMessage({ type: "success", text: t.deleteSuccess });
-        await loadCredentials();
-      } catch (_error) {
-        setMessage({ type: "error", text: t.error });
-      } finally {
-        setBusy(false);
+  const requestDelete = useCallback((credential: Credential) => {
+    setTargetCredential(credential);
+    setMessage(null);
+  }, []);
+
+  const confirmDelete = useCallback(async () => {
+    if (!targetCredential) return;
+    setDeleting(true);
+    setMessage(null);
+    try {
+      const res = await fetch(
+        `/api/user/webauthn/credentials/${targetCredential.id}`,
+        { method: "DELETE" },
+      );
+      if (res.status === 409) {
+        setMessage({ type: "error", text: t.lastPasskeyBlocked });
+        return;
       }
-    },
-    [t, loadCredentials],
-  );
+      if (!res.ok) throw new Error("delete");
+      setMessage({ type: "success", text: t.deleteSuccess });
+      await loadCredentials();
+    } catch (_error) {
+      setMessage({ type: "error", text: t.error });
+    } finally {
+      setDeleting(false);
+      setTargetCredential(null);
+    }
+  }, [targetCredential, t, loadCredentials]);
 
   const startEditNickname = useCallback((credential: Credential) => {
     setEditingId(credential.id);
@@ -362,7 +371,7 @@ export function PasskeySection({
                     <Button
                       size="sm"
                       variant="danger"
-                      onClick={() => handleDelete(c)}
+                      onClick={() => requestDelete(c)}
                       disabled={busy}
                     >
                       {t.delete}
@@ -374,6 +383,19 @@ export function PasskeySection({
           ))}
         </ul>
       )}
+
+      <DeleteConfirmDialog
+        open={targetCredential !== null}
+        onOpenChange={(open) => {
+          if (!open) setTargetCredential(null);
+        }}
+        title={t.deleteTitle}
+        description={t.confirmDelete}
+        cancelLabel={t.cancel}
+        deleteLabel={t.delete}
+        disabled={deleting}
+        onDelete={confirmDelete}
+      />
     </div>
   );
 }

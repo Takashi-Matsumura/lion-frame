@@ -105,6 +105,7 @@ export const settingsTranslations = {
       saveNickname: "Save",
       cancel: "Cancel",
       delete: "Delete",
+      deleteTitle: "Delete passkey",
       confirmDelete:
         "Are you sure you want to delete this passkey? You will no longer be able to sign in with it.",
       lastUsedAt: "Last used",
@@ -234,6 +235,7 @@ export const settingsTranslations = {
       saveNickname: "保存",
       cancel: "キャンセル",
       delete: "削除",
+      deleteTitle: "パスキーを削除",
       confirmDelete:
         "このパスキーを削除してよろしいですか？ このパスキーではサインインできなくなります。",
       lastUsedAt: "最終使用日時",

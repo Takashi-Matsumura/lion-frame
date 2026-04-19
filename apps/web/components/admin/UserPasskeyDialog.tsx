@@ -2,8 +2,10 @@
 
 import { Trash2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
 import {
   Dialog,
   DialogContent,
@@ -43,6 +45,9 @@ export function UserPasskeyDialog({
   const [credentials, setCredentials] = useState<Credential[]>([]);
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
+  const [targetCredential, setTargetCredential] = useState<Credential | null>(
+    null,
+  );
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -62,41 +67,40 @@ export function UserPasskeyDialog({
     if (open) load();
   }, [open, load]);
 
-  const handleDelete = useCallback(
-    async (credential: Credential) => {
-      const msg = t(
-        `Are you sure you want to force-delete this passkey? The user will no longer be able to sign in with it.`,
-        "このパスキーを強制削除してよろしいですか？ ユーザはこのパスキーでサインインできなくなります。",
+  const requestDelete = useCallback((credential: Credential) => {
+    setTargetCredential(credential);
+  }, []);
+
+  const confirmDelete = useCallback(async () => {
+    if (!targetCredential) return;
+    const credential = targetCredential;
+    setBusy(credential.id);
+    try {
+      const res = await fetch(
+        `/api/admin/users/${userId}/webauthn/${credential.id}`,
+        { method: "DELETE" },
       );
-      if (!confirm(msg)) return;
-      setBusy(credential.id);
-      try {
-        const res = await fetch(
-          `/api/admin/users/${userId}/webauthn/${credential.id}`,
-          { method: "DELETE" },
-        );
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
-          throw new Error(data.errorJa ?? data.error ?? "delete failed");
-        }
-        await load();
-      } catch (error) {
-        alert(
-          t(
-            error instanceof Error
-              ? error.message
-              : "Failed to delete passkey",
-            error instanceof Error
-              ? error.message
-              : "パスキーの削除に失敗しました",
-          ),
-        );
-      } finally {
-        setBusy(null);
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.errorJa ?? data.error ?? "delete failed");
       }
-    },
-    [userId, load, t],
-  );
+      await load();
+    } catch (error) {
+      toast.error(
+        t(
+          error instanceof Error
+            ? error.message
+            : "Failed to delete passkey",
+          error instanceof Error
+            ? error.message
+            : "パスキーの削除に失敗しました",
+        ),
+      );
+    } finally {
+      setBusy(null);
+      setTargetCredential(null);
+    }
+  }, [targetCredential, userId, load, t]);
 
   const formatDate = useCallback(
     (iso: string | null) => {
@@ -164,7 +168,7 @@ export function UserPasskeyDialog({
                 <Button
                   variant="destructive"
                   size="sm"
-                  onClick={() => handleDelete(c)}
+                  onClick={() => requestDelete(c)}
                   disabled={busy === c.id}
                   loading={busy === c.id}
                 >
@@ -181,6 +185,21 @@ export function UserPasskeyDialog({
           </Button>
         </DialogFooter>
       </DialogContent>
+      <DeleteConfirmDialog
+        open={targetCredential !== null}
+        onOpenChange={(next) => {
+          if (!next) setTargetCredential(null);
+        }}
+        title={t("Delete passkey", "パスキーを削除")}
+        description={t(
+          "Are you sure you want to force-delete this passkey? The user will no longer be able to sign in with it.",
+          "このパスキーを強制削除してよろしいですか？ ユーザはこのパスキーでサインインできなくなります。",
+        )}
+        cancelLabel={t("Cancel", "キャンセル")}
+        deleteLabel={t("Delete", "削除")}
+        disabled={busy !== null}
+        onDelete={confirmDelete}
+      />
     </Dialog>
   );
 }
