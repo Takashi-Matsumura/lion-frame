@@ -27,8 +27,13 @@ describe("セキュリティ静的検証", () => {
   });
 
   describe("x-forwarded-host 信頼制限", () => {
-    it("middleware.ts で AUTH_URL に対する検証があること", () => {
+    it("middleware.ts が共通ヘルパー getRequestBaseUrl 経由でオリジンを決定していること", () => {
       const source = readSource("middleware.ts");
+      expect(source).toContain("getRequestBaseUrl");
+    });
+
+    it("lib/api/base-url.ts で AUTH_URL と trustedHost 検証が実装されていること", () => {
+      const source = readSource("lib/api/base-url.ts");
       expect(source).toContain("AUTH_URL");
       expect(source).toContain("trustedHost");
     });

@@ -425,6 +425,59 @@ describe("Authorize エンドポイント契約", () => {
 
   // ------------------ 署名鍵プレフライト ------------------
 
+  // ------------------ Issue #24: リダイレクト先オリジン ------------------
+
+  it("AUTH_URL が設定されていれば /login リダイレクトで AUTH_URL のオリジンを使う（0.0.0.0 問題の修正）", async () => {
+    mockPrisma.oIDCClient.findUnique.mockResolvedValue(validClient());
+    mockAuth.mockResolvedValue(null);
+
+    const prevAuthUrl = process.env.AUTH_URL;
+    process.env.AUTH_URL = "http://localhost:3030";
+
+    try {
+      const { GET } = require("@/app/api/oidc/authorize/route");
+      // dev server の 0.0.0.0 bind を模した request
+      const url = `http://0.0.0.0:3030/api/oidc/authorize?${new URLSearchParams(
+        validParams,
+      ).toString()}`;
+      const res = await GET(
+        new Request(url, { method: "GET", headers: {} }),
+      );
+      expect(res.status).toBe(302);
+      const loc = new URL(res.headers.get("location") as string);
+      expect(loc.origin).toBe("http://localhost:3030");
+      expect(loc.pathname).toBe("/login");
+    } finally {
+      if (prevAuthUrl === undefined) delete process.env.AUTH_URL;
+      else process.env.AUTH_URL = prevAuthUrl;
+    }
+  });
+
+  it("AUTH_URL 設定時は /oidc/consent リダイレクトも AUTH_URL のオリジンを使う", async () => {
+    mockPrisma.oIDCClient.findUnique.mockResolvedValue(validClient());
+    mockAuth.mockResolvedValue(userSession("USER"));
+
+    const prevAuthUrl = process.env.AUTH_URL;
+    process.env.AUTH_URL = "http://localhost:3030";
+
+    try {
+      const { GET } = require("@/app/api/oidc/authorize/route");
+      const url = `http://0.0.0.0:3030/api/oidc/authorize?${new URLSearchParams(
+        validParams,
+      ).toString()}`;
+      const res = await GET(
+        new Request(url, { method: "GET", headers: {} }),
+      );
+      expect(res.status).toBe(302);
+      const loc = new URL(res.headers.get("location") as string);
+      expect(loc.origin).toBe("http://localhost:3030");
+      expect(loc.pathname).toBe("/oidc/consent");
+    } finally {
+      if (prevAuthUrl === undefined) delete process.env.AUTH_URL;
+      else process.env.AUTH_URL = prevAuthUrl;
+    }
+  });
+
   it("OIDC_SIGNING_KEYS 未設定で server_error を redirect + 監査ログ", async () => {
     mockPrisma.oIDCClient.findUnique.mockResolvedValue(validClient());
     mockGetSigningKeyStatus.mockResolvedValueOnce({

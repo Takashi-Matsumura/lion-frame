@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import NextAuth from "next-auth";
 import { authConfig } from "@/auth.config";
+import { getRequestBaseUrl } from "@/lib/api/base-url";
 import { sanitizeCallbackUrl } from "@/lib/services/safe-redirect";
 
 const { auth } = NextAuth(authConfig);
@@ -26,18 +27,10 @@ export default auth(async (req) => {
 
   const session = req.auth;
 
-  // Reverse proxy support: construct correct redirect base URL
-  // Validate x-forwarded-host against AUTH_URL to prevent host header injection
-  const authUrl = process.env.AUTH_URL;
-  const forwardedProto = req.headers.get("x-forwarded-proto");
-  const forwardedHost = req.headers.get("x-forwarded-host");
-  let baseUrl = req.nextUrl.origin;
-  if (forwardedProto && forwardedHost && authUrl) {
-    const trustedHost = new URL(authUrl).host;
-    if (forwardedHost === trustedHost) {
-      baseUrl = `${forwardedProto}://${forwardedHost}`;
-    }
-  }
+  // AUTH_URL 基準でリダイレクト URL を組み立てる。dev server の 0.0.0.0 bind
+  // 問題 (Issue #24) + リバースプロキシ経由の x-forwarded-host spoofing 対策
+  // を共通ヘルパーで一元化。
+  const baseUrl = getRequestBaseUrl(req);
   const redirectUrl = (path: string) => new URL(path, baseUrl);
 
   // Build ID mismatch helper
@@ -184,7 +177,7 @@ export default auth(async (req) => {
   const excludedLogPaths = ["/login", "/auth/", "/settings", "/_next/", "/api/"];
   const shouldLog = !excludedLogPaths.some((p) => pathname.startsWith(p));
   if (shouldLog && session.user?.id) {
-    const logUrl = new URL("/api/usage-log", req.nextUrl.origin);
+    const logUrl = new URL("/api/usage-log", baseUrl);
     fetch(logUrl, {
       method: "POST",
       headers: {
