@@ -40,12 +40,21 @@ jest.mock("jose", () => ({
   },
 }));
 
+const mockGetSigningKeyStatus = jest.fn(() =>
+  Promise.resolve({
+    ok: true as const,
+    activeKid: "k1",
+    keyCount: 1,
+    statusCounts: { active: 1, next: 0, retired: 0 },
+  }),
+);
 jest.mock("@/lib/services/oidc/keys", () => ({
   getActiveSigningKey: jest.fn(() =>
     Promise.resolve({ kid: "k1", privateKey: "p", publicKey: "q", publicJwk: {} }),
   ),
   findKeyByKid: jest.fn(),
   getPublicJwks: jest.fn(),
+  getSigningKeyStatus: () => mockGetSigningKeyStatus(),
 }));
 
 const mockPrisma = {
@@ -409,6 +418,37 @@ describe("Authorize エンドポイント契約", () => {
     expect(res.headers.get("set-cookie")).toMatch(/oidc_auth_req=/);
     expect(mockPrisma.oIDCAuthRequest.create).toHaveBeenCalled();
     // code は発行しない
+    expect(mockPrisma.oIDCAuthCode.create).not.toHaveBeenCalled();
+  });
+
+  // ------------------ 署名鍵プレフライト ------------------
+
+  it("OIDC_SIGNING_KEYS 未設定で server_error を redirect + 監査ログ", async () => {
+    mockPrisma.oIDCClient.findUnique.mockResolvedValue(validClient());
+    mockGetSigningKeyStatus.mockResolvedValueOnce({
+      ok: false as unknown as true,
+      reason: "not_set" as unknown as never,
+      message:
+        "OIDC_SIGNING_KEYS is not set. Generate keys with `node apps/web/scripts/generate-oidc-keys.mjs` and add them to .env.",
+    } as never);
+
+    const { GET } = require("@/app/api/oidc/authorize/route");
+    const res = await GET(makeRequest(validParams));
+
+    expect(res.status).toBe(302);
+    const loc = new URL(res.headers.get("location") as string);
+    expect(loc.origin + loc.pathname).toBe("https://rp.example.lan/callback");
+    expect(loc.searchParams.get("error")).toBe("server_error");
+    expect(loc.searchParams.get("state")).toBe("state123");
+
+    expect(mockAuditLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: "OIDC_AUTHORIZE_SERVER_ERROR",
+        category: "OIDC",
+        details: expect.objectContaining({ reason: "not_set" }),
+      }),
+    );
+    // token endpoint 到達前に止まるので AuthCode は発行しない
     expect(mockPrisma.oIDCAuthCode.create).not.toHaveBeenCalled();
   });
 

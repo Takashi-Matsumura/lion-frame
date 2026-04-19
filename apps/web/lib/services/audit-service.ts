@@ -98,6 +98,7 @@ export type AuditAction =
   // OIDC（Issue #6 でフレーム本体の認証基盤拡張として追加）
   | "OIDC_AUTHORIZE"
   | "OIDC_AUTHORIZE_DENIED"
+  | "OIDC_AUTHORIZE_SERVER_ERROR"
   | "OIDC_CONSENT_GRANT"
   | "OIDC_TOKEN_ISSUE"
   | "OIDC_TOKEN_REUSE_DETECTED"
