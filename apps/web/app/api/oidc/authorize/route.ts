@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
+import { getRequestBaseUrl } from "@/lib/api/base-url";
 import { verifySignedValue } from "@/lib/services/cookie-signer";
 import { AuditService } from "@/lib/services/audit-service";
 import { OIDCClientService } from "@/lib/services/oidc/client-service";
@@ -228,7 +229,10 @@ export async function GET(request: Request): Promise<NextResponse> {
     }
     const cookie = await buildAuthRequestCookie(handle);
     const callbackUrl = `/api/oidc/authorize?resume=${encodeURIComponent(handle)}`;
-    const loginUrl = new URL("/login", url.origin);
+    // dev server が 0.0.0.0 bind のため url.origin ではなく AUTH_URL 基準で
+    // 組み立てる。これをしないとブラウザは別オリジン扱いして WebAuthn /
+    // パスキーが発火しない（Issue #24）。
+    const loginUrl = new URL("/login", getRequestBaseUrl(request));
     loginUrl.searchParams.set("callbackUrl", callbackUrl);
     return NextResponse.redirect(loginUrl.toString(), {
       status: 302,
@@ -349,7 +353,7 @@ export async function GET(request: Request): Promise<NextResponse> {
     handle = saved.id;
   }
   const cookie = await buildAuthRequestCookie(handle);
-  const consentUrl = new URL("/oidc/consent", url.origin);
+  const consentUrl = new URL("/oidc/consent", getRequestBaseUrl(request));
   return NextResponse.redirect(consentUrl.toString(), {
     status: 302,
     headers: { "Set-Cookie": cookie },
