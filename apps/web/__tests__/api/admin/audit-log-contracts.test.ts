@@ -21,10 +21,6 @@ jest.mock("@/lib/services/notification-service", () => ({
   },
 }));
 
-jest.mock("@/lib/totp", () => ({
-  verifyTotp: jest.fn(),
-}));
-
 jest.mock("node:fs/promises", () => ({
   writeFile: jest.fn().mockResolvedValue(undefined),
   unlink: jest.fn().mockResolvedValue(undefined),
@@ -84,117 +80,6 @@ const createJsonRequest = (url: string, body: unknown) =>
 describe("監査ログ契約テスト", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-  });
-
-  // ----------------------------------------------------------
-  // 2FA Enable / Disable
-  // ----------------------------------------------------------
-  describe("2FA enable/disable", () => {
-    it("2FA有効化成功時に TWO_FACTOR_ENABLE ログが記録される", async () => {
-      mockAuth.mockResolvedValue(userSession);
-
-      const { verifyTotp } = require("@/lib/totp");
-      verifyTotp.mockReturnValue(true);
-
-      mockPrisma.user.update.mockResolvedValue({
-        id: "user-1",
-        email: "user@example.com",
-      });
-
-      const { POST } = require("@/app/api/user/two-factor/enable/route");
-      const response = await POST(
-        createJsonRequest("http://localhost:3000/api/user/two-factor/enable", {
-          secret: "test-secret",
-          code: "123456",
-        }),
-      );
-
-      expect(response.status).toBe(200);
-      expect(mockAuditLog).toHaveBeenCalledWith(
-        expect.objectContaining({
-          action: "TWO_FACTOR_ENABLE",
-          category: "USER_MANAGEMENT",
-        }),
-      );
-    });
-
-    it("2FA有効化で認証なしの場合ログが記録されない", async () => {
-      mockAuth.mockResolvedValue(null);
-
-      const { POST } = require("@/app/api/user/two-factor/enable/route");
-      const response = await POST(
-        createJsonRequest("http://localhost:3000/api/user/two-factor/enable", {
-          secret: "test-secret",
-          code: "123456",
-        }),
-      );
-
-      expect(response.status).toBe(401);
-      expect(mockAuditLog).not.toHaveBeenCalled();
-    });
-
-    it("2FA有効化でコード不正の場合ログが記録されない", async () => {
-      mockAuth.mockResolvedValue(userSession);
-
-      const { verifyTotp } = require("@/lib/totp");
-      verifyTotp.mockReturnValue(false);
-
-      const { POST } = require("@/app/api/user/two-factor/enable/route");
-      const response = await POST(
-        createJsonRequest("http://localhost:3000/api/user/two-factor/enable", {
-          secret: "test-secret",
-          code: "000000",
-        }),
-      );
-
-      expect(response.status).toBe(400);
-      expect(mockAuditLog).not.toHaveBeenCalled();
-    });
-
-    it("2FA無効化成功時に TWO_FACTOR_DISABLE ログが記録される", async () => {
-      mockAuth.mockResolvedValue(userSession);
-
-      const { verifyTotp } = require("@/lib/totp");
-      verifyTotp.mockReturnValue(true);
-
-      mockPrisma.user.findUnique.mockResolvedValue({
-        twoFactorEnabled: true,
-        twoFactorSecret: "existing-secret",
-      });
-      mockPrisma.user.update.mockResolvedValue({
-        id: "user-1",
-        email: "user@example.com",
-      });
-
-      const { POST } = require("@/app/api/user/two-factor/disable/route");
-      const response = await POST(
-        createJsonRequest("http://localhost:3000/api/user/two-factor/disable", {
-          code: "123456",
-        }),
-      );
-
-      expect(response.status).toBe(200);
-      expect(mockAuditLog).toHaveBeenCalledWith(
-        expect.objectContaining({
-          action: "TWO_FACTOR_DISABLE",
-          category: "USER_MANAGEMENT",
-        }),
-      );
-    });
-
-    it("2FA無効化で認証なしの場合ログが記録されない", async () => {
-      mockAuth.mockResolvedValue(null);
-
-      const { POST } = require("@/app/api/user/two-factor/disable/route");
-      const response = await POST(
-        createJsonRequest("http://localhost:3000/api/user/two-factor/disable", {
-          code: "123456",
-        }),
-      );
-
-      expect(response.status).toBe(401);
-      expect(mockAuditLog).not.toHaveBeenCalled();
-    });
   });
 
   // ----------------------------------------------------------

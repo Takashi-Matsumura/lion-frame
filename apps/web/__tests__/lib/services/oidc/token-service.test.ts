@@ -98,8 +98,6 @@ function makeUser(partial: Partial<User>): User {
     systemPrompt: null,
     orgContextEnabled: true,
     lastSignInAt: null,
-    twoFactorEnabled: partial.twoFactorEnabled ?? false,
-    twoFactorSecret: null,
     forcePasswordChange: false,
     passwordExpiresAt: null,
     createdAt: new Date(),
@@ -144,7 +142,7 @@ describe("buildUserClaims", () => {
     expect(claims.email_verified).toBe(false);
   });
 
-  it("includes profile claims including lion:role and lion:two_factor", () => {
+  it("includes profile claims including lion:role and lion:mfa_used", () => {
     const user = makeUser({
       id: "u1",
       name: "Alice",
@@ -155,12 +153,12 @@ describe("buildUserClaims", () => {
     expect(claims.name).toBe("Alice");
     expect(claims.picture).toBe("https://example.com/a.png");
     expect(claims["lion:role"]).toBe("ADMIN");
-    expect(claims["lion:two_factor"]).toBe(true);
+    expect(claims["lion:mfa_used"]).toBe(true);
   });
 
-  it("lion:two_factor is false when 2FA was not used", () => {
+  it("lion:mfa_used is false when no MFA was used", () => {
     const user = makeUser({ id: "u1", role: "USER" });
     const claims = buildUserClaims(user, "openid profile", false);
-    expect(claims["lion:two_factor"]).toBe(false);
+    expect(claims["lion:mfa_used"]).toBe(false);
   });
 });

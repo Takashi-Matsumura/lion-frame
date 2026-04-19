@@ -9,9 +9,6 @@ export const profileTranslations = {
     role: "Role:",
     lastSignIn: "Last Sign In:",
     never: "Never",
-    twoFactorAuth: "Two-Factor Auth:",
-    enabled: "Enabled",
-    disabled: "Disabled",
     note: "Note:",
     noteMessage:
       "Only administrators can change user roles. If you need different permissions, please contact an admin.",
@@ -26,9 +23,6 @@ export const profileTranslations = {
     role: "ロール:",
     lastSignIn: "最終サインイン:",
     never: "未サインイン",
-    twoFactorAuth: "二要素認証:",
-    enabled: "有効",
-    disabled: "無効",
     note: "注意:",
     noteMessage:
       "ロールを変更できるのは管理者のみです。異なる権限が必要な場合は、管理者にお問い合わせください。",

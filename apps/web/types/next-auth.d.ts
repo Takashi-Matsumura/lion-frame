@@ -7,7 +7,6 @@ declare module "next-auth" {
       id: string;
       role: Role;
       language: string;
-      twoFactorEnabled: boolean;
       mustChangePassword: boolean;
       authMethod?: string;
       name?: string | null;
@@ -19,7 +18,6 @@ declare module "next-auth" {
   interface User {
     role: Role;
     language?: string;
-    twoFactorEnabled?: boolean;
     authMethod?: string;
   }
 }

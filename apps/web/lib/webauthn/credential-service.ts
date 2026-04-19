@@ -103,19 +103,18 @@ export const CredentialService = {
   },
 
   /**
-   * 削除可能かを判定。パスワード無し・2FA 無し・パスキー残 1 件の場合は false を返す。
+   * 削除可能かを判定。パスワード無し・パスキー残 1 件の場合は false を返す。
    */
   async canUserRemoveCredential(userId: string): Promise<boolean> {
     const [user, credentialCount] = await Promise.all([
       prisma.user.findUnique({
         where: { id: userId },
-        select: { password: true, twoFactorEnabled: true },
+        select: { password: true },
       }),
       prisma.webAuthnCredential.count({ where: { userId } }),
     ]);
     if (!user) return false;
-    const hasOtherFactor = user.password !== null || user.twoFactorEnabled;
-    if (hasOtherFactor) return true;
+    if (user.password !== null) return true;
     return credentialCount > 1;
   },
 };

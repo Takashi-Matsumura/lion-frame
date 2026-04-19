@@ -97,21 +97,9 @@ export async function POST(request: Request): Promise<NextResponse> {
     );
   }
 
-  // 2FA 状態を判定（ID Token のクレーム用）
-  let twoFactorUsed = false;
-  if (session.user.twoFactorEnabled) {
-    const twoFactorCookie = cookieHeader
-      .split(";")
-      .map((s) => s.trim())
-      .find((s) => s.startsWith("2fa_verified="));
-    if (twoFactorCookie) {
-      const signedTf = decodeURIComponent(
-        twoFactorCookie.split("=", 2)[1] ?? "",
-      );
-      const verifiedUserId = await verifySignedValue(signedTf);
-      twoFactorUsed = verifiedUserId === session.user.id;
-    }
-  }
+  // MFA 使用状態（ID Token のクレーム用）
+  // パスキー（WebAuthn）認証は所持＋生体/PIN で MFA 相当
+  const mfaUsed = session.user.authMethod === "webauthn";
 
   // 同意を保存
   await OIDCConsentService.upsertConsent({
@@ -140,7 +128,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     nonce: authRequest.nonce,
     codeChallenge: authRequest.codeChallenge,
     codeChallengeMethod: authRequest.codeChallengeMethod,
-    twoFactorUsed,
+    mfaUsed,
   });
 
   await AuditService.log({

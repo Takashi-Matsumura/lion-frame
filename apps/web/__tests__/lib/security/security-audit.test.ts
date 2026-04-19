@@ -79,14 +79,14 @@ describe("セキュリティ静的検証", () => {
     });
   });
 
-  describe("2FA Cookie 署名", () => {
-    it("middleware で verifySignedValue が使われていること", () => {
-      const source = readSource("middleware.ts");
+  describe("OIDC Cookie 署名", () => {
+    it("OIDC authorize route で verifySignedValue が使われていること", () => {
+      const source = readSource("app/api/oidc/authorize/route.ts");
       expect(source).toContain("verifySignedValue");
     });
 
-    it("verify-totp route で signValue が使われていること", () => {
-      const source = readSource("app/api/auth/verify-totp/route.ts");
+    it("OIDC authorize route で signValue が使われていること", () => {
+      const source = readSource("app/api/oidc/authorize/route.ts");
       expect(source).toContain("signValue");
     });
   });

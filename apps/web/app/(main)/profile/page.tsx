@@ -25,10 +25,9 @@ export default async function ProfilePage() {
   const language = await getLanguage();
   const t = profileTranslations[language];
 
-  // Get user's lastSignInAt and twoFactorEnabled
   const user = await prisma.user.findUnique({
     where: { email: session.user.email ?? "" },
-    select: { lastSignInAt: true, twoFactorEnabled: true },
+    select: { lastSignInAt: true },
   });
 
   return (
@@ -40,7 +39,6 @@ export default async function ProfilePage() {
         image: session.user.image ?? null,
         role: session.user.role,
         lastSignInAt: user?.lastSignInAt ?? null,
-        twoFactorEnabled: user?.twoFactorEnabled ?? false,
       }}
       language={language}
       translations={t}

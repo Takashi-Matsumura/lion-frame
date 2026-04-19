@@ -126,7 +126,7 @@ export const OIDCConsentService = {
     nonce?: string | null;
     codeChallenge: string;
     codeChallengeMethod: string;
-    twoFactorUsed: boolean;
+    mfaUsed: boolean;
   }): Promise<OIDCAuthCode> {
     const code = `code_${randomBytes(32).toString("base64url")}`;
     const expiresAt = new Date(Date.now() + OIDC_CODE_TTL_SECONDS * 1000);
@@ -140,7 +140,7 @@ export const OIDCConsentService = {
         nonce: input.nonce ?? null,
         codeChallenge: input.codeChallenge,
         codeChallengeMethod: input.codeChallengeMethod,
-        twoFactorUsed: input.twoFactorUsed,
+        mfaUsed: input.mfaUsed,
         expiresAt,
       },
     });

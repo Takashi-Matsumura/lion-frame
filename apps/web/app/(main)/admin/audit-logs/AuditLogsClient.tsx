@@ -271,12 +271,6 @@ export function AuditLogsClient({ language }: AuditLogsClientProps) {
                   <SelectItem value="USER_ROLE_CHANGE">
                     {t.actionRoleChange}
                   </SelectItem>
-                  <SelectItem value="TWO_FACTOR_ENABLE">
-                    {t.actionTwoFactorEnable}
-                  </SelectItem>
-                  <SelectItem value="TWO_FACTOR_DISABLE">
-                    {t.actionTwoFactorDisable}
-                  </SelectItem>
                   <SelectItem value="PROFILE_IMAGE_UPDATE">
                     {t.actionProfileImageUpdate}
                   </SelectItem>
