@@ -251,7 +251,7 @@ Next.js 15のmiddlewareはEdge Runtimeで動作するため、認証設定を分
 
 | ファイル | Runtime | 用途 |
 |---------|---------|------|
-| `apps/web/auth.config.ts` | Edge | middleware用（OAuth設定） |
+| `apps/web/auth.config.ts` | Edge | middleware用（session/jwt callbacks のみ、Provider は空配列） |
 | `apps/web/auth.ts` | Node.js | APIルート用（Credentialsプロバイダ） |
 | `apps/web/middleware.ts` | Edge | auth.config.tsを使用 |
 

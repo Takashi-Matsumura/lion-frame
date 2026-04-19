@@ -239,9 +239,9 @@ app/api/auth/[...nextauth]/route.ts
    ```
 
 2. **Provider の種類**
-   - OAuth（Google, GitHub など）
-   - Credentials（ID/パスワード）
-   - LDAP（企業認証）
+   - Credentials（メール+パスワード）
+   - WebAuthn（パスキー／FIDO2、`@simplewebauthn/server`）
+   - ※ Google / GitHub OAuth は廃止済み（社内設置のセットアップ負担と、email 一致で他人のアカウントをリンクできてしまう実装リスクのため）
 
 3. **ミドルウェアによる保護**
    ```typescript
@@ -283,7 +283,8 @@ Dockerfile             ← コンテナ定義（あれば）
 2. **環境変数の管理**
    - DATABASE_URL
    - AUTH_SECRET
-   - OAuth クレデンシャル
+   - WebAuthn 設定（`NEXT_PUBLIC_WEBAUTHN_RP_ID` / `WEBAUTHN_ORIGIN`）
+   - VAPID キー（Web Push 用）
 
 **レビュー観点**:
 - [ ] 機密情報は .env で管理されているか

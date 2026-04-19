@@ -209,10 +209,9 @@ await NotificationService.broadcast({
 
 | イベント | ファイル |
 |---------|---------|
-| ログイン成功（OpenLDAP） | `auth.ts` |
-| ログイン成功（Google） | `auth.config.ts` |
-| 2FA有効化 | `app/api/user/two-factor/enable/route.ts` |
-| 2FA無効化 | `app/api/user/two-factor/disable/route.ts` |
+| ログイン成功（Credentials） | `auth.ts` |
+| パスキー登録 | `app/api/user/webauthn/register/verify/route.ts` |
+| パスキー認証 | `auth.ts`（WebAuthn Provider authorize） |
 | パスワード変更 | `app/api/auth/change-password/route.ts` |
 | ロール変更 | `app/api/admin/change-role/route.ts` |
 | アクセスキー作成/変更/削除 | `app/api/admin/access-keys/route.ts` |
