@@ -20,6 +20,48 @@ services:
       timeout: 5s
       retries: 5
 
+  # Next.js Web App (開発コンテナ)
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile.dev
+    container_name: lionframe-web
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      airag-backend:
+        condition: service_started
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://lionframe:lionframe@postgres:5432/lionframe?schema=public
+      AUTH_URL: http://localhost:3030
+      AUTH_SECRET: ${AUTH_SECRET:-dev-secret-change-me}
+      OIDC_ISSUER: http://localhost:3030
+      OIDC_SIGNING_KEYS: ${OIDC_SIGNING_KEYS:-}
+      RAG_BACKEND_URL: http://airag-backend:8000
+      LLM_BASE_URL: ${LLM_BASE_URL:-http://host.docker.internal:8080}
+      NEXT_PUBLIC_APP_NAME: LionFrame
+      NEXT_PUBLIC_APP_DESCRIPTION: Modular framework for back-office operations
+      NEXT_PUBLIC_APP_DESCRIPTION_JA: バックオフィス業務を支援するモジュラーフレームワーク
+      NEXT_PUBLIC_VAPID_PUBLIC_KEY: ${NEXT_PUBLIC_VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+      NEXT_PUBLIC_WEBAUTHN_RP_ID: localhost
+      NEXT_PUBLIC_WEBAUTHN_RP_NAME: LionFrame
+      WEBAUTHN_ORIGIN: http://localhost:3030
+      WATCHPACK_POLLING: "true"
+      CHOKIDAR_USEPOLLING: "true"
+    ports:
+      - "3030:3030"
+    volumes:
+      - .:/app
+      - web_node_modules_root:/app/node_modules
+      - web_node_modules_web:/app/apps/web/node_modules
+      - web_node_modules_types:/app/packages/module-types/node_modules
+      - web_node_modules_playground:/app/addons/ai-playground/node_modules
+      - web_node_modules_mcp_org:/app/mcp-servers/organization/node_modules
+      - web_next_cache:/app/apps/web/.next
+
   # AI RAG Backend (ChromaDB + sentence-transformers)
   airag-backend:
     build:
@@ -51,3 +93,9 @@ volumes:
   postgres_data:
   chroma_data:
   model_cache:
+  web_node_modules_root:
+  web_node_modules_web:
+  web_node_modules_types:
+  web_node_modules_playground:
+  web_node_modules_mcp_org:
+  web_next_cache:
