@@ -121,6 +121,10 @@ export const settingsTranslations = {
         "Cannot remove your last passkey when no password is set.",
       deviceSingle: "This device only",
       deviceMulti: "Syncs across devices",
+      test: "Test",
+      testing: "Testing...",
+      testSuccess: "Passkey authentication succeeded.",
+      testFailure: "Passkey authentication failed.",
     },
   },
   ja: {
@@ -244,6 +248,10 @@ export const settingsTranslations = {
         "パスワードが設定されていないため、最後のパスキーは削除できません。",
       deviceSingle: "このデバイス専用",
       deviceMulti: "デバイス間で同期",
+      test: "テスト",
+      testing: "テスト中…",
+      testSuccess: "パスキー認証に成功しました。",
+      testFailure: "パスキー認証に失敗しました。",
     },
   },
 } as const;

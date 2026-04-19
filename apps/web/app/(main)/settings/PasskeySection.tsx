@@ -2,6 +2,7 @@
 
 import {
   browserSupportsWebAuthn,
+  startAuthentication,
   startRegistration,
 } from "@simplewebauthn/browser";
 import { useCallback, useEffect, useState } from "react";
@@ -44,6 +45,10 @@ type PasskeyTranslations = {
   lastPasskeyBlocked: string;
   deviceSingle: string;
   deviceMulti: string;
+  test: string;
+  testing: string;
+  testSuccess: string;
+  testFailure: string;
 };
 
 interface PasskeySectionProps {
@@ -59,6 +64,7 @@ export function PasskeySection({
   const [credentials, setCredentials] = useState<Credential[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [testingId, setTestingId] = useState<string | null>(null);
   const [nickname, setNickname] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingNickname, setEditingNickname] = useState("");
@@ -165,6 +171,46 @@ export function PasskeySection({
     setEditingId(null);
     setEditingNickname("");
   }, []);
+
+  const handleTest = useCallback(
+    async (credential: Credential) => {
+      setTestingId(credential.id);
+      setBusy(true);
+      setMessage(null);
+      try {
+        const optionsRes = await fetch("/api/user/webauthn/test/options", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ credentialDbId: credential.id }),
+        });
+        if (!optionsRes.ok) throw new Error("options");
+        const options = await optionsRes.json();
+
+        const assertion = await startAuthentication({ optionsJSON: options });
+
+        const verifyRes = await fetch("/api/user/webauthn/test/verify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ response: assertion }),
+        });
+        if (!verifyRes.ok) throw new Error("verify");
+
+        setMessage({ type: "success", text: t.testSuccess });
+        await loadCredentials();
+      } catch (error) {
+        const name = error instanceof Error ? error.name : "";
+        if (name === "NotAllowedError" || name === "AbortError") {
+          setMessage({ type: "error", text: t.userCancelled });
+        } else {
+          setMessage({ type: "error", text: t.testFailure });
+        }
+      } finally {
+        setBusy(false);
+        setTestingId(null);
+      }
+    },
+    [t, loadCredentials],
+  );
 
   const saveNickname = useCallback(async () => {
     if (!editingId) return;
@@ -302,14 +348,25 @@ export function PasskeySection({
                       ))}
                     </div>
                   </div>
-                  <Button
-                    size="sm"
-                    variant="danger"
-                    onClick={() => handleDelete(c)}
-                    disabled={busy}
-                  >
-                    {t.delete}
-                  </Button>
+                  <div className="flex flex-col gap-2 sm:flex-row">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleTest(c)}
+                      disabled={busy}
+                      loading={testingId === c.id}
+                    >
+                      {testingId === c.id ? t.testing : t.test}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="danger"
+                      onClick={() => handleDelete(c)}
+                      disabled={busy}
+                    >
+                      {t.delete}
+                    </Button>
+                  </div>
                 </div>
               )}
             </li>
