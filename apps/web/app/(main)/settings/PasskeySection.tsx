@@ -49,6 +49,8 @@ type PasskeyTranslations = {
   testing: string;
   testSuccess: string;
   testFailure: string;
+  unnamed: string;
+  loading: string;
 };
 
 interface PasskeySectionProps {
@@ -283,7 +285,7 @@ export function PasskeySection({
       </div>
 
       {loading ? (
-        <p className="text-sm text-muted-foreground">…</p>
+        <p className="text-sm text-muted-foreground">{t.loading}</p>
       ) : credentials.length === 0 ? (
         <p className="text-sm text-muted-foreground">{t.empty}</p>
       ) : (
@@ -324,8 +326,7 @@ export function PasskeySection({
                       className="font-medium text-left hover:underline"
                       onClick={() => startEditNickname(c)}
                     >
-                      {c.nickname ??
-                        (language === "ja" ? "（未設定）" : "(unnamed)")}
+                      {c.nickname ?? t.unnamed}
                     </button>
                     <div className="text-xs text-muted-foreground mt-1 flex flex-wrap gap-2">
                       <span>

@@ -317,18 +317,20 @@ export function PasswordChangeSection({
                 autoComplete="new-password"
                 className={`pr-10 ${showNewPassword ? "font-mono" : ""}`}
               />
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="icon-sm"
                 onClick={() => setShowNewPassword((v) => !v)}
                 aria-label={showNewPassword ? t.hidePassword : t.showPassword}
-                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground"
+                className="absolute right-1 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
               >
                 {showNewPassword ? (
                   <RiEyeOffLine className="w-4 h-4" />
                 ) : (
                   <RiEyeLine className="w-4 h-4" />
                 )}
-              </button>
+              </Button>
             </div>
             {strengthInfo && (
               <div className="flex items-center gap-2 pt-1">
@@ -357,20 +359,22 @@ export function PasswordChangeSection({
                 autoComplete="new-password"
                 className={`pr-10 ${showConfirmPassword ? "font-mono" : ""}`}
               />
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="icon-sm"
                 onClick={() => setShowConfirmPassword((v) => !v)}
                 aria-label={
                   showConfirmPassword ? t.hidePassword : t.showPassword
                 }
-                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground"
+                className="absolute right-1 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
               >
                 {showConfirmPassword ? (
                   <RiEyeOffLine className="w-4 h-4" />
                 ) : (
                   <RiEyeLine className="w-4 h-4" />
                 )}
-              </button>
+              </Button>
             </div>
           </div>
 

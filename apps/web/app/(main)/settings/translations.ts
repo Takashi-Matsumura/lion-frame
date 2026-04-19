@@ -125,6 +125,8 @@ export const settingsTranslations = {
       testing: "Testing...",
       testSuccess: "Passkey authentication succeeded.",
       testFailure: "Passkey authentication failed.",
+      unnamed: "(unnamed)",
+      loading: "Loading...",
     },
   },
   ja: {
@@ -252,6 +254,8 @@ export const settingsTranslations = {
       testing: "テスト中…",
       testSuccess: "パスキー認証に成功しました。",
       testFailure: "パスキー認証に失敗しました。",
+      unnamed: "（未設定）",
+      loading: "読み込み中…",
     },
   },
 } as const;

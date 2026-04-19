@@ -57,10 +57,9 @@ export const POST = apiHandler(async (request, session) => {
 
     await CredentialService.updateCounter(stored.id, newCounter);
   } catch (error) {
+    console.error("[webauthn/test/verify]", error);
     await clearChallenge();
-    throw ApiError.badRequest(
-      error instanceof Error ? error.message : "verification failed",
-    );
+    throw ApiError.badRequest("verification failed");
   }
 
   await clearChallenge();
