@@ -1,6 +1,7 @@
 import { Info } from "lucide-react";
 import { CredentialsLoginForm } from "@/components/CredentialsLoginForm";
 import { OAuthButtons } from "@/components/OAuthButtons";
+import { PasskeySignInButton } from "@/components/PasskeySignInButton";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { getLanguage } from "@/lib/i18n/get-language";
@@ -59,6 +60,16 @@ export default async function LoginPage({
 
             {/* Credentials認証フォーム（常時表示） */}
             <CredentialsLoginForm language={language} />
+
+            {/* パスキーサインイン（対応ブラウザでのみ表示） */}
+            <div className="my-6 flex items-center gap-4">
+              <Separator className="flex-1" />
+              <span className="text-sm text-muted-foreground font-medium">
+                {t.or}
+              </span>
+              <Separator className="flex-1" />
+            </div>
+            <PasskeySignInButton language={language} />
 
             {/* OAuthが有効な場合のセパレータ */}
             {hasOAuthEnabled && (

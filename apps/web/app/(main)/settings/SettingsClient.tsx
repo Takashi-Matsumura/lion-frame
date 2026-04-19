@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useState } from "react";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { Card, CardContent } from "@/components/ui/card";
+import { PasskeySection } from "./PasskeySection";
 import { PasswordChangeSection } from "./PasswordChangeSection";
 import { TwoFactorSection } from "./TwoFactorSection";
 import type { settingsTranslations } from "./translations";
@@ -100,6 +101,13 @@ export function SettingsClient({
                 translations={t.twoFactor}
                 onStatusChange={handleTwoFactorStatusChange}
               />
+            </CardContent>
+          </Card>
+
+          {/* Passkeys */}
+          <Card>
+            <CardContent className="pt-6">
+              <PasskeySection language={language} translations={t.passkey} />
             </CardContent>
           </Card>
         </div>

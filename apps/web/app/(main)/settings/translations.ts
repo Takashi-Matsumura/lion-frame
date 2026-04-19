@@ -105,6 +105,33 @@ export const settingsTranslations = {
       mustChangeWarning:
         "Your password has been reset by an administrator. Please change your password to continue.",
     },
+    passkey: {
+      title: "Passkeys",
+      description:
+        "Sign in without a password using Touch ID, Face ID, or a hardware security key",
+      registerButton: "Add a passkey",
+      registering: "Registering...",
+      nicknamePlaceholder: "Passkey nickname (optional)",
+      saveNickname: "Save",
+      cancel: "Cancel",
+      delete: "Delete",
+      confirmDelete:
+        "Are you sure you want to delete this passkey? You will no longer be able to sign in with it.",
+      lastUsedAt: "Last used",
+      createdAt: "Added",
+      never: "Never used",
+      empty: "You have not registered any passkeys yet.",
+      registerSuccess: "Passkey registered successfully!",
+      deleteSuccess: "Passkey deleted.",
+      nicknameUpdated: "Nickname updated.",
+      error: "An error occurred. Please try again.",
+      notSupported: "Passkeys are not supported in this browser.",
+      userCancelled: "Passkey registration was cancelled.",
+      lastPasskeyBlocked:
+        "Cannot remove your last passkey when no password or 2FA is set.",
+      deviceSingle: "This device only",
+      deviceMulti: "Syncs across devices",
+    },
   },
   ja: {
     title: "設定",
@@ -210,6 +237,33 @@ export const settingsTranslations = {
       passwordTooShort: "パスワードは8文字以上必要です",
       mustChangeWarning:
         "管理者によりパスワードがリセットされました。続行するには新しいパスワードを設定してください。",
+    },
+    passkey: {
+      title: "パスキー",
+      description:
+        "Touch ID・Face ID・ハードウェアセキュリティキーでパスワードレスにサインインできます",
+      registerButton: "パスキーを追加",
+      registering: "登録中…",
+      nicknamePlaceholder: "パスキーのニックネーム（任意）",
+      saveNickname: "保存",
+      cancel: "キャンセル",
+      delete: "削除",
+      confirmDelete:
+        "このパスキーを削除してよろしいですか？ このパスキーではサインインできなくなります。",
+      lastUsedAt: "最終使用日時",
+      createdAt: "登録日時",
+      never: "未使用",
+      empty: "まだパスキーは登録されていません。",
+      registerSuccess: "パスキーを登録しました！",
+      deleteSuccess: "パスキーを削除しました。",
+      nicknameUpdated: "ニックネームを更新しました。",
+      error: "エラーが発生しました。もう一度お試しください。",
+      notSupported: "このブラウザはパスキーに対応していません。",
+      userCancelled: "パスキーの登録をキャンセルしました。",
+      lastPasskeyBlocked:
+        "パスワードも 2FA も設定されていないため、最後のパスキーは削除できません。",
+      deviceSingle: "このデバイス専用",
+      deviceMulti: "デバイス間で同期",
     },
   },
 } as const;

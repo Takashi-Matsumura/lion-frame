@@ -227,6 +227,59 @@ cd apps/web && npx prisma db push
 - [OIDC_INTEGRATION_GUIDE.md](docs/OIDC_INTEGRATION_GUIDE.md) — **社内アプリ（RP）から利用する開発者向け** 統合ガイド
 - [OIDC_PROVIDER.md](docs/OIDC_PROVIDER.md) — Provider 側の設計方針・実装判断の記録
 
+## パスキー（WebAuthn）
+
+LionFrame はパスワード代替の認証手段として **パスキー（WebAuthn / FIDO2）** に対応しています。`@simplewebauthn/server` ベースで実装しており、NextAuth v5 の JWT セッションに統合されています。
+
+### 機能
+
+| 機能 | 場所 |
+|------|------|
+| 登録・一覧・ニックネーム編集・削除 | `/settings`（ユーザ自身） |
+| パスキーでサインイン | `/login`（discoverable credential、メール入力不要） |
+| 他人のパスキー強制削除 | `/admin`（ユーザ管理テーブルの鍵アイコン） |
+| 監査ログ | `WEBAUTHN_REGISTER` / `WEBAUTHN_AUTHENTICATE` / `WEBAUTHN_DELETE` / `WEBAUTHN_ADMIN_DELETE` |
+
+認証オプションは `userVerification: "required"` / `residentKey: "required"` / `attestation: "none"` で固定。パスキーでサインインした場合、**TOTP 2FA は自動スキップ**されます（パスキー自体が所持＋生体の多要素のため）。
+
+### パスキーの保存先（運用担当者向け）
+
+登録時にブラウザが **どこに秘密鍵を保存するか** を選択するダイアログを表示します。どれを選んでもサーバ側の登録フローは同じですが、**同期範囲・復旧性・フィッシング耐性が大きく異なる** ため、ユーザ層ごとに推奨保存先が変わります。
+
+| 保存先 | 同期範囲 | 復旧性 | 向くユーザ |
+|--------|---------|--------|-----------|
+| **Google パスワード マネージャー** | Google アカウントで Chrome / Android 全デバイス | Google アカウント復旧で復活 | Chrome + Android 主体 |
+| **iCloud キーチェーン** | Apple ID で Mac / iPhone / iPad / Safari | Apple ID 復旧で復活 | Apple エコシステム主体 |
+| **スマートフォン / タブレット（ハイブリッド）** | スマホ側のパスキーストア（QR + Bluetooth） | スマホ次第 | 共用 PC・出先・検証 |
+| **自分の Chrome プロファイル（デバイスバウンド）** | 同期なし（この PC 限定） | **デバイス故障で失う** | 高セキュリティ運用 |
+| **USB セキュリティキー** | 同期なし（物理トークン内） | 予備キーが必須 | ADMIN・特権アカウント |
+
+**USB セキュリティキーについて補足:** YubiKey 5（6,000〜10,000 円）、Google Titan（5,000〜6,000 円）、Feitian ePass（企業一括導入向け）などが代表的。秘密鍵はセキュアエレメントから取り出せず、マルウェア感染 PC でも鍵は盗まれません。**紛失時のロックアウトを防ぐため、必ず 2 本以上（メイン + 金庫保管のバックアップ）運用**してください。
+
+### 推奨運用ポリシー
+
+- **一般ユーザ（USER / MANAGER）**: Google パスワードマネージャー または iCloud キーチェーンを推奨（UX が良く、デバイス紛失時も Apple / Google アカウント復旧で戻せる）
+- **EXECUTIVE / ADMIN**: USB セキュリティキー（2 本）の併用を強く推奨（フィッシング耐性が最強、クラウド漏洩の影響を受けない）
+- **開発・検証端末**: 「自分の Chrome プロファイル」または Chrome DevTools の仮想オーセンティケータ（物理デバイス不要）
+- 最後の 1 件削除ガード: パスワード無し・2FA 無しの状態で最後のパスキーを削除しようとするとサーバ側で 409 を返却（アカウントロックアウト防止）
+
+### 環境変数
+
+```bash
+# apps/web/.env
+# RP ID（本番はドメイン名、未指定時は AUTH_URL のホスト名 → "localhost"）
+NEXT_PUBLIC_WEBAUTHN_RP_ID=""
+# OS／パスワードマネージャに表示される名前
+NEXT_PUBLIC_WEBAUTHN_RP_NAME="LionFrame"
+# 許容 Origin（カンマ区切りで複数指定可。未指定時は AUTH_URL）
+WEBAUTHN_ORIGIN=""
+```
+
+**注意事項:**
+- `NEXT_PUBLIC_WEBAUTHN_RP_ID` 変更後は **dev サーバ再起動必須**（クライアントビルド時に埋め込まれるため）
+- 本番は HTTPS 必須（`localhost` のみ HTTP 許可）
+- Chrome のシークレットモードで登録したパスキーは、通常プロファイルに保存し直さないとウィンドウを閉じた時点で失われる
+
 ## ドキュメント
 
 | ドキュメント | 内容 |
