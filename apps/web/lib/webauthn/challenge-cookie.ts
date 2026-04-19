@@ -5,8 +5,9 @@ const CHALLENGE_TTL_SECONDS = 60 * 5;
 
 export type ChallengeContext = {
   challenge: string;
-  kind: "registration" | "authentication";
+  kind: "registration" | "authentication" | "test";
   userId?: string;
+  credentialDbId?: string;
 };
 
 export async function setChallenge(ctx: ChallengeContext): Promise<void> {
@@ -28,8 +29,12 @@ export async function getChallenge(): Promise<ChallengeContext | null> {
     const parsed = JSON.parse(raw) as ChallengeContext;
     if (
       typeof parsed.challenge === "string" &&
-      (parsed.kind === "registration" || parsed.kind === "authentication") &&
-      (parsed.userId === undefined || typeof parsed.userId === "string")
+      (parsed.kind === "registration" ||
+        parsed.kind === "authentication" ||
+        parsed.kind === "test") &&
+      (parsed.userId === undefined || typeof parsed.userId === "string") &&
+      (parsed.credentialDbId === undefined ||
+        typeof parsed.credentialDbId === "string")
     ) {
       return parsed;
     }

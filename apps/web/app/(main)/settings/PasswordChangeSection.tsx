@@ -23,6 +23,8 @@ import {
   validatePassword,
   type ValidationError,
 } from "@/lib/password/validator";
+import { PasskeySection } from "./PasskeySection";
+import type { settingsTranslations } from "./translations";
 
 interface PasswordChangeTranslations {
   title: string;
@@ -51,8 +53,14 @@ interface PasswordChangeTranslations {
   mustChangeWarning: string;
 }
 
+type PasskeyTranslationsFromSettings =
+  | (typeof settingsTranslations)["en"]["passkey"]
+  | (typeof settingsTranslations)["ja"]["passkey"];
+
 interface PasswordChangeSectionProps {
   translations: PasswordChangeTranslations;
+  passkeyTranslations: PasskeyTranslationsFromSettings;
+  language: "en" | "ja";
   mustChangePassword: boolean;
   userContext?: { email?: string | null; name?: string | null };
   onPasswordChanged?: () => void;
@@ -78,6 +86,8 @@ function translateError(
 
 export function PasswordChangeSection({
   translations: t,
+  passkeyTranslations,
+  language,
   mustChangePassword,
   userContext,
   onPasswordChanged,
@@ -225,7 +235,7 @@ export function PasswordChangeSection({
 
       <div
         className={`overflow-hidden transition-all duration-300 ease-in-out ${
-          isExpanded ? "max-h-[900px] opacity-100 mt-4" : "max-h-0 opacity-0"
+          isExpanded ? "max-h-[3000px] opacity-100 mt-4" : "max-h-0 opacity-0"
         }`}
       >
         {mustChangePassword && (
@@ -307,18 +317,20 @@ export function PasswordChangeSection({
                 autoComplete="new-password"
                 className={`pr-10 ${showNewPassword ? "font-mono" : ""}`}
               />
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="icon-sm"
                 onClick={() => setShowNewPassword((v) => !v)}
                 aria-label={showNewPassword ? t.hidePassword : t.showPassword}
-                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground"
+                className="absolute right-1 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
               >
                 {showNewPassword ? (
                   <RiEyeOffLine className="w-4 h-4" />
                 ) : (
                   <RiEyeLine className="w-4 h-4" />
                 )}
-              </button>
+              </Button>
             </div>
             {strengthInfo && (
               <div className="flex items-center gap-2 pt-1">
@@ -347,20 +359,22 @@ export function PasswordChangeSection({
                 autoComplete="new-password"
                 className={`pr-10 ${showConfirmPassword ? "font-mono" : ""}`}
               />
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="icon-sm"
                 onClick={() => setShowConfirmPassword((v) => !v)}
                 aria-label={
                   showConfirmPassword ? t.hidePassword : t.showPassword
                 }
-                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground"
+                className="absolute right-1 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
               >
                 {showConfirmPassword ? (
                   <RiEyeOffLine className="w-4 h-4" />
                 ) : (
                   <RiEyeLine className="w-4 h-4" />
                 )}
-              </button>
+              </Button>
             </div>
           </div>
 
@@ -368,6 +382,13 @@ export function PasswordChangeSection({
             {t.changeButton}
           </Button>
         </form>
+
+        <div className="mt-8 pt-6 border-t">
+          <PasskeySection
+            language={language}
+            translations={passkeyTranslations}
+          />
+        </div>
       </div>
     </div>
   );

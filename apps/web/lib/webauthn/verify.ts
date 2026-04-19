@@ -81,10 +81,18 @@ export async function verifyRegistration(
   };
 }
 
-export async function buildAuthenticationOptions(): Promise<PublicKeyCredentialRequestOptionsJSON> {
+export async function buildAuthenticationOptions(
+  allowCredentials: Array<{
+    credentialId: string;
+    transports: string[];
+  }> = [],
+): Promise<PublicKeyCredentialRequestOptionsJSON> {
   return generateAuthenticationOptions({
     rpID: getRpId(),
-    allowCredentials: [],
+    allowCredentials: allowCredentials.map((c) => ({
+      id: c.credentialId,
+      transports: c.transports as AuthenticatorTransportFuture[] | undefined,
+    })),
     userVerification: "required",
   });
 }

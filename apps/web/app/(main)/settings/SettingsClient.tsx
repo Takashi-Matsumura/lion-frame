@@ -5,7 +5,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useState } from "react";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { Card, CardContent } from "@/components/ui/card";
-import { PasskeySection } from "./PasskeySection";
 import { PasswordChangeSection } from "./PasswordChangeSection";
 import type { settingsTranslations } from "./translations";
 import { UserAccessKeySection } from "./UserAccessKeySection";
@@ -55,11 +54,13 @@ export function SettingsClient({
     <div className="max-w-4xl mx-auto">
       {activeTab === "basic" && (
         <div className="space-y-6">
-          {/* Password Change Section */}
+          {/* Password + Passkey Section */}
           <Card>
             <CardContent className="pt-6">
               <PasswordChangeSection
                 translations={t.passwordChange}
+                passkeyTranslations={t.passkey}
+                language={language}
                 mustChangePassword={mustChangePassword || passwordReset}
                 userContext={userContext}
                 onPasswordChanged={handlePasswordChanged}
@@ -83,13 +84,6 @@ export function SettingsClient({
               <PushNotificationSection
                 translations={t.pushNotification}
               />
-            </CardContent>
-          </Card>
-
-          {/* Passkeys */}
-          <Card>
-            <CardContent className="pt-6">
-              <PasskeySection language={language} translations={t.passkey} />
             </CardContent>
           </Card>
         </div>
