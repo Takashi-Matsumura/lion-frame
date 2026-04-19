@@ -23,6 +23,8 @@ import {
   validatePassword,
   type ValidationError,
 } from "@/lib/password/validator";
+import { PasskeySection } from "./PasskeySection";
+import type { settingsTranslations } from "./translations";
 
 interface PasswordChangeTranslations {
   title: string;
@@ -51,8 +53,14 @@ interface PasswordChangeTranslations {
   mustChangeWarning: string;
 }
 
+type PasskeyTranslationsFromSettings =
+  | (typeof settingsTranslations)["en"]["passkey"]
+  | (typeof settingsTranslations)["ja"]["passkey"];
+
 interface PasswordChangeSectionProps {
   translations: PasswordChangeTranslations;
+  passkeyTranslations: PasskeyTranslationsFromSettings;
+  language: "en" | "ja";
   mustChangePassword: boolean;
   userContext?: { email?: string | null; name?: string | null };
   onPasswordChanged?: () => void;
@@ -78,6 +86,8 @@ function translateError(
 
 export function PasswordChangeSection({
   translations: t,
+  passkeyTranslations,
+  language,
   mustChangePassword,
   userContext,
   onPasswordChanged,
@@ -225,7 +235,7 @@ export function PasswordChangeSection({
 
       <div
         className={`overflow-hidden transition-all duration-300 ease-in-out ${
-          isExpanded ? "max-h-[900px] opacity-100 mt-4" : "max-h-0 opacity-0"
+          isExpanded ? "max-h-[3000px] opacity-100 mt-4" : "max-h-0 opacity-0"
         }`}
       >
         {mustChangePassword && (
@@ -368,6 +378,13 @@ export function PasswordChangeSection({
             {t.changeButton}
           </Button>
         </form>
+
+        <div className="mt-8 pt-6 border-t">
+          <PasskeySection
+            language={language}
+            translations={passkeyTranslations}
+          />
+        </div>
       </div>
     </div>
   );
