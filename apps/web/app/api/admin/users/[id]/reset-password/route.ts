@@ -1,7 +1,7 @@
-import crypto from "node:crypto";
 import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
 import { ApiError, requireAdmin } from "@/lib/api";
+import { generateTemporaryPassword } from "@/lib/password/generator";
 import { prisma } from "@/lib/prisma";
 import { AuditService } from "@/lib/services/audit-service";
 
@@ -41,11 +41,8 @@ export async function POST(
       throw ApiError.notFound("User not found", "ユーザが見つかりません");
     }
 
-    // 8文字のランダム仮パスワードを生成（英数字）
-    const temporaryPassword = crypto
-      .randomBytes(6)
-      .toString("base64url")
-      .slice(0, 8);
+    // 12 文字の仮パスワードを生成（英大小+数字+記号、曖昧文字を除外）
+    const temporaryPassword = generateTemporaryPassword();
 
     // bcrypt でハッシュ化
     const hashedPassword = await bcrypt.hash(temporaryPassword, 10);

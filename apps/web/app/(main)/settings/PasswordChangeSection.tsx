@@ -1,18 +1,26 @@
 "use client";
 
 import { signOut } from "next-auth/react";
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   RiAlertLine,
   RiArrowDownSLine,
   RiCheckLine,
   RiCloseLine,
+  RiFileCopyLine,
+  RiMagicLine,
 } from "react-icons/ri";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { generatePassword } from "@/lib/password/generator";
+import {
+  MIN_PASSWORD_LENGTH,
+  validatePassword,
+  type ValidationError,
+} from "@/lib/password/validator";
 
 interface PasswordChangeTranslations {
   title: string;
@@ -21,11 +29,20 @@ interface PasswordChangeTranslations {
   newPassword: string;
   confirmPassword: string;
   changeButton: string;
+  generateButton: string;
+  generateCopied: string;
+  strengthLabel: string;
+  strengthWeak: string;
+  strengthMedium: string;
+  strengthStrong: string;
   success: string;
   successLoggingOut: string;
   error: string;
   passwordMismatch: string;
   passwordTooShort: string;
+  errorBlacklisted: string;
+  errorContainsUserInfo: string;
+  errorRepeatedChars: string;
   mustChangeWarning: string;
 }
 
@@ -35,19 +52,54 @@ interface PasswordChangeSectionProps {
   onPasswordChanged?: () => void;
 }
 
+function translateError(
+  err: ValidationError,
+  t: PasswordChangeTranslations,
+): string {
+  switch (err) {
+    case "TOO_SHORT":
+      return t.passwordTooShort;
+    case "BLACKLISTED":
+      return t.errorBlacklisted;
+    case "CONTAINS_USER_INFO":
+      return t.errorContainsUserInfo;
+    case "REPEATED_CHARS":
+      return t.errorRepeatedChars;
+  }
+}
+
 export function PasswordChangeSection({
   translations: t,
   mustChangePassword,
   onPasswordChanged,
 }: PasswordChangeSectionProps) {
-  // アコーディオンの開閉状態（パスワード変更必須の場合は初期状態で開く）
   const [isExpanded, setIsExpanded] = useState(mustChangePassword);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const strengthInfo = useMemo(() => {
+    if (!newPassword) return null;
+    return validatePassword(newPassword);
+  }, [newPassword]);
+
+  const handleGenerate = useCallback(async () => {
+    const pw = generatePassword(16);
+    setNewPassword(pw);
+    setConfirmPassword(pw);
+    setError(null);
+    try {
+      await navigator.clipboard.writeText(pw);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 3000);
+    } catch {
+      // clipboard API が失敗しても入力欄には反映されているので続行
+    }
+  }, []);
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
@@ -55,9 +107,9 @@ export function PasswordChangeSection({
       setError(null);
       setSuccess(false);
 
-      // バリデーション
-      if (newPassword.length < 8) {
-        setError(t.passwordTooShort);
+      const result = validatePassword(newPassword);
+      if (!result.valid && result.errors.length > 0) {
+        setError(translateError(result.errors[0], t));
         return;
       }
 
@@ -92,9 +144,8 @@ export function PasswordChangeSection({
         setConfirmPassword("");
 
         if (mustChangePassword) {
-          // 強制パスワード変更後は自動ログアウト
           setSuccess(true);
-          setIsSubmitting(true); // ログアウトまでボタンを無効化
+          setIsSubmitting(true);
           setTimeout(() => {
             signOut({ callbackUrl: "/login" });
           }, 2000);
@@ -119,9 +170,27 @@ export function PasswordChangeSection({
     ],
   );
 
+  const strengthBarWidth =
+    strengthInfo?.strength === "strong"
+      ? "w-full"
+      : strengthInfo?.strength === "medium"
+        ? "w-2/3"
+        : "w-1/3";
+  const strengthBarColor =
+    strengthInfo?.strength === "strong"
+      ? "bg-green-500"
+      : strengthInfo?.strength === "medium"
+        ? "bg-yellow-500"
+        : "bg-red-500";
+  const strengthLabel =
+    strengthInfo?.strength === "strong"
+      ? t.strengthStrong
+      : strengthInfo?.strength === "medium"
+        ? t.strengthMedium
+        : t.strengthWeak;
+
   return (
     <div>
-      {/* アコーディオンヘッダー */}
       <button
         type="button"
         onClick={() => setIsExpanded(!isExpanded)}
@@ -139,10 +208,9 @@ export function PasswordChangeSection({
       </button>
       <p className="text-sm text-muted-foreground mt-1">{t.description}</p>
 
-      {/* アコーディオンコンテンツ */}
       <div
         className={`overflow-hidden transition-all duration-300 ease-in-out ${
-          isExpanded ? "max-h-[800px] opacity-100 mt-4" : "max-h-0 opacity-0"
+          isExpanded ? "max-h-[900px] opacity-100 mt-4" : "max-h-0 opacity-0"
         }`}
       >
         {mustChangePassword && (
@@ -164,6 +232,16 @@ export function PasswordChangeSection({
             <AlertDescription>
               {mustChangePassword ? t.successLoggingOut : t.success}
             </AlertDescription>
+          </Alert>
+        )}
+
+        {copied && (
+          <Alert
+            variant="default"
+            className="mb-4 border-blue-200 bg-blue-50 text-blue-800"
+          >
+            <RiFileCopyLine className="h-4 w-4" />
+            <AlertDescription>{t.generateCopied}</AlertDescription>
           </Alert>
         )}
 
@@ -189,26 +267,54 @@ export function PasswordChangeSection({
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="newPassword">{t.newPassword}</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="newPassword">{t.newPassword}</Label>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={handleGenerate}
+                className="gap-1"
+              >
+                <RiMagicLine className="w-3.5 h-3.5" />
+                {t.generateButton}
+              </Button>
+            </div>
             <Input
-              type="password"
+              type="text"
               id="newPassword"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
               required
-              minLength={8}
+              minLength={MIN_PASSWORD_LENGTH}
+              autoComplete="new-password"
+              className="font-mono"
             />
+            {strengthInfo && (
+              <div className="flex items-center gap-2 pt-1">
+                <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
+                  <div
+                    className={`h-full transition-all duration-200 ${strengthBarWidth} ${strengthBarColor}`}
+                  />
+                </div>
+                <span className="text-xs text-muted-foreground w-12 text-right">
+                  {t.strengthLabel}: {strengthLabel}
+                </span>
+              </div>
+            )}
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="confirmPassword">{t.confirmPassword}</Label>
             <Input
-              type="password"
+              type="text"
               id="confirmPassword"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               required
-              minLength={8}
+              minLength={MIN_PASSWORD_LENGTH}
+              autoComplete="new-password"
+              className="font-mono"
             />
           </div>
 
