@@ -3,6 +3,14 @@ name: Claude Code Review
 on:
   pull_request:
     types: [opened, synchronize, ready_for_review]
+    # ドキュメントのみの PR では Claude API の従量課金を避けるため自動レビューをスキップ。
+    # コード変更と同時に docs を変更する PR ではコード側がマッチするため通常どおりレビューされる。
+    # ドキュメント単独でレビューが欲しい場合は手動で @claude とコメント（issue_comment トリガ）。
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.claude/**'
+      - 'LICENSE'
   issue_comment:
     types: [created]
 
