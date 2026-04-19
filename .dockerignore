@@ -1,0 +1,15 @@
+**/node_modules
+**/.next
+**/.turbo
+**/dist
+**/coverage
+**/.DS_Store
+.git
+.gitignore
+.vscode
+.idea
+*.log
+backend/chroma_data
+backend/model_cache
+backend/__pycache__
+backend/venv
