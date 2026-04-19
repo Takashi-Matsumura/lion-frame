@@ -83,6 +83,17 @@ describe("getRequestBaseUrl", () => {
     expect(getRequestBaseUrl(req)).toBe("http://app.example.com");
   });
 
+  it("x-forwarded-proto が http/https 以外なら AUTH_URL を使う（危険スキーム排除）", () => {
+    process.env.AUTH_URL = "http://app.example.com";
+    const req = buildReq({
+      headers: {
+        "x-forwarded-proto": "javascript",
+        "x-forwarded-host": "app.example.com",
+      },
+    });
+    expect(getRequestBaseUrl(req)).toBe("http://app.example.com");
+  });
+
   it("AUTH_URL 未設定時は nextUrl.origin にフォールバック", () => {
     delete process.env.AUTH_URL;
     const req = buildReq({

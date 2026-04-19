@@ -17,13 +17,22 @@ type MinimalRequest = {
   nextUrl?: { origin: string };
 };
 
+// x-forwarded-proto は http/https のみ許容する。攻撃者がリバースプロキシより
+// 手前でヘッダを注入できる環境で javascript: 等の危険なスキームが
+// 混入するのを防ぐ。
+const ALLOWED_FORWARDED_PROTOS: ReadonlySet<string> = new Set(["http", "https"]);
+
 export function getRequestBaseUrl(request: MinimalRequest): string {
   const authUrl = process.env.AUTH_URL;
   const forwardedProto = request.headers.get("x-forwarded-proto");
   const forwardedHost = request.headers.get("x-forwarded-host");
 
   if (authUrl) {
-    if (forwardedProto && forwardedHost) {
+    if (
+      forwardedProto &&
+      forwardedHost &&
+      ALLOWED_FORWARDED_PROTOS.has(forwardedProto)
+    ) {
       try {
         const trustedHost = new URL(authUrl).host;
         if (forwardedHost === trustedHost) {

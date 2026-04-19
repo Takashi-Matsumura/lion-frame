@@ -177,7 +177,7 @@ export default auth(async (req) => {
   const excludedLogPaths = ["/login", "/auth/", "/settings", "/_next/", "/api/"];
   const shouldLog = !excludedLogPaths.some((p) => pathname.startsWith(p));
   if (shouldLog && session.user?.id) {
-    const logUrl = new URL("/api/usage-log", req.nextUrl.origin);
+    const logUrl = new URL("/api/usage-log", baseUrl);
     fetch(logUrl, {
       method: "POST",
       headers: {
