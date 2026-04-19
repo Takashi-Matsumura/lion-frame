@@ -30,12 +30,12 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      airag-backend:
-        condition: service_started
     environment:
       NODE_ENV: development
       DATABASE_URL: postgresql://lionframe:lionframe@postgres:5432/lionframe?schema=public
       AUTH_URL: http://localhost:3030
+      # 開発環境専用のフォールバック。本番・ステージングでは必ず強力なランダム文字列を設定すること
+      # 生成例: openssl rand -base64 32
       AUTH_SECRET: ${AUTH_SECRET:-dev-secret-change-me}
       OIDC_ISSUER: http://localhost:3030
       OIDC_SIGNING_KEYS: ${OIDC_SIGNING_KEYS:-}

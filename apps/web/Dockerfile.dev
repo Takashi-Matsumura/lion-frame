@@ -8,6 +8,8 @@ RUN corepack enable && corepack prepare pnpm@10.6.5 --activate
 
 WORKDIR /app
 
+# NOTE: 新しいワークスペース（addons/*, mcp-servers/*, packages/*）を追加する際は
+# 下記の COPY 行を手動で追加すること。pnpm-workspace.yaml のパターンとの整合に注意。
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/web/package.json apps/web/
 COPY packages/module-types/package.json packages/module-types/
@@ -16,9 +18,7 @@ COPY mcp-servers/organization/package.json mcp-servers/organization/
 
 RUN pnpm install --frozen-lockfile
 
-COPY apps/web/prisma apps/web/prisma
-RUN cd apps/web && pnpm exec prisma generate
-
 EXPOSE 3030
 
+# prisma generate は起動時に実行（schema は bind mount されるため）
 CMD ["sh", "-c", "cd apps/web && pnpm exec prisma generate && pnpm exec next dev -H 0.0.0.0 -p 3030"]
