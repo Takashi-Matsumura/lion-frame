@@ -71,12 +71,27 @@ export const settingsTranslations = {
       newPassword: "New Password",
       confirmPassword: "Confirm New Password",
       changeButton: "Change Password",
+      generateButton: "Generate strong password",
+      generateCopied: "Generated password copied to clipboard",
+      strengthLabel: "Strength",
+      strengthWeak: "Weak",
+      strengthMedium: "Medium",
+      strengthStrong: "Strong",
       success: "Password changed successfully!",
       successLoggingOut:
         "Password changed successfully. Logging out... Please log in with your new password.",
       error: "Failed to change password",
       passwordMismatch: "Passwords do not match",
-      passwordTooShort: "Password must be at least 8 characters",
+      passwordTooShort: "Password must be at least 12 characters",
+      errorTooLong: "Password must be 1000 characters or fewer",
+      errorBlacklisted:
+        "This password is too common. Please choose a different one.",
+      errorContainsUserInfo:
+        "Password must not contain your email address or name.",
+      errorRepeatedChars:
+        "Password must not repeat the same character 4 or more times.",
+      showPassword: "Show password",
+      hidePassword: "Hide password",
       mustChangeWarning:
         "Your password has been reset by an administrator. Please change your password to continue.",
     },
@@ -180,12 +195,26 @@ export const settingsTranslations = {
       newPassword: "新しいパスワード",
       confirmPassword: "新しいパスワード（確認）",
       changeButton: "パスワードを変更",
+      generateButton: "安全なパスワードを生成",
+      generateCopied: "生成したパスワードをクリップボードにコピーしました",
+      strengthLabel: "強度",
+      strengthWeak: "弱い",
+      strengthMedium: "標準",
+      strengthStrong: "強い",
       success: "パスワードを変更しました！",
       successLoggingOut:
         "パスワードを変更しました。ログアウトします…新しいパスワードでログインしてください。",
       error: "パスワードの変更に失敗しました",
       passwordMismatch: "パスワードが一致しません",
-      passwordTooShort: "パスワードは8文字以上必要です",
+      passwordTooShort: "パスワードは 12 文字以上で入力してください",
+      errorTooLong: "パスワードは 1000 文字以下で入力してください",
+      errorBlacklisted:
+        "よく使われるパスワードのため使用できません。別のパスワードを設定してください。",
+      errorContainsUserInfo:
+        "メールアドレスや氏名を含むパスワードは使用できません。",
+      errorRepeatedChars: "同じ文字を 4 回以上連続させないでください。",
+      showPassword: "パスワードを表示",
+      hidePassword: "パスワードを非表示",
       mustChangeWarning:
         "管理者によりパスワードがリセットされました。続行するには新しいパスワードを設定してください。",
     },

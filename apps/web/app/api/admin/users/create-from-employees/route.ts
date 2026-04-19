@@ -1,6 +1,6 @@
-import crypto from "node:crypto";
 import bcrypt from "bcryptjs";
 import { ApiError, apiHandler } from "@/lib/api";
+import { generateTemporaryPassword } from "@/lib/password/generator";
 import { prisma } from "@/lib/prisma";
 import { AuditService } from "@/lib/services/audit-service";
 
@@ -72,11 +72,8 @@ export const POST = apiHandler(async (request, session) => {
         continue;
       }
 
-      // 仮パスワード生成
-      const temporaryPassword = crypto
-        .randomBytes(6)
-        .toString("base64url")
-        .slice(0, 8);
+      // 仮パスワード生成（12 文字、英大小+数字+記号）
+      const temporaryPassword = generateTemporaryPassword();
 
       // bcrypt でハッシュ化
       const hashedPassword = await bcrypt.hash(temporaryPassword, 10);

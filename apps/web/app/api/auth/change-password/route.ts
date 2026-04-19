@@ -1,5 +1,11 @@
 import bcrypt from "bcryptjs";
 import { ApiError, apiHandler } from "@/lib/api";
+import {
+  MAX_PASSWORD_LENGTH,
+  MIN_PASSWORD_LENGTH,
+  validatePassword,
+  type ValidationError,
+} from "@/lib/password/validator";
 import { prisma } from "@/lib/prisma";
 import { AuditService } from "@/lib/services/audit-service";
 
@@ -10,27 +16,63 @@ import { AuditService } from "@/lib/services/audit-service";
  *
  * - forcePasswordChange === true の場合: 現在のパスワード不要
  * - forcePasswordChange === false の場合: 現在のパスワードを bcrypt 照合
- * - 新パスワードは8文字以上
+ * - 新パスワードは lib/password/validator の規則を満たす必要がある
  */
+function validationErrorMessage(
+  err: ValidationError,
+): { message: string; messageJa: string } {
+  switch (err) {
+    case "TOO_SHORT":
+      return {
+        message: `Password must be at least ${MIN_PASSWORD_LENGTH} characters`,
+        messageJa: `パスワードは ${MIN_PASSWORD_LENGTH} 文字以上で入力してください`,
+      };
+    case "TOO_LONG":
+      return {
+        message: `Password must be ${MAX_PASSWORD_LENGTH} characters or fewer`,
+        messageJa: `パスワードは ${MAX_PASSWORD_LENGTH} 文字以下で入力してください`,
+      };
+    case "BLACKLISTED":
+      return {
+        message: "This password is too common. Please choose a different one.",
+        messageJa:
+          "よく使われるパスワードのため使用できません。別のパスワードを設定してください。",
+      };
+    case "CONTAINS_USER_INFO":
+      return {
+        message:
+          "Password must not contain your email address or name.",
+        messageJa:
+          "メールアドレスや氏名を含むパスワードは使用できません。",
+      };
+    case "REPEATED_CHARS":
+      return {
+        message: "Password must not repeat the same character 4 or more times.",
+        messageJa: "同じ文字を 4 回以上連続させないでください。",
+      };
+  }
+}
+
 export const POST = apiHandler(async (request, session) => {
   const body = await request.json();
   const { currentPassword, newPassword } = body;
 
-  // 新パスワードのバリデーション
-  if (!newPassword || typeof newPassword !== "string" || newPassword.length < 8) {
+  if (!newPassword || typeof newPassword !== "string") {
     throw new ApiError(
       400,
       "BAD_REQUEST",
-      "New password must be at least 8 characters",
-      "新しいパスワードは8文字以上必要です",
+      "New password is required",
+      "新しいパスワードを入力してください",
     );
   }
 
-  // ユーザを取得
+  // ユーザを取得（validator にユーザ情報を渡す）
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
     select: {
       id: true,
+      email: true,
+      name: true,
       password: true,
       forcePasswordChange: true,
     },
@@ -40,9 +82,24 @@ export const POST = apiHandler(async (request, session) => {
     throw new ApiError(404, "NOT_FOUND", "User not found", "ユーザが見つかりません");
   }
 
+  // 新パスワードのバリデーション
+  const result = validatePassword(newPassword, {
+    email: user.email,
+    name: user.name,
+  });
+  if (!result.valid) {
+    const first = result.errors[0];
+    const { message, messageJa } = validationErrorMessage(first);
+    throw new ApiError(400, "BAD_REQUEST", message, messageJa);
+  }
+
   // forcePasswordChange でない場合は現在のパスワードを検証
   if (!user.forcePasswordChange) {
-    if (!currentPassword || typeof currentPassword !== "string") {
+    if (
+      !currentPassword ||
+      typeof currentPassword !== "string" ||
+      currentPassword.length > MAX_PASSWORD_LENGTH
+    ) {
       throw new ApiError(
         400,
         "BAD_REQUEST",
