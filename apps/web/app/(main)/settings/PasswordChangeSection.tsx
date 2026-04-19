@@ -7,6 +7,8 @@ import {
   RiArrowDownSLine,
   RiCheckLine,
   RiCloseLine,
+  RiEyeLine,
+  RiEyeOffLine,
   RiFileCopyLine,
   RiMagicLine,
 } from "react-icons/ri";
@@ -40,15 +42,19 @@ interface PasswordChangeTranslations {
   error: string;
   passwordMismatch: string;
   passwordTooShort: string;
+  errorTooLong: string;
   errorBlacklisted: string;
   errorContainsUserInfo: string;
   errorRepeatedChars: string;
+  showPassword: string;
+  hidePassword: string;
   mustChangeWarning: string;
 }
 
 interface PasswordChangeSectionProps {
   translations: PasswordChangeTranslations;
   mustChangePassword: boolean;
+  userContext?: { email?: string | null; name?: string | null };
   onPasswordChanged?: () => void;
 }
 
@@ -59,6 +65,8 @@ function translateError(
   switch (err) {
     case "TOO_SHORT":
       return t.passwordTooShort;
+    case "TOO_LONG":
+      return t.errorTooLong;
     case "BLACKLISTED":
       return t.errorBlacklisted;
     case "CONTAINS_USER_INFO":
@@ -71,12 +79,15 @@ function translateError(
 export function PasswordChangeSection({
   translations: t,
   mustChangePassword,
+  userContext,
   onPasswordChanged,
 }: PasswordChangeSectionProps) {
   const [isExpanded, setIsExpanded] = useState(mustChangePassword);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -84,13 +95,15 @@ export function PasswordChangeSection({
 
   const strengthInfo = useMemo(() => {
     if (!newPassword) return null;
-    return validatePassword(newPassword);
-  }, [newPassword]);
+    return validatePassword(newPassword, userContext);
+  }, [newPassword, userContext]);
 
   const handleGenerate = useCallback(async () => {
     const pw = generatePassword(16);
     setNewPassword(pw);
     setConfirmPassword(pw);
+    setShowNewPassword(true);
+    setShowConfirmPassword(true);
     setError(null);
     try {
       await navigator.clipboard.writeText(pw);
@@ -107,7 +120,7 @@ export function PasswordChangeSection({
       setError(null);
       setSuccess(false);
 
-      const result = validatePassword(newPassword);
+      const result = validatePassword(newPassword, userContext);
       if (!result.valid && result.errors.length > 0) {
         setError(translateError(result.errors[0], t));
         return;
@@ -165,6 +178,7 @@ export function PasswordChangeSection({
       newPassword,
       confirmPassword,
       mustChangePassword,
+      userContext,
       t,
       onPasswordChanged,
     ],
@@ -191,10 +205,11 @@ export function PasswordChangeSection({
 
   return (
     <div>
-      <button
+      <Button
         type="button"
+        variant="ghost"
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full flex items-center justify-between text-left"
+        className="w-full flex items-center justify-between text-left h-auto p-0 hover:bg-transparent"
       >
         <div className="flex items-center gap-3">
           <h3 className="text-xl font-semibold">{t.title}</h3>
@@ -205,7 +220,7 @@ export function PasswordChangeSection({
             isExpanded ? "rotate-180" : ""
           }`}
         />
-      </button>
+      </Button>
       <p className="text-sm text-muted-foreground mt-1">{t.description}</p>
 
       <div
@@ -262,6 +277,7 @@ export function PasswordChangeSection({
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
                 required={!mustChangePassword}
+                autoComplete="current-password"
               />
             </div>
           )}
@@ -280,16 +296,30 @@ export function PasswordChangeSection({
                 {t.generateButton}
               </Button>
             </div>
-            <Input
-              type="text"
-              id="newPassword"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              required
-              minLength={MIN_PASSWORD_LENGTH}
-              autoComplete="new-password"
-              className="font-mono"
-            />
+            <div className="relative">
+              <Input
+                type={showNewPassword ? "text" : "password"}
+                id="newPassword"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                required
+                minLength={MIN_PASSWORD_LENGTH}
+                autoComplete="new-password"
+                className={`pr-10 ${showNewPassword ? "font-mono" : ""}`}
+              />
+              <button
+                type="button"
+                onClick={() => setShowNewPassword((v) => !v)}
+                aria-label={showNewPassword ? t.hidePassword : t.showPassword}
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground"
+              >
+                {showNewPassword ? (
+                  <RiEyeOffLine className="w-4 h-4" />
+                ) : (
+                  <RiEyeLine className="w-4 h-4" />
+                )}
+              </button>
+            </div>
             {strengthInfo && (
               <div className="flex items-center gap-2 pt-1">
                 <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
@@ -297,7 +327,7 @@ export function PasswordChangeSection({
                     className={`h-full transition-all duration-200 ${strengthBarWidth} ${strengthBarColor}`}
                   />
                 </div>
-                <span className="text-xs text-muted-foreground w-12 text-right">
+                <span className="text-xs text-muted-foreground w-16 text-right">
                   {t.strengthLabel}: {strengthLabel}
                 </span>
               </div>
@@ -306,16 +336,32 @@ export function PasswordChangeSection({
 
           <div className="space-y-2">
             <Label htmlFor="confirmPassword">{t.confirmPassword}</Label>
-            <Input
-              type="text"
-              id="confirmPassword"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              required
-              minLength={MIN_PASSWORD_LENGTH}
-              autoComplete="new-password"
-              className="font-mono"
-            />
+            <div className="relative">
+              <Input
+                type={showConfirmPassword ? "text" : "password"}
+                id="confirmPassword"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+                minLength={MIN_PASSWORD_LENGTH}
+                autoComplete="new-password"
+                className={`pr-10 ${showConfirmPassword ? "font-mono" : ""}`}
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword((v) => !v)}
+                aria-label={
+                  showConfirmPassword ? t.hidePassword : t.showPassword
+                }
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground"
+              >
+                {showConfirmPassword ? (
+                  <RiEyeOffLine className="w-4 h-4" />
+                ) : (
+                  <RiEyeLine className="w-4 h-4" />
+                )}
+              </button>
+            </div>
           </div>
 
           <Button type="submit" disabled={isSubmitting} loading={isSubmitting}>

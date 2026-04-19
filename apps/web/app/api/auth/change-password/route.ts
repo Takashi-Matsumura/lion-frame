@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import { ApiError, apiHandler } from "@/lib/api";
 import {
+  MAX_PASSWORD_LENGTH,
   MIN_PASSWORD_LENGTH,
   validatePassword,
   type ValidationError,
@@ -25,6 +26,11 @@ function validationErrorMessage(
       return {
         message: `Password must be at least ${MIN_PASSWORD_LENGTH} characters`,
         messageJa: `パスワードは ${MIN_PASSWORD_LENGTH} 文字以上で入力してください`,
+      };
+    case "TOO_LONG":
+      return {
+        message: `Password must be ${MAX_PASSWORD_LENGTH} characters or fewer`,
+        messageJa: `パスワードは ${MAX_PASSWORD_LENGTH} 文字以下で入力してください`,
       };
     case "BLACKLISTED":
       return {
@@ -89,7 +95,11 @@ export const POST = apiHandler(async (request, session) => {
 
   // forcePasswordChange でない場合は現在のパスワードを検証
   if (!user.forcePasswordChange) {
-    if (!currentPassword || typeof currentPassword !== "string") {
+    if (
+      !currentPassword ||
+      typeof currentPassword !== "string" ||
+      currentPassword.length > MAX_PASSWORD_LENGTH
+    ) {
       throw new ApiError(
         400,
         "BAD_REQUEST",

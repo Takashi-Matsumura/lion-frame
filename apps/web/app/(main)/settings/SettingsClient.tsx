@@ -26,12 +26,14 @@ interface SettingsClientProps {
   language: "en" | "ja";
   translations: SettingsTranslations;
   mustChangePassword: boolean;
+  userContext: { email?: string | null; name?: string | null };
 }
 
 export function SettingsClient({
   language,
   translations: t,
   mustChangePassword: initialMustChangePassword,
+  userContext,
 }: SettingsClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -59,6 +61,7 @@ export function SettingsClient({
               <PasswordChangeSection
                 translations={t.passwordChange}
                 mustChangePassword={mustChangePassword || passwordReset}
+                userContext={userContext}
                 onPasswordChanged={handlePasswordChanged}
               />
             </CardContent>

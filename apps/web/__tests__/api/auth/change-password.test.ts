@@ -6,6 +6,8 @@
  * - 200: 正常変更（監査ログ記録）
  */
 
+export {};
+
 const mockAuditLog = jest.fn().mockResolvedValue(undefined);
 jest.mock("@/lib/services/audit-service", () => ({
   AuditService: { log: mockAuditLog },

@@ -1,4 +1,5 @@
 import {
+  MAX_PASSWORD_LENGTH,
   MIN_PASSWORD_LENGTH,
   validatePassword,
 } from "@/lib/password/validator";
@@ -15,6 +16,19 @@ describe("validatePassword", () => {
       const r = validatePassword("Abcdefg12345"); // 12 chars
       expect(r.errors).not.toContain("TOO_SHORT");
       expect(r.valid).toBe(true);
+    });
+
+    it(`${MAX_PASSWORD_LENGTH} 文字を超えると TOO_LONG`, () => {
+      const pw = "A1b!".repeat(Math.ceil((MAX_PASSWORD_LENGTH + 1) / 4));
+      const r = validatePassword(pw);
+      expect(r.errors).toContain("TOO_LONG");
+      expect(r.valid).toBe(false);
+    });
+
+    it(`${MAX_PASSWORD_LENGTH} 文字ちょうどは TOO_LONG を返さない`, () => {
+      const pw = "A1b!".repeat(Math.floor(MAX_PASSWORD_LENGTH / 4)); // 1000 chars
+      const r = validatePassword(pw);
+      expect(r.errors).not.toContain("TOO_LONG");
     });
   });
 

@@ -28,6 +28,8 @@ export default async function SettingsPage() {
   const user = await prisma.user.findUnique({
     where: { email: session.user.email ?? "" },
     select: {
+      email: true,
+      name: true,
       forcePasswordChange: true,
     },
   });
@@ -37,6 +39,7 @@ export default async function SettingsPage() {
       language={language}
       translations={t}
       mustChangePassword={user?.forcePasswordChange ?? false}
+      userContext={{ email: user?.email ?? null, name: user?.name ?? null }}
     />
   );
 }

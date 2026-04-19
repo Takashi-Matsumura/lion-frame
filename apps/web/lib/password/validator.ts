@@ -2,9 +2,15 @@ import { isCommonPassword } from "./common-passwords";
 
 export const MIN_PASSWORD_LENGTH = 12;
 export const RECOMMENDED_PASSWORD_LENGTH = 16;
+/**
+ * DoS 対策の上限。bcrypt は 72 バイト以降を切り捨てるため、1000 文字を超える
+ * 入力は意味がなく、リクエスト肥大化・ハッシュ処理でのメモリ圧迫の攻撃面になる。
+ */
+export const MAX_PASSWORD_LENGTH = 1000;
 
 export type ValidationError =
   | "TOO_SHORT"
+  | "TOO_LONG"
   | "BLACKLISTED"
   | "CONTAINS_USER_INFO"
   | "REPEATED_CHARS";
@@ -33,6 +39,10 @@ export function validatePassword(
 
   if (password.length < MIN_PASSWORD_LENGTH) {
     errors.push("TOO_SHORT");
+  }
+
+  if (password.length > MAX_PASSWORD_LENGTH) {
+    errors.push("TOO_LONG");
   }
 
   if (isCommonPassword(password)) {
