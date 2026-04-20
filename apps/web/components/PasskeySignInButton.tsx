@@ -4,7 +4,7 @@ import {
   browserSupportsWebAuthn,
   startAuthentication,
 } from "@simplewebauthn/browser";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { useCallback, useEffect, useState } from "react";
 import { RiFingerprintLine } from "react-icons/ri";
@@ -32,7 +32,6 @@ interface PasskeySignInButtonProps {
 export function PasskeySignInButton({
   language = "ja",
 }: PasskeySignInButtonProps) {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = sanitizeCallbackUrl(searchParams?.get("callbackUrl"), "/");
   const [supported, setSupported] = useState(false);
@@ -66,8 +65,11 @@ export function PasskeySignInButton({
         return;
       }
       if (result?.ok) {
-        router.push(callbackUrl);
-        router.refresh();
+        // callbackUrl が /api/oidc/authorize?resume=... のような API Route を
+        // 含むケース (OIDC フロー) では router.push + refresh が 2 回目の GET
+        // を誘発し、既に deleteAuthRequest 済みで 400 になる (Issue #26)。
+        // 外部遷移として full navigation にすることで 1 回の GET に固定する。
+        window.location.assign(callbackUrl);
       }
     } catch (err) {
       const name = err instanceof Error ? err.name : "";
@@ -79,7 +81,7 @@ export function PasskeySignInButton({
     } finally {
       setBusy(false);
     }
-  }, [callbackUrl, router, t]);
+  }, [callbackUrl, t]);
 
   if (!supported) return null;
 
