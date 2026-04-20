@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { useCallback, useState } from "react";
 import { RiLoginBoxLine } from "react-icons/ri";
@@ -41,7 +41,6 @@ interface CredentialsLoginFormProps {
 export function CredentialsLoginForm({
   language = "ja",
 }: CredentialsLoginFormProps) {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = sanitizeCallbackUrl(
     searchParams?.get("callbackUrl"),
@@ -79,8 +78,10 @@ export function CredentialsLoginForm({
       if (result?.error) {
         setError(t.loginError);
       } else if (result?.ok) {
-        router.push(callbackUrl);
-        router.refresh();
+        // callbackUrl が /api/oidc/authorize?resume=... のような API Route を
+        // 含む場合、router.push は SPA 遷移を試みつつ refresh で 2 回目の GET
+        // を誘発しうる。full navigation で 1 回の GET に揃える (Issue #26)。
+        window.location.assign(callbackUrl);
       }
     } catch (err) {
       console.error("Credentials login error:", err);
