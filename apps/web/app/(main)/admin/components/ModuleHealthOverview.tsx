@@ -4,6 +4,7 @@ import {
   Activity,
   AlertTriangle,
   CheckCircle2,
+  ChevronDown,
   Megaphone,
   OctagonX,
   RefreshCw,
@@ -13,6 +14,11 @@ import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import type {
   ModuleHealthCheckResponse,
   ModuleImpact,
@@ -31,6 +37,7 @@ export function ModuleHealthOverview({ language }: ModuleHealthOverviewProps) {
   const [data, setData] = useState<ModuleHealthCheckResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [stoppedOpen, setStoppedOpen] = useState(false);
 
   const runHealthCheck = useCallback(async () => {
     try {
@@ -128,6 +135,96 @@ export function ModuleHealthOverview({ language }: ModuleHealthOverviewProps) {
 
   const { summary, impacts } = data;
   const allHealthy = summary.degraded === 0 && summary.stopped === 0;
+  const degradedImpacts = impacts.filter((i) => i.sourceStatus === "degraded");
+  const stoppedImpacts = impacts.filter((i) => i.sourceStatus === "stopped");
+
+  const renderImpactCard = (impact: ModuleImpact) => (
+    <Card
+      key={impact.sourceModuleId}
+      className={`border-l-4 ${
+        impact.sourceStatus === "stopped"
+          ? "border-l-red-500"
+          : "border-l-amber-500"
+      }`}
+    >
+      <CardContent className="py-3 px-4">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex-1 space-y-2">
+            {/* ヘッダー */}
+            <div className="flex items-center gap-2">
+              <Badge
+                variant="outline"
+                className={
+                  impact.sourceStatus === "stopped"
+                    ? "bg-red-50 text-red-700 border-red-200"
+                    : "bg-amber-50 text-amber-700 border-amber-200"
+                }
+              >
+                {impact.sourceStatus === "stopped"
+                  ? t("Stopped", "停止")
+                  : t("Degraded", "低下")}
+              </Badge>
+              <span className="font-medium">
+                {impact.sourceModuleNameJa}
+              </span>
+            </div>
+
+            {/* 理由 */}
+            <p className="text-sm text-muted-foreground">
+              {data.modules.find((m) => m.moduleId === impact.sourceModuleId)?.reasonJa}
+            </p>
+
+            {/* 影響メニュー */}
+            {impact.affectedMenus.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-xs text-muted-foreground">
+                  {t("Affected menus:", "影響メニュー:")}
+                </span>
+                {impact.affectedMenus.map((menu) => (
+                  <Badge
+                    key={menu.id}
+                    variant="secondary"
+                    className="text-xs"
+                  >
+                    {menu.nameJa}
+                  </Badge>
+                ))}
+              </div>
+            )}
+
+            {/* 影響モジュール */}
+            {impact.affectedModules.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-xs text-muted-foreground">
+                  {t("Affected modules:", "影響モジュール:")}
+                </span>
+                {impact.affectedModules.map((mod) => (
+                  <Badge
+                    key={mod.id}
+                    variant="secondary"
+                    className="text-xs"
+                  >
+                    {mod.nameJa}
+                  </Badge>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* アナウンス作成ボタン */}
+          <Button
+            variant="outline"
+            size="sm"
+            className="shrink-0"
+            onClick={() => handleCreateAnnouncement(impact)}
+          >
+            <Megaphone className="mr-1.5 h-3.5 w-3.5" />
+            {t("Create Announcement", "アナウンス作成")}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
 
   return (
     <div className="space-y-3">
@@ -171,94 +268,40 @@ export function ModuleHealthOverview({ language }: ModuleHealthOverviewProps) {
         </Button>
       </div>
 
-      {/* 非正常モジュールの影響カード */}
-      {impacts.map((impact) => (
-        <Card
-          key={impact.sourceModuleId}
-          className={`border-l-4 ${
-            impact.sourceStatus === "stopped"
-              ? "border-l-red-500"
-              : "border-l-amber-500"
-          }`}
+      {/* 機能低下: 常に展開（アナウンス対応の判断が必要なため埋もれさせない） */}
+      {degradedImpacts.map(renderImpactCard)}
+
+      {/* 停止: 件数バッジ付きヘッダーに集約してデフォルト折り畳み */}
+      {stoppedImpacts.length > 0 && (
+        <Collapsible
+          open={stoppedOpen}
+          onOpenChange={setStoppedOpen}
+          className="space-y-3"
         >
-          <CardContent className="py-3 px-4">
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex-1 space-y-2">
-                {/* ヘッダー */}
-                <div className="flex items-center gap-2">
-                  <Badge
-                    variant="outline"
-                    className={
-                      impact.sourceStatus === "stopped"
-                        ? "bg-red-50 text-red-700 border-red-200"
-                        : "bg-amber-50 text-amber-700 border-amber-200"
-                    }
-                  >
-                    {impact.sourceStatus === "stopped"
-                      ? t("Stopped", "停止")
-                      : t("Degraded", "低下")}
-                  </Badge>
-                  <span className="font-medium">
-                    {impact.sourceModuleNameJa}
-                  </span>
-                </div>
-
-                {/* 理由 */}
-                <p className="text-sm text-muted-foreground">
-                  {data.modules.find((m) => m.moduleId === impact.sourceModuleId)?.reasonJa}
-                </p>
-
-                {/* 影響メニュー */}
-                {impact.affectedMenus.length > 0 && (
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <span className="text-xs text-muted-foreground">
-                      {t("Affected menus:", "影響メニュー:")}
-                    </span>
-                    {impact.affectedMenus.map((menu) => (
-                      <Badge
-                        key={menu.id}
-                        variant="secondary"
-                        className="text-xs"
-                      >
-                        {menu.nameJa}
-                      </Badge>
-                    ))}
-                  </div>
+          <CollapsibleTrigger asChild>
+            <Button
+              variant="ghost"
+              className="w-full justify-start h-auto rounded-lg border border-red-200 bg-red-50/60 px-4 py-2.5 hover:bg-red-50 text-red-700 hover:text-red-700"
+            >
+              <ChevronDown
+                className={`h-4 w-4 transition-transform ${
+                  stoppedOpen ? "" : "-rotate-90"
+                }`}
+              />
+              <OctagonX className="h-4 w-4" />
+              <span className="text-sm font-medium">
+                {t(
+                  `${stoppedImpacts.length} stopped module${stoppedImpacts.length === 1 ? "" : "s"}`,
+                  `停止中のモジュール ${stoppedImpacts.length} 件`,
                 )}
-
-                {/* 影響モジュール */}
-                {impact.affectedModules.length > 0 && (
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <span className="text-xs text-muted-foreground">
-                      {t("Affected modules:", "影響モジュール:")}
-                    </span>
-                    {impact.affectedModules.map((mod) => (
-                      <Badge
-                        key={mod.id}
-                        variant="secondary"
-                        className="text-xs"
-                      >
-                        {mod.nameJa}
-                      </Badge>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* アナウンス作成ボタン */}
-              <Button
-                variant="outline"
-                size="sm"
-                className="shrink-0"
-                onClick={() => handleCreateAnnouncement(impact)}
-              >
-                <Megaphone className="mr-1.5 h-3.5 w-3.5" />
-                {t("Create Announcement", "アナウンス作成")}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
+              </span>
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="space-y-3">
+            {stoppedImpacts.map(renderImpactCard)}
+          </CollapsibleContent>
+        </Collapsible>
+      )}
     </div>
   );
 }
