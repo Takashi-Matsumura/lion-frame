@@ -1,6 +1,10 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import {
+  urlValidationMessage,
+  validateHttpUrl,
+} from "@/lib/utils/url-validation";
 
 const SETTINGS_KEYS = {
   LLM_CONFIG: "ai_playground_llm_config",
@@ -125,12 +129,39 @@ export async function PUT(request: NextRequest) {
     const updates: Array<{ key: string; value: string }> = [];
 
     for (const [key, value] of Object.entries(body)) {
-      if (validKeys.includes(key as (typeof validKeys)[number])) {
-        updates.push({
-          key,
-          value: typeof value === "string" ? value : JSON.stringify(value),
-        });
+      if (!validKeys.includes(key as (typeof validKeys)[number])) continue;
+
+      let normalized: unknown = value;
+      if (
+        (key === SETTINGS_KEYS.LLM_CONFIG ||
+          key === SETTINGS_KEYS.RAG_CONFIG) &&
+        value &&
+        typeof value === "object"
+      ) {
+        const cfg = { ...(value as Record<string, unknown>) };
+        if (typeof cfg.baseUrl === "string" && cfg.baseUrl.trim() !== "") {
+          const result = validateHttpUrl(cfg.baseUrl);
+          if (!result.ok) {
+            return NextResponse.json(
+              {
+                error: `Invalid baseUrl in ${key}: ${urlValidationMessage(result.reason, "en")}`,
+                errorJa: `${key} の URL が無効です: ${urlValidationMessage(result.reason, "ja")}`,
+              },
+              { status: 400 },
+            );
+          }
+          cfg.baseUrl = result.url;
+        }
+        normalized = cfg;
       }
+
+      updates.push({
+        key,
+        value:
+          typeof normalized === "string"
+            ? normalized
+            : JSON.stringify(normalized),
+      });
     }
 
     for (const update of updates) {
