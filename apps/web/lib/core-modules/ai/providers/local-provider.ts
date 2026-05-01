@@ -15,6 +15,24 @@ import type {
   TranslateResponse,
 } from "../types";
 
+function getOpenAIBase(endpoint: string): string {
+  const trimmed = endpoint.trim().replace(/\/+$/, "");
+  try {
+    return `${new URL(trimmed).origin}/v1`;
+  } catch {
+    return trimmed;
+  }
+}
+
+function getOllamaBase(endpoint: string): string {
+  const trimmed = endpoint.trim().replace(/\/+$/, "");
+  try {
+    return new URL(trimmed).origin;
+  } catch {
+    return trimmed;
+  }
+}
+
 // ============================================
 // 接続テスト
 // ============================================
@@ -35,7 +53,7 @@ export async function testLocalConnection(
   try {
     if (config.localProvider === "ollama") {
       const response = await fetch(
-        config.localEndpoint.replace("/api/chat", "/api/tags"),
+        `${getOllamaBase(config.localEndpoint)}/api/tags`,
         { method: "GET" },
       );
       if (response.ok) {
@@ -44,7 +62,7 @@ export async function testLocalConnection(
     } else {
       // OpenAI互換API (llama.cpp, LM Studio)
       const response = await fetch(
-        config.localEndpoint.replace("/v1/chat/completions", "/v1/models"),
+        `${getOpenAIBase(config.localEndpoint)}/models`,
         { method: "GET" },
       );
       if (response.ok) {
@@ -80,7 +98,7 @@ export async function getLocalModelName(
     } else {
       // OpenAI互換API (llama.cpp, LM Studio)
       const response = await fetch(
-        config.localEndpoint.replace("/v1/chat/completions", "/v1/models"),
+        `${getOpenAIBase(config.localEndpoint)}/models`,
         { method: "GET" },
       );
       if (response.ok) {
@@ -163,25 +181,28 @@ async function translateWithOpenAICompatible(
   sourceLang: string,
   targetLang: string,
 ): Promise<TranslateResponse> {
-  const response = await fetch(config.localEndpoint, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: config.localModel || "default",
-      messages: [
-        {
-          role: "system",
-          content: DEFAULT_SYSTEM_PROMPTS.translate(sourceLang, targetLang),
-        },
-        {
-          role: "user",
-          content: request.text,
-        },
-      ],
-      temperature: 0.3,
-      max_tokens: 1000,
-    }),
-  });
+  const response = await fetch(
+    `${getOpenAIBase(config.localEndpoint)}/chat/completions`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: config.localModel || "default",
+        messages: [
+          {
+            role: "system",
+            content: DEFAULT_SYSTEM_PROMPTS.translate(sourceLang, targetLang),
+          },
+          {
+            role: "user",
+            content: request.text,
+          },
+        ],
+        temperature: 0.3,
+        max_tokens: 1000,
+      }),
+    },
+  );
 
   if (!response.ok) {
     const errorText = await response.text().catch(() => "");
@@ -211,24 +232,27 @@ async function translateWithOllama(
   sourceLang: string,
   targetLang: string,
 ): Promise<TranslateResponse> {
-  const response = await fetch(config.localEndpoint, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: config.localModel || "llama3.2",
-      messages: [
-        {
-          role: "system",
-          content: DEFAULT_SYSTEM_PROMPTS.translate(sourceLang, targetLang),
-        },
-        {
-          role: "user",
-          content: request.text,
-        },
-      ],
-      stream: false,
-    }),
-  });
+  const response = await fetch(
+    `${getOllamaBase(config.localEndpoint)}/api/chat`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: config.localModel || "llama3.2",
+        messages: [
+          {
+            role: "system",
+            content: DEFAULT_SYSTEM_PROMPTS.translate(sourceLang, targetLang),
+          },
+          {
+            role: "user",
+            content: request.text,
+          },
+        ],
+        stream: false,
+      }),
+    },
+  );
 
   if (!response.ok) {
     const errorText = await response.text().catch(() => "");
@@ -274,16 +298,19 @@ async function chatWithOpenAICompatible(
   messages: ChatMessage[],
   config: AIConfig,
 ): Promise<ChatResponse> {
-  const response = await fetch(config.localEndpoint, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: config.localModel || "default",
-      messages,
-      temperature: 0.7,
-      max_tokens: 2000,
-    }),
-  });
+  const response = await fetch(
+    `${getOpenAIBase(config.localEndpoint)}/chat/completions`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: config.localModel || "default",
+        messages,
+        temperature: 0.7,
+        max_tokens: 2000,
+      }),
+    },
+  );
 
   if (!response.ok) {
     const errorText = await response.text().catch(() => "");
@@ -311,15 +338,18 @@ async function chatWithOllama(
   messages: ChatMessage[],
   config: AIConfig,
 ): Promise<ChatResponse> {
-  const response = await fetch(config.localEndpoint, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: config.localModel || "llama3.2",
-      messages,
-      stream: false,
-    }),
-  });
+  const response = await fetch(
+    `${getOllamaBase(config.localEndpoint)}/api/chat`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: config.localModel || "llama3.2",
+        messages,
+        stream: false,
+      }),
+    },
+  );
 
   if (!response.ok) {
     const errorText = await response.text().catch(() => "");
@@ -354,16 +384,19 @@ export async function generateWithLocal(
   maxTokens: number,
 ): Promise<GenerateResponse> {
   if (config.localProvider === "ollama") {
-    const response = await fetch(config.localEndpoint, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: config.localModel || "llama3.2",
-        messages,
-        stream: false,
-        options: { temperature },
-      }),
-    });
+    const response = await fetch(
+      `${getOllamaBase(config.localEndpoint)}/api/chat`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: config.localModel || "llama3.2",
+          messages,
+          stream: false,
+          options: { temperature },
+        }),
+      },
+    );
 
     if (!response.ok) {
       const errorText = await response.text().catch(() => "");
@@ -385,16 +418,19 @@ export async function generateWithLocal(
   }
 
   // llama.cpp, LM Studio (OpenAI互換)
-  const response = await fetch(config.localEndpoint, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: config.localModel || "default",
-      messages,
-      temperature,
-      max_tokens: maxTokens,
-    }),
-  });
+  const response = await fetch(
+    `${getOpenAIBase(config.localEndpoint)}/chat/completions`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: config.localModel || "default",
+        messages,
+        temperature,
+        max_tokens: maxTokens,
+      }),
+    },
+  );
 
   if (!response.ok) {
     const errorText = await response.text().catch(() => "");
