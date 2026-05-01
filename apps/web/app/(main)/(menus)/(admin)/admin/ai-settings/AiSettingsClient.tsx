@@ -230,25 +230,37 @@ export function AiSettingsClient({
   const handleUpdateAiConfig = useCallback(
     async (updates: Partial<AIConfig & { apiKey?: string }>) => {
       setSaving(true);
+      setSaveError(null);
       try {
         const res = await fetch("/api/admin/ai", {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(updates),
         });
-        if (res.ok) {
-          const data = await res.json();
-          setAiConfig(data.config);
-          setAiApiKeyInput("");
-          setGeneralTestResult(null);
-          setSaved(true);
-          setTimeout(() => setSaved(false), 2000);
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          const message =
+            data.errorJa ||
+            data.error ||
+            (language === "ja" ? "保存に失敗しました" : "Failed to save");
+          setSaveError(message);
+          return;
         }
+        const data = await res.json();
+        setAiConfig(data.config);
+        setAiApiKeyInput("");
+        setGeneralTestResult(null);
+        setSaved(true);
+        setTimeout(() => setSaved(false), 2000);
+      } catch {
+        setSaveError(
+          language === "ja" ? "保存に失敗しました" : "Failed to save",
+        );
       } finally {
         setSaving(false);
       }
     },
-    [],
+    [language],
   );
 
   const handleTestGeneral = useCallback(async () => {
@@ -565,6 +577,12 @@ export function AiSettingsClient({
                 </Badge>
               )}
             </div>
+
+            {saveError && (
+              <p className="text-sm text-red-600 dark:text-red-400">
+                {saveError}
+              </p>
+            )}
 
             <div
               className={`flex items-center gap-2 p-4 rounded-lg ${aiConfig.enabled ? "bg-green-50 dark:bg-green-950/30" : "bg-muted"}`}
