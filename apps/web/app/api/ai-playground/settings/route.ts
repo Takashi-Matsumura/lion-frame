@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 
@@ -9,6 +9,59 @@ const SETTINGS_KEYS = {
   RAG_CONFIG: "ai_playground_rag_config",
 } as const;
 
+const GLOBAL_AI_KEYS = [
+  "ai_local_endpoint",
+  "ai_local_provider",
+  "ai_local_model",
+] as const;
+
+function deriveOpenAIBase(endpoint: string): string {
+  const trimmed = endpoint.trim().replace(/\/+$/, "");
+  try {
+    return `${new URL(trimmed).origin}/v1`;
+  } catch {
+    return trimmed;
+  }
+}
+
+function mapLocalProvider(provider: string | undefined): string | undefined {
+  if (!provider) return undefined;
+  if (provider === "llama.cpp") return "llama-cpp";
+  if (
+    provider === "lm-studio" ||
+    provider === "ollama" ||
+    provider === "llama-cpp"
+  )
+    return provider;
+  return undefined;
+}
+
+function applyPlaygroundLlmFallback(
+  current: unknown,
+  globals: Record<string, string | undefined>,
+): unknown {
+  const cfg: Record<string, unknown> =
+    current && typeof current === "object"
+      ? { ...(current as Record<string, unknown>) }
+      : {};
+  const endpoint = globals.ai_local_endpoint;
+  const provider = mapLocalProvider(globals.ai_local_provider);
+  const model = globals.ai_local_model;
+
+  const hasProvider =
+    typeof cfg.provider === "string" && (cfg.provider as string).length > 0;
+  const hasBaseUrl =
+    typeof cfg.baseUrl === "string" && (cfg.baseUrl as string).length > 0;
+  const hasModel =
+    typeof cfg.model === "string" && (cfg.model as string).length > 0;
+
+  if (!hasProvider && provider) cfg.provider = provider;
+  if (!hasBaseUrl && endpoint) cfg.baseUrl = deriveOpenAIBase(endpoint);
+  if (!hasModel && model) cfg.model = model;
+
+  return cfg.provider || cfg.baseUrl || cfg.model ? cfg : current;
+}
+
 export async function GET() {
   try {
     const session = await auth();
@@ -18,18 +71,34 @@ export async function GET() {
 
     const settings = await prisma.systemSetting.findMany({
       where: {
-        key: { in: [...Object.values(SETTINGS_KEYS), "ai_enabled"] },
+        key: {
+          in: [
+            ...Object.values(SETTINGS_KEYS),
+            "ai_enabled",
+            ...GLOBAL_AI_KEYS,
+          ],
+        },
       },
     });
 
     const result: Record<string, unknown> = {};
+    const globals: Record<string, string | undefined> = {};
     for (const setting of settings) {
+      if ((GLOBAL_AI_KEYS as readonly string[]).includes(setting.key)) {
+        globals[setting.key] = setting.value;
+        continue;
+      }
       try {
         result[setting.key] = JSON.parse(setting.value);
       } catch {
         result[setting.key] = setting.value;
       }
     }
+
+    result[SETTINGS_KEYS.LLM_CONFIG] = applyPlaygroundLlmFallback(
+      result[SETTINGS_KEYS.LLM_CONFIG],
+      globals,
+    );
 
     return NextResponse.json(result);
   } catch (error) {

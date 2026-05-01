@@ -217,29 +217,32 @@ export function AiPlaygroundPage({ language }: { language: "en" | "ja" }) {
           const chunk = decoder.decode(value, { stream: true });
           for (const line of chunk.split("\n")) {
             if (!line.trim() || line === "data: [DONE]" || !line.startsWith("data: ")) continue;
+            let data: { error?: string; content?: string };
             try {
-              const data = JSON.parse(line.slice(6));
-              if (data.error) throw new Error(data.error);
-              if (data.content) {
-                content += data.content;
-                setStreamingContent(content);
-                const currentTime = Date.now();
-                const outputTokens = estimateTokenCount(content);
-                const timeSinceLastUpdate = currentTime - lastTokenTimeRef.current;
-                if (timeSinceLastUpdate > 100) {
-                  const tokensSinceLastUpdate = outputTokens - lastTokenCountRef.current;
-                  lastTokenCountRef.current = outputTokens;
-                  lastTokenTimeRef.current = currentTime;
-                  setMetrics((prev) => ({
-                    ...prev,
-                    outputTokens,
-                    contextUsagePercent: ((prev.inputTokens + outputTokens) / prev.contextWindowSize) * 100,
-                    tokensPerSecond: (tokensSinceLastUpdate / timeSinceLastUpdate) * 1000,
-                    totalTimeMs: currentTime - generationStartTimeRef.current,
-                  }));
-                }
+              data = JSON.parse(line.slice(6));
+            } catch {
+              continue;
+            }
+            if (data.error) throw new Error(data.error);
+            if (data.content) {
+              content += data.content;
+              setStreamingContent(content);
+              const currentTime = Date.now();
+              const outputTokens = estimateTokenCount(content);
+              const timeSinceLastUpdate = currentTime - lastTokenTimeRef.current;
+              if (timeSinceLastUpdate > 100) {
+                const tokensSinceLastUpdate = outputTokens - lastTokenCountRef.current;
+                lastTokenCountRef.current = outputTokens;
+                lastTokenTimeRef.current = currentTime;
+                setMetrics((prev) => ({
+                  ...prev,
+                  outputTokens,
+                  contextUsagePercent: ((prev.inputTokens + outputTokens) / prev.contextWindowSize) * 100,
+                  tokensPerSecond: (tokensSinceLastUpdate / timeSinceLastUpdate) * 1000,
+                  totalTimeMs: currentTime - generationStartTimeRef.current,
+                }));
               }
-            } catch { /* skip */ }
+            }
           }
         }
 
