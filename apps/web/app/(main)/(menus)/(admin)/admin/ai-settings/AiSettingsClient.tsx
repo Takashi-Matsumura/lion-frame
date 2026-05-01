@@ -1,15 +1,13 @@
 "use client";
 
-import type {
-  RAGConfig,
-  SearchConfig,
-  SystemPrompts,
-} from "@lionframe/addon-ai-playground";
-import { DEFAULT_SYSTEM_PROMPTS } from "@lionframe/addon-ai-playground/src/prompts";
 import {
   DEFAULT_RAG_CONFIG,
   DEFAULT_SEARCH_CONFIG,
-} from "@lionframe/addon-ai-playground/src/types";
+  DEFAULT_SYSTEM_PROMPTS,
+  type RAGConfig,
+  type SearchConfig,
+  type SystemPrompts,
+} from "@lionframe/addon-ai-playground";
 import { useCallback, useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
