@@ -7,9 +7,7 @@
   "types": "src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./pages/AiPlaygroundPage": "./src/pages/AiPlaygroundPage.tsx",
-    "./src/prompts": "./src/prompts.ts",
-    "./src/types": "./src/types.ts"
+    "./pages/AiPlaygroundPage": "./src/pages/AiPlaygroundPage.tsx"
   },
   "dependencies": {
     "@lionframe/module-types": "workspace:*"

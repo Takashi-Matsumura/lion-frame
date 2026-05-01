@@ -1,12 +1,18 @@
 import { NextRequest } from "next/server";
-import type { LLMConfig, LLMGenerateOptions, ChatRequest, ChatMode, SearchResult, RAGContext, SystemPrompts } from "@lionframe/addon-ai-playground";
 import {
-  getSystemPrompt as getPrompt,
   buildExplainPrompt,
   buildIdeaPrompt,
-  buildSearchPrompt,
   buildRAGPrompt,
-} from "@lionframe/addon-ai-playground/src/prompts";
+  buildSearchPrompt,
+  getSystemPrompt as getPrompt,
+  type ChatMode,
+  type ChatRequest,
+  type LLMConfig,
+  type LLMGenerateOptions,
+  type RAGContext,
+  type SearchResult,
+  type SystemPrompts,
+} from "@lionframe/addon-ai-playground";
 import { AIService } from "@/lib/core-modules/ai/services/ai-service";
 
 // --- Inline LLM Provider (server-only) ---
