@@ -514,7 +514,10 @@ function HeaderFallback({ language = "en" }: { language?: string }) {
  * ない場合は SidebarProvider 不要の HeaderFallback を表示する。
  */
 export function Header(props: HeaderProps) {
-  if (!props.session) {
+  const pathname = usePathname();
+  // ClientLayout は /login で SidebarProvider をスキップするため、
+  // セッションが残っていても HeaderInner（useSidebar 必須）は使えない。
+  if (!props.session || pathname === "/login") {
     return <HeaderFallback language={props.language} />;
   }
   return <HeaderInner {...props} />;
