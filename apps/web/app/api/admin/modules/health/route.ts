@@ -40,7 +40,7 @@ async function checkContainerHealth(
         // 内部APIパスの場合はサーバー内で直接フェッチ
         const url = healthCheckUrl.startsWith("http")
           ? healthCheckUrl
-          : `${process.env.NEXTAUTH_URL || "http://localhost:3000"}${healthCheckUrl}`;
+          : `${process.env.NEXTAUTH_URL || process.env.AUTH_URL || "http://localhost:3000"}${healthCheckUrl}`;
 
         const res = await fetch(url, {
           signal: AbortSignal.timeout(HEALTH_CHECK_TIMEOUT_MS),
