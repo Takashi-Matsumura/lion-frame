@@ -192,6 +192,7 @@ export function AiSettingsClient({
     useState<UrlValidationError | null>(null);
   const [ragBaseUrlError, setRagBaseUrlError] =
     useState<UrlValidationError | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
     if (aiConfig?.localEndpoint !== undefined) {
@@ -276,31 +277,49 @@ export function AiSettingsClient({
   }, [language, t]);
 
   const handleSavePlayground = useCallback(async () => {
-    const ragResult = validateHttpUrl(ragConfig.baseUrl);
-    if (!ragResult.ok) {
-      setRagBaseUrlError(ragResult.reason);
-      return;
+    const trimmedRagUrl = ragConfig.baseUrl.trim();
+    let normalizedRagBaseUrl = ragConfig.baseUrl;
+    if (trimmedRagUrl !== "") {
+      const ragResult = validateHttpUrl(ragConfig.baseUrl);
+      if (!ragResult.ok) {
+        setRagBaseUrlError(ragResult.reason);
+        return;
+      }
+      normalizedRagBaseUrl = ragResult.url;
     }
     setRagBaseUrlError(null);
+    setSaveError(null);
     setSaving(true);
     setSaved(false);
     try {
       const body: Record<string, unknown> = {
         ai_playground_search_config: searchConfig,
-        ai_playground_rag_config: { ...ragConfig, baseUrl: ragResult.url },
+        ai_playground_rag_config: {
+          ...ragConfig,
+          baseUrl: normalizedRagBaseUrl,
+        },
       };
       if (systemPrompts) body.ai_playground_system_prompts = systemPrompts;
-      await fetch("/api/ai-playground/settings", {
+      const res = await fetch("/api/ai-playground/settings", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        const message =
+          data.errorJa ||
+          data.error ||
+          (language === "ja" ? "保存に失敗しました" : "Failed to save");
+        setSaveError(message);
+        return;
+      }
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } finally {
       setSaving(false);
     }
-  }, [searchConfig, ragConfig, systemPrompts]);
+  }, [searchConfig, ragConfig, systemPrompts, language]);
 
   const handleLocalEndpointChange = useCallback(
     (value: string) => {
@@ -631,11 +650,11 @@ export function AiSettingsClient({
                 <Input
                   value={ragConfig.baseUrl}
                   onChange={(e) => handleRagBaseUrlChange(e.target.value)}
-                  className={
+                  className={`font-mono ${
                     ragBaseUrlError
                       ? "border-red-500 focus-visible:ring-red-500"
                       : ""
-                  }
+                  }`}
                   aria-invalid={ragBaseUrlError !== null}
                 />
                 {ragBaseUrlError && (
@@ -711,7 +730,12 @@ export function AiSettingsClient({
               ))}
             </CardContent>
           </Card>
-          <div className="flex justify-end">
+          <div className="flex items-center justify-end gap-3">
+            {saveError && (
+              <p className="text-sm text-red-600 dark:text-red-400">
+                {saveError}
+              </p>
+            )}
             <Button onClick={handleSavePlayground} disabled={saving}>
               {saving ? t.saving : saved ? t.saved : t.save}
             </Button>
