@@ -72,7 +72,7 @@ export const GET = apiHandler(async () => {
           if (healthCheckUrl) {
             const url = healthCheckUrl.startsWith("http")
               ? healthCheckUrl
-              : `${process.env.NEXTAUTH_URL || "http://localhost:3000"}${healthCheckUrl}`;
+              : `${process.env.NEXTAUTH_URL || process.env.AUTH_URL || "http://localhost:3000"}${healthCheckUrl}`;
             const res = await fetch(url, {
               signal: AbortSignal.timeout(5000),
             });

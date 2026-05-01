@@ -157,7 +157,7 @@ export const POST = apiHandler(async (_request, session) => {
 
     // 5. API Health
     runDiagnostic("api_health", "API Health", "API応答", async () => {
-      const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
+      const baseUrl = process.env.NEXTAUTH_URL || process.env.AUTH_URL || "http://localhost:3000";
       const response = await fetch(`${baseUrl}/api/health`);
       if (response.status === 200) {
         return {
