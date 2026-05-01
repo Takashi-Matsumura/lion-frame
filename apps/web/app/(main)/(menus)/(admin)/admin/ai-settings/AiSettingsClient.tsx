@@ -109,6 +109,7 @@ const translations = {
     save: "Save",
     saving: "Saving...",
     saved: "Saved",
+    saveFailed: "Failed to save",
   },
   ja: {
     generalTitle: "全般AI設定",
@@ -154,6 +155,7 @@ const translations = {
     save: "保存",
     saving: "保存中...",
     saved: "保存しました",
+    saveFailed: "保存に失敗しました",
   },
 };
 
@@ -239,10 +241,7 @@ export function AiSettingsClient({
         });
         if (!res.ok) {
           const data = await res.json().catch(() => ({}));
-          const message =
-            data.errorJa ||
-            data.error ||
-            (language === "ja" ? "保存に失敗しました" : "Failed to save");
+          const message = data.errorJa || data.error || t.saveFailed;
           setSaveError(message);
           return;
         }
@@ -253,14 +252,12 @@ export function AiSettingsClient({
         setSaved(true);
         setTimeout(() => setSaved(false), 2000);
       } catch {
-        setSaveError(
-          language === "ja" ? "保存に失敗しました" : "Failed to save",
-        );
+        setSaveError(t.saveFailed);
       } finally {
         setSaving(false);
       }
     },
-    [language],
+    [t],
   );
 
   const handleTestGeneral = useCallback(async () => {
@@ -319,19 +316,18 @@ export function AiSettingsClient({
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        const message =
-          data.errorJa ||
-          data.error ||
-          (language === "ja" ? "保存に失敗しました" : "Failed to save");
+        const message = data.errorJa || data.error || t.saveFailed;
         setSaveError(message);
         return;
       }
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
+    } catch {
+      setSaveError(t.saveFailed);
     } finally {
       setSaving(false);
     }
-  }, [searchConfig, ragConfig, systemPrompts, language]);
+  }, [searchConfig, ragConfig, systemPrompts, t]);
 
   const handleLocalEndpointChange = useCallback(
     (value: string) => {
