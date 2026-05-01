@@ -109,6 +109,7 @@ const translations = {
     save: "Save",
     saving: "Saving...",
     saved: "Saved",
+    saveFailed: "Failed to save",
   },
   ja: {
     generalTitle: "全般AI設定",
@@ -154,6 +155,7 @@ const translations = {
     save: "保存",
     saving: "保存中...",
     saved: "保存しました",
+    saveFailed: "保存に失敗しました",
   },
 };
 
@@ -230,25 +232,32 @@ export function AiSettingsClient({
   const handleUpdateAiConfig = useCallback(
     async (updates: Partial<AIConfig & { apiKey?: string }>) => {
       setSaving(true);
+      setSaveError(null);
       try {
         const res = await fetch("/api/admin/ai", {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(updates),
         });
-        if (res.ok) {
-          const data = await res.json();
-          setAiConfig(data.config);
-          setAiApiKeyInput("");
-          setGeneralTestResult(null);
-          setSaved(true);
-          setTimeout(() => setSaved(false), 2000);
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          const message = data.errorJa || data.error || t.saveFailed;
+          setSaveError(message);
+          return;
         }
+        const data = await res.json();
+        setAiConfig(data.config);
+        setAiApiKeyInput("");
+        setGeneralTestResult(null);
+        setSaved(true);
+        setTimeout(() => setSaved(false), 2000);
+      } catch {
+        setSaveError(t.saveFailed);
       } finally {
         setSaving(false);
       }
     },
-    [],
+    [t],
   );
 
   const handleTestGeneral = useCallback(async () => {
@@ -307,19 +316,18 @@ export function AiSettingsClient({
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        const message =
-          data.errorJa ||
-          data.error ||
-          (language === "ja" ? "保存に失敗しました" : "Failed to save");
+        const message = data.errorJa || data.error || t.saveFailed;
         setSaveError(message);
         return;
       }
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
+    } catch {
+      setSaveError(t.saveFailed);
     } finally {
       setSaving(false);
     }
-  }, [searchConfig, ragConfig, systemPrompts, language]);
+  }, [searchConfig, ragConfig, systemPrompts, t]);
 
   const handleLocalEndpointChange = useCallback(
     (value: string) => {
@@ -565,6 +573,12 @@ export function AiSettingsClient({
                 </Badge>
               )}
             </div>
+
+            {saveError && (
+              <p className="text-sm text-red-600 dark:text-red-400">
+                {saveError}
+              </p>
+            )}
 
             <div
               className={`flex items-center gap-2 p-4 rounded-lg ${aiConfig.enabled ? "bg-green-50 dark:bg-green-950/30" : "bg-muted"}`}
