@@ -74,10 +74,54 @@ VAPID_PRIVATE_KEY=<秘密鍵>
 ```env
 # .env（本番用）
 AUTH_SECRET=<openssl rand -base64 48 で生成>
+# 単一ホスト名で公開する場合は AUTH_URL を明示
 AUTH_URL=https://<本番ドメイン>
+# LAN IP / 複数ホスト名で公開する場合は AUTH_URL を未設定にし、
+# AUTH_TRUST_HOST=true で Host ヘッダから動的解決する（Issue #46）
+# AUTH_TRUST_HOST=true
 DATABASE_URL="postgresql://<user>:<password>@<host>:5432/<dbname>?schema=public"
 NEXT_PUBLIC_APP_NAME="LionFrame"
 ```
+
+### HTTPS 終端 / HSTS の運用
+
+LionFrame の Next.js アプリ自体は **HSTS ヘッダを送信しない**設計です（Issue #46）。
+HTTP のみで待ち受けるサーバ（dev / LAN 内本番）に HSTS を返すと RFC 6797 §7.2
+違反となり、Chrome の Network State により `ERR_ADDRESS_UNREACHABLE` で到達不能
+になるためです。
+
+本番では **HTTPS 終端を行うリバースプロキシ層（Caddy / nginx 等）から HSTS を
+付与する** 運用を推奨します。
+
+**Caddy の例:**
+
+```caddy
+example.com {
+  reverse_proxy localhost:3000
+  header Strict-Transport-Security "max-age=31536000; includeSubDomains"
+}
+```
+
+**nginx の例:**
+
+```nginx
+server {
+  listen 443 ssl http2;
+  server_name example.com;
+  add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+  location / {
+    proxy_pass http://localhost:3000;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-Host $host;
+  }
+}
+```
+
+> アプリ側でも `NODE_ENV=production` のときは HSTS を送信するため、リバプロから
+> 二重に付与されても問題ありません。LAN IP 経由の本番（リバプロなしで HTTP 配信）
+> では `NODE_ENV=production` にしないか、リバプロ経由のアクセスのみを想定して
+> 運用してください。
 
 ### 2. 本番イメージのビルドと起動
 
@@ -217,7 +261,7 @@ lsof -i :3000  # Next.js開発サーバ
 本番デプロイ時:
 
 - [ ] `.env` に本番用の `AUTH_SECRET` を生成・設定
-- [ ] `AUTH_URL` を本番ドメインに変更（HTTPS 必須、WebAuthn 要件）
+- [ ] `AUTH_URL` を本番ドメインに変更（HTTPS 必須、WebAuthn 要件）。LAN IP / 複数ホスト名なら未設定 + `AUTH_TRUST_HOST=true`
 - [ ] `DATABASE_URL` を本番DBに変更
 - [ ] `NEXT_PUBLIC_WEBAUTHN_RP_ID` を本番ドメインで設定、`WEBAUTHN_ORIGIN` も揃える
 - [ ] VAPID 鍵（`NEXT_PUBLIC_VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY`）を生成・設定
@@ -226,3 +270,4 @@ lsof -i :3000  # Next.js開発サーバ
 - [ ] 管理画面でOpenLDAP設定を確認（必要な場合）
 - [ ] 初期パスワードを変更
 - [ ] HTTPS/TLSが有効になっているか確認
+- [ ] リバースプロキシ層から HSTS ヘッダを付与する設定になっているか確認（Issue #46）

@@ -24,6 +24,18 @@ describe("セキュリティ静的検証", () => {
       expect(source).toContain("DENY");
       expect(source).toContain("Strict-Transport-Security");
     });
+
+    // Issue #46: HSTS は本番ビルド時のみ送信
+    it("HSTS は NODE_ENV === 'production' でのみ送信されること", () => {
+      const source = readSource("next.config.ts");
+      // HSTS の push が production 判定の中にあること
+      const productionGuardIdx = source.indexOf(
+        'process.env.NODE_ENV === "production"',
+      );
+      const hstsIdx = source.indexOf("Strict-Transport-Security");
+      expect(productionGuardIdx).toBeGreaterThan(-1);
+      expect(hstsIdx).toBeGreaterThan(productionGuardIdx);
+    });
   });
 
   describe("x-forwarded-host 信頼制限", () => {

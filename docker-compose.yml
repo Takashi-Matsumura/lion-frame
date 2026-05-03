@@ -41,7 +41,11 @@ services:
     environment:
       NODE_ENV: development
       DATABASE_URL: postgresql://lionframe:lionframe@postgres:5432/lionframe?schema=public
-      AUTH_URL: http://localhost:3030
+      # AUTH_URL は固定しない (Issue #46)。LAN IP からのアクセス時に
+      # callback URL が localhost に固定されてログインフローが破綻する
+      # ため、AUTH_TRUST_HOST=true で Host ヘッダから動的解決する。
+      # 単一ホスト名の本番では env_file 等で AUTH_URL を明示してもよい。
+      AUTH_TRUST_HOST: "true"
       # 開発環境専用のフォールバック。本番・ステージングでは必ず強力なランダム文字列を設定すること
       # 生成例: openssl rand -base64 32
       AUTH_SECRET: ${AUTH_SECRET:-dev-secret-change-me}

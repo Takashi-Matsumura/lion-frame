@@ -108,4 +108,62 @@ describe("getRequestBaseUrl", () => {
     const req = buildReq({ url: "http://localhost:3030/foo" });
     expect(getRequestBaseUrl(req)).toBe("http://localhost:3030");
   });
+
+  // Issue #46: AUTH_URL を固定しない運用 (AUTH_TRUST_HOST=true)
+  describe("AUTH_URL 未設定 + Host ヘッダ運用 (Issue #46)", () => {
+    it("Host ヘッダがあれば LAN IP ベースの origin を返す", () => {
+      delete process.env.AUTH_URL;
+      const req = buildReq({
+        url: "http://0.0.0.0:3030/login",
+        headers: { host: "192.168.1.15:3030" },
+      });
+      expect(getRequestBaseUrl(req)).toBe("http://192.168.1.15:3030");
+    });
+
+    it("x-forwarded-proto=https が一緒に来れば https を採用する", () => {
+      delete process.env.AUTH_URL;
+      const req = buildReq({
+        headers: {
+          host: "app.example.com",
+          "x-forwarded-proto": "https",
+        },
+      });
+      expect(getRequestBaseUrl(req)).toBe("https://app.example.com");
+    });
+
+    it("x-forwarded-host があれば forwarded を優先する", () => {
+      delete process.env.AUTH_URL;
+      const req = buildReq({
+        headers: {
+          host: "internal:3030",
+          "x-forwarded-proto": "https",
+          "x-forwarded-host": "app.example.com",
+        },
+      });
+      expect(getRequestBaseUrl(req)).toBe("https://app.example.com");
+    });
+
+    it("不正な x-forwarded-proto は無視して http にフォールバック", () => {
+      delete process.env.AUTH_URL;
+      const req = buildReq({
+        headers: {
+          host: "app.example.com",
+          "x-forwarded-proto": "javascript",
+        },
+      });
+      expect(getRequestBaseUrl(req)).toBe("http://app.example.com");
+    });
+
+    it("Host ヘッダ運用時は dev server 0.0.0.0 問題が発生しない", () => {
+      delete process.env.AUTH_URL;
+      // Issue #24 の状況: dev server は 0.0.0.0 で bind しているが、
+      // Host ヘッダから実アクセス先 (localhost) を取得できる。
+      const req = buildReq({
+        url: "http://0.0.0.0:3030/api/oidc/authorize",
+        headers: { host: "localhost:3030" },
+        nextUrlOrigin: "http://0.0.0.0:3030",
+      });
+      expect(getRequestBaseUrl(req)).toBe("http://localhost:3030");
+    });
+  });
 });
