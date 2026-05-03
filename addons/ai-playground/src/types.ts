@@ -181,6 +181,44 @@ export interface SystemPrompts {
   rag: string;          // ナレッジ検索モード追加部分
 }
 
+// Suggestion Prompts Types (Issue #44: ホストアプリからモード別サンプルを差し替え可能に)
+//
+// `free` はモード未選択時のサンプル。`ChatMode` 各モード（explain/idea/search/rag）
+// と "free" の和集合をキーとする。すべてのモードを必ず提供する必要はない（差分マージ）。
+export type SuggestionsLanguage = "en" | "ja";
+export type SuggestionMap = Partial<Record<ChatMode | "free", readonly string[]>>;
+export type Suggestions = Record<SuggestionsLanguage, SuggestionMap>;
+export type SuggestionsOverride = Partial<Record<SuggestionsLanguage, SuggestionMap>>;
+
+export const DEFAULT_SUGGESTIONS: Suggestions = {
+  ja: {
+    free: ["今日の天気について教えて", "おすすめの本を紹介して", "面白い雑学を教えて"],
+    explain: ["プログラミングの「変数」って何？", "AIと機械学習の違いを教えて", "インターネットの仕組み"],
+    idea: ["高校生向けの学習アプリ", "社内コミュニケーション改善", "新入社員研修プログラム"],
+    search: ["2024年のAI技術トレンド", "リモートワークのベストプラクティス"],
+    rag: ["ナレッジベースの内容を教えて"],
+  },
+  en: {
+    free: ["Tell me about today's weather", "Recommend a good book", "Share an interesting fact"],
+    explain: ["What is a 'variable' in programming?", "Difference between AI and ML", "How does the internet work?"],
+    idea: ["Learning app for students", "Improving team communication", "New employee training program"],
+    search: ["AI technology trends 2024", "Remote work best practices"],
+    rag: ["Tell me about the knowledge base"],
+  },
+};
+
+// 既定のサンプルにホストアプリの override をモード単位でマージする。
+// override 側の配列が空でも「明示的に空にしたい」意図として尊重する。
+export function resolveSuggestions(
+  language: SuggestionsLanguage,
+  modeKey: ChatMode | "free",
+  override: SuggestionsOverride | undefined,
+): readonly string[] {
+  const overridden = override?.[language]?.[modeKey];
+  if (overridden !== undefined) return overridden;
+  return DEFAULT_SUGGESTIONS[language][modeKey] ?? [];
+}
+
 // Generation Metrics Types
 export interface GenerationMetrics {
   // コンテキスト情報
