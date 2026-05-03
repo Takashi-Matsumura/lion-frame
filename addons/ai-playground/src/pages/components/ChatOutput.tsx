@@ -44,8 +44,8 @@ export function ChatOutput({ messages, isLoading, streamingContent }: ChatOutput
   return (
     <div ref={scrollRef} className="flex flex-col h-full overflow-y-auto">
       <div className="flex-1 space-y-1 p-4">
-        {messages.map((message, index) => (
-          <div key={index} className="flex items-start gap-3 py-2">
+        {messages.map((message) => (
+          <div key={message.id} className="flex items-start gap-3 py-2">
             <div className={`flex-shrink-0 w-8 h-8 rounded-md flex items-center justify-center ${
               message.role === 'user'
                 ? 'bg-primary text-primary-foreground'

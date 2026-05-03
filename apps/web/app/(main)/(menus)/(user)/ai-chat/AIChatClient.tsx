@@ -9,6 +9,7 @@ import {
   RiRobot2Line,
 } from "react-icons/ri";
 import { Button } from "@/components/ui/button";
+import { generateId } from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
@@ -227,7 +228,7 @@ export function AIChatClient({ language, userName }: AIChatClientProps) {
             messageAdded = true;
             const outputTokens = estimateTokens(fullContent);
             const assistantMessage: ChatMessage = {
-              id: crypto.randomUUID(),
+              id: generateId(),
               role: "assistant",
               content: fullContent,
               timestamp: new Date(),
@@ -266,7 +267,7 @@ export function AIChatClient({ language, userName }: AIChatClientProps) {
     if (fullContent && !messageAdded) {
       const outputTokens = estimateTokens(fullContent);
       const assistantMessage: ChatMessage = {
-        id: crypto.randomUUID(),
+        id: generateId(),
         role: "assistant",
         content: fullContent,
         timestamp: new Date(),
@@ -293,7 +294,7 @@ export function AIChatClient({ language, userName }: AIChatClientProps) {
     const ragContextForThisMessage = forceRagContext ?? useRagContext;
 
     const userMessage: ChatMessage = {
-      id: crypto.randomUUID(),
+      id: generateId(),
       role: "user",
       content: text,
       timestamp: new Date(),
@@ -337,7 +338,7 @@ export function AIChatClient({ language, userName }: AIChatClientProps) {
         if (streamingContent) {
           const outputTokens = estimateTokens(streamingContent);
           const assistantMessage: ChatMessage = {
-            id: crypto.randomUUID(),
+            id: generateId(),
             role: "assistant",
             content: streamingContent,
             timestamp: new Date(),
@@ -418,7 +419,7 @@ export function AIChatClient({ language, userName }: AIChatClientProps) {
           if (streamingContent) {
             const outputTokens = estimateTokens(streamingContent);
             const assistantMessage: ChatMessage = {
-              id: crypto.randomUUID(),
+              id: generateId(),
               role: "assistant",
               content: streamingContent,
               timestamp: new Date(),

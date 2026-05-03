@@ -137,6 +137,9 @@ export interface SearchResponse {
 
 // Message Types
 export interface Message {
+  // メッセージごとの一意 ID。React の key に利用する。
+  // 生成は `lib/id.ts` の `generateId()` を使う (Issue #49)。
+  id: string;
   role: 'user' | 'assistant';
   content: string;
   sources?: SearchResult[];

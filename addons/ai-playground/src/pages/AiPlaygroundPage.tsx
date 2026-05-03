@@ -24,6 +24,7 @@ import {
   resolveSuggestions,
 } from "../types";
 import { DEFAULT_SYSTEM_PROMPTS } from "../prompts";
+import { generateId } from "../lib/id";
 import { estimateTokenCount } from "../lib/token-utils";
 
 const DEFAULT_CONTEXT_WINDOW = 4096;
@@ -110,7 +111,7 @@ export function AiPlaygroundPage({
       abortControllerRef.current = null;
     }
     if (streamingContent) {
-      setMessages((prev) => [...prev, { role: "assistant", content: streamingContent + "\n\n[中断されました]" }]);
+      setMessages((prev) => [...prev, { id: generateId(), role: "assistant", content: streamingContent + "\n\n[中断されました]" }]);
     }
     setIsLoading(false);
     setStreamingContent("");
@@ -144,7 +145,7 @@ export function AiPlaygroundPage({
       abortControllerRef.current = new AbortController();
       const signal = abortControllerRef.current.signal;
 
-      setMessages((prev) => [...prev, { role: "user", content: message }]);
+      setMessages((prev) => [...prev, { id: generateId(), role: "user", content: message }]);
 
       let searchResults: SearchResult[] = [];
       let ragContext: RAGContext[] = [];
@@ -246,6 +247,7 @@ export function AiPlaygroundPage({
           setMessages((prev) => [
             ...prev,
             {
+              id: generateId(),
               role: "assistant",
               content,
               sources: selectedMode === "search" ? searchResults : undefined,
@@ -259,6 +261,7 @@ export function AiPlaygroundPage({
         setMessages((prev) => [
           ...prev,
           {
+            id: generateId(),
             role: "assistant",
             content: language === "ja"
               ? `**エラーが発生しました**\n\n${errorMessage}\n\n- LLMが起動しているか確認してください\n- 管理者に接続設定を確認してください`
