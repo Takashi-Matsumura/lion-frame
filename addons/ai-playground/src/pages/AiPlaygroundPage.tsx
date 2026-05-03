@@ -14,36 +14,32 @@ import type {
   SystemPrompts,
   SearchConfig,
   RAGConfig,
+  SuggestionsOverride,
 } from "../types";
 import {
   PROVIDER_PRESETS,
   CHAT_MODES,
   DEFAULT_SEARCH_CONFIG,
   DEFAULT_RAG_CONFIG,
+  resolveSuggestions,
 } from "../types";
 import { DEFAULT_SYSTEM_PROMPTS } from "../prompts";
 import { estimateTokenCount } from "../lib/token-utils";
 
 const DEFAULT_CONTEXT_WINDOW = 4096;
 
-const SUGGESTIONS = {
-  ja: {
-    free: ["今日の天気について教えて", "おすすめの本を紹介して", "面白い雑学を教えて"],
-    explain: ["プログラミングの「変数」って何？", "AIと機械学習の違いを教えて", "インターネットの仕組み"],
-    idea: ["高校生向けの学習アプリ", "社内コミュニケーション改善", "新入社員研修プログラム"],
-    search: ["2024年のAI技術トレンド", "リモートワークのベストプラクティス"],
-    rag: ["ナレッジベースの内容を教えて"],
-  },
-  en: {
-    free: ["Tell me about today's weather", "Recommend a good book", "Share an interesting fact"],
-    explain: ["What is a 'variable' in programming?", "Difference between AI and ML", "How does the internet work?"],
-    idea: ["Learning app for students", "Improving team communication", "New employee training program"],
-    search: ["AI technology trends 2024", "Remote work best practices"],
-    rag: ["Tell me about the knowledge base"],
-  },
-};
+export interface AiPlaygroundPageProps {
+  language: "en" | "ja";
+  // ホストアプリから既定のサンプルプロンプトを差し替えるためのオプション (Issue #44)。
+  // モード単位の差分マージ。特に rag モードは投入されたナレッジに依存するため、
+  // 各環境のナレッジに沿ったサンプルを提示するために利用する。
+  suggestionsOverride?: SuggestionsOverride;
+}
 
-export function AiPlaygroundPage({ language }: { language: "en" | "ja" }) {
+export function AiPlaygroundPage({
+  language,
+  suggestionsOverride,
+}: AiPlaygroundPageProps) {
   const llamaCppPreset = PROVIDER_PRESETS.find((p) => p.provider === "llama-cpp")!;
   const [llmConfig, setLlmConfig] = useState<LLMConfig>({
     provider: llamaCppPreset.provider,
@@ -344,7 +340,11 @@ export function AiPlaygroundPage({ language }: { language: "en" | "ja" }) {
   }
 
   const hasMessages = messages.length > 0 || isLoading;
-  const currentSuggestions = SUGGESTIONS[language][mode ?? "free"] || [];
+  const currentSuggestions = resolveSuggestions(
+    language,
+    mode ?? "free",
+    suggestionsOverride,
+  );
   const currentModeInfo = mode ? CHAT_MODES.find((m) => m.id === mode) : null;
 
   return (
