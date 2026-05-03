@@ -24,25 +24,35 @@ const nextConfig: NextConfig = {
 
   // セキュリティヘッダー
   async headers() {
+    const baseSecurityHeaders = [
+      { key: "X-Content-Type-Options", value: "nosniff" },
+      { key: "X-Frame-Options", value: "DENY" },
+      {
+        key: "Referrer-Policy",
+        value: "strict-origin-when-cross-origin",
+      },
+      {
+        key: "Permissions-Policy",
+        value: "geolocation=(), microphone=(), camera=()",
+      },
+    ];
+
+    // HSTS は本番ビルド時のみ送信。HTTP 配信時 (dev / LAN 内本番で
+    // リバプロを介さない構成) に送ると RFC 6797 §7.2 違反となり、
+    // Chrome の Network State により ERR_ADDRESS_UNREACHABLE で
+    // 到達不能になる (Issue #46)。本番では HTTPS 終端を行うリバプロ
+    // 層 (Caddy / nginx 等) で HSTS を付与する運用とする。
+    if (process.env.NODE_ENV === "production") {
+      baseSecurityHeaders.push({
+        key: "Strict-Transport-Security",
+        value: "max-age=31536000; includeSubDomains",
+      });
+    }
+
     return [
       {
         source: "/(.*)",
-        headers: [
-          { key: "X-Content-Type-Options", value: "nosniff" },
-          { key: "X-Frame-Options", value: "DENY" },
-          {
-            key: "Referrer-Policy",
-            value: "strict-origin-when-cross-origin",
-          },
-          {
-            key: "Permissions-Policy",
-            value: "geolocation=(), microphone=(), camera=()",
-          },
-          {
-            key: "Strict-Transport-Security",
-            value: "max-age=31536000; includeSubDomains",
-          },
-        ],
+        headers: baseSecurityHeaders,
       },
       {
         // チュートリアルPDF: 同一オリジンのiframe表示を許可
