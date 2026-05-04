@@ -24,6 +24,74 @@ function getOpenAIBase(endpoint: string): string {
   }
 }
 
+/**
+ * OpenAI 互換 API のレスポンスから content を取り出し、空だった場合は
+ * thinking モデル（reasoning_content を返すモデル）の打ち切りなど
+ * 原因を含む専用エラーを投げる。
+ *
+ * thinking モデル（Gemma thinking, gpt-oss, DeepSeek-R1 等）は
+ * `reasoning_content` に思考を出力したあと `max_tokens` を使い切ると
+ * `content` 空 + `finish_reason="length"` で返ってくる。
+ * Issue #51 参照。
+ */
+function extractOpenAICompatibleContent(
+  data: unknown,
+  context: { provider: string; model: string; maxTokens: number },
+): string {
+  const choice = (data as { choices?: Array<Record<string, unknown>> })
+    ?.choices?.[0];
+  const message = choice?.message as
+    | { content?: unknown; reasoning_content?: unknown }
+    | undefined;
+  const content =
+    typeof message?.content === "string" ? message.content.trim() : "";
+
+  if (content) {
+    return content;
+  }
+
+  const finishReason =
+    typeof choice?.finish_reason === "string" ? choice.finish_reason : "";
+  const usage = (data as { usage?: Record<string, unknown> })?.usage;
+  const completionTokens =
+    typeof usage?.completion_tokens === "number" ? usage.completion_tokens : 0;
+  const reasoningContent =
+    typeof message?.reasoning_content === "string"
+      ? message.reasoning_content
+      : "";
+  const reasoningLen = reasoningContent.length;
+
+  // thinking モデルが思考だけ出して max_tokens を使い切ったケース
+  if (
+    reasoningLen > 0 &&
+    finishReason === "length" &&
+    completionTokens >= context.maxTokens
+  ) {
+    throw new Error(
+      `${context.provider} のモデル「${context.model}」は thinking/reasoning モデルのため、` +
+        `思考の出力で max_tokens (${context.maxTokens}) を使い切り本文が返りませんでした` +
+        ` (completion_tokens=${completionTokens}, reasoning_len=${reasoningLen}, finish_reason=length)。` +
+        `対処: max_tokens を増やすか、thinking なしのモデルに切り替えてください。`,
+    );
+  }
+
+  // length 切りだが reasoning は無い（普通のモデルでも token 不足）
+  if (finishReason === "length" && completionTokens >= context.maxTokens) {
+    throw new Error(
+      `${context.provider} のモデル「${context.model}」が max_tokens (${context.maxTokens}) を使い切り` +
+        ` 本文が返りませんでした (completion_tokens=${completionTokens}, finish_reason=length)。` +
+        `対処: max_tokens を増やしてください。`,
+    );
+  }
+
+  // それ以外（フィルタリングなど）
+  throw new Error(
+    `${context.provider} から本文が返りませんでした` +
+      ` (finish_reason=${finishReason || "unknown"}, completion_tokens=${completionTokens}` +
+      `${reasoningLen > 0 ? `, reasoning_len=${reasoningLen}` : ""}).`,
+  );
+}
+
 function getOllamaBase(endpoint: string): string {
   const trimmed = endpoint.trim().replace(/\/+$/, "");
   try {
@@ -181,6 +249,7 @@ async function translateWithOpenAICompatible(
   sourceLang: string,
   targetLang: string,
 ): Promise<TranslateResponse> {
+  const maxTokens = 1000;
   const response = await fetch(
     `${getOpenAIBase(config.localEndpoint)}/chat/completions`,
     {
@@ -199,7 +268,7 @@ async function translateWithOpenAICompatible(
           },
         ],
         temperature: 0.3,
-        max_tokens: 1000,
+        max_tokens: maxTokens,
       }),
     },
   );
@@ -210,11 +279,11 @@ async function translateWithOpenAICompatible(
   }
 
   const data = await response.json();
-  const translatedText = data.choices?.[0]?.message?.content?.trim();
-
-  if (!translatedText) {
-    throw new Error(`No translation received from ${config.localProvider}`);
-  }
+  const translatedText = extractOpenAICompatibleContent(data, {
+    provider: config.localProvider,
+    model: config.localModel || "default",
+    maxTokens,
+  });
 
   return {
     translatedText,
@@ -298,6 +367,7 @@ async function chatWithOpenAICompatible(
   messages: ChatMessage[],
   config: AIConfig,
 ): Promise<ChatResponse> {
+  const maxTokens = 2000;
   const response = await fetch(
     `${getOpenAIBase(config.localEndpoint)}/chat/completions`,
     {
@@ -307,7 +377,7 @@ async function chatWithOpenAICompatible(
         model: config.localModel || "default",
         messages,
         temperature: 0.7,
-        max_tokens: 2000,
+        max_tokens: maxTokens,
       }),
     },
   );
@@ -318,11 +388,11 @@ async function chatWithOpenAICompatible(
   }
 
   const data = await response.json();
-  const message = data.choices?.[0]?.message?.content?.trim();
-
-  if (!message) {
-    throw new Error(`No response received from ${config.localProvider}`);
-  }
+  const message = extractOpenAICompatibleContent(data, {
+    provider: config.localProvider,
+    model: config.localModel || "default",
+    maxTokens,
+  });
 
   return {
     message,
@@ -438,11 +508,11 @@ export async function generateWithLocal(
   }
 
   const data = await response.json();
-  const output = data.choices?.[0]?.message?.content?.trim();
-
-  if (!output) {
-    throw new Error(`No response received from ${config.localProvider}`);
-  }
+  const output = extractOpenAICompatibleContent(data, {
+    provider: config.localProvider,
+    model: config.localModel || "default",
+    maxTokens,
+  });
 
   return {
     output,

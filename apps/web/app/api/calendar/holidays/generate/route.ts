@@ -49,6 +49,8 @@ Return ONLY the JSON array, no other text.`;
     input,
     systemPrompt,
     temperature: 0.1,
+    // thinking モデルが reasoning に消費するぶんを見越した安全マージン (Issue #51)
+    maxTokens: 8000,
   });
 
   // Parse AI response
