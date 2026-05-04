@@ -45,13 +45,22 @@ Return ONLY the JSON array, no other text.`;
   const systemPrompt =
     "You are a helpful assistant that generates accurate Japanese holiday data. Return only valid JSON arrays with no markdown formatting or additional text.";
 
-  const result = await AIService.generate({
-    input,
-    systemPrompt,
-    temperature: 0.1,
-    // thinking モデルが reasoning に消費するぶんを見越した安全マージン (Issue #51)
-    maxTokens: 8000,
-  });
+  // AI 呼び出し: provider 側のエラー (例: thinking モデルの max_tokens 切れ)
+  // を画面に伝えるため、apiHandler の汎用 500 ハンドラで握り潰されないよう
+  // ApiError として再 throw する。
+  let result: Awaited<ReturnType<typeof AIService.generate>>;
+  try {
+    result = await AIService.generate({
+      input,
+      systemPrompt,
+      temperature: 0.1,
+      // thinking モデルが reasoning に消費するぶんを見越した安全マージン (Issue #51)
+      maxTokens: 8000,
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    throw ApiError.badRequest(message, message);
+  }
 
   // Parse AI response
   let holidays: Array<{
@@ -75,7 +84,10 @@ Return ONLY the JSON array, no other text.`;
     holidays = JSON.parse(jsonStr);
   } catch {
     console.error("Failed to parse AI response:", result.output);
-    throw new Error("Failed to parse AI response");
+    throw ApiError.badRequest(
+      "AI から返ったレスポンスを JSON として解析できませんでした。モデルやプロンプトを見直してください。",
+      "AI から返ったレスポンスを JSON として解析できませんでした。モデルやプロンプトを見直してください。",
+    );
   }
 
   // Validate and insert holidays
