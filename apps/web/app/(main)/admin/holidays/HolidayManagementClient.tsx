@@ -93,6 +93,7 @@ export function HolidayManagementClient({
   const [generateYear, setGenerateYear] = useState(String(currentYear));
   const [generating, setGenerating] = useState(false);
   const [generateResult, setGenerateResult] = useState<string | null>(null);
+  const [generateResultIsError, setGenerateResultIsError] = useState(false);
 
   // Translate state
   const [translating, setTranslating] = useState(false);
@@ -205,6 +206,7 @@ export function HolidayManagementClient({
   const handleGenerate = useCallback(async () => {
     setGenerating(true);
     setGenerateResult(null);
+    setGenerateResultIsError(false);
     try {
       const res = await fetch("/api/calendar/holidays/generate", {
         method: "POST",
@@ -215,13 +217,28 @@ export function HolidayManagementClient({
         const data = await res.json();
         const msg = t.generateSuccess.replace("{count}", String(data.generated));
         setGenerateResult(msg);
+        setGenerateResultIsError(false);
         setFilterYear(generateYear);
         fetchHolidays();
       } else {
-        setGenerateResult(t.error);
+        // サーバー側で ApiError として返ってきた具体的なメッセージを表示する
+        // (Issue #51 の thinking モデル切れエラーなど)。
+        let detail: string = t.error;
+        try {
+          const data = (await res.json()) as {
+            errorJa?: string;
+            error?: string;
+          };
+          detail = data.errorJa || data.error || t.error;
+        } catch {
+          // ボディが JSON でない場合はフォールバック
+        }
+        setGenerateResult(detail);
+        setGenerateResultIsError(true);
       }
     } catch {
       setGenerateResult(t.error);
+      setGenerateResultIsError(true);
     } finally {
       setGenerating(false);
     }
@@ -503,7 +520,13 @@ export function HolidayManagementClient({
           </div>
 
           {generateResult && (
-            <p className="text-sm font-medium text-green-600 dark:text-green-400">
+            <p
+              className={`text-sm font-medium whitespace-pre-line ${
+                generateResultIsError
+                  ? "text-red-600 dark:text-red-400"
+                  : "text-green-600 dark:text-green-400"
+              }`}
+            >
               {generateResult}
             </p>
           )}
@@ -514,6 +537,7 @@ export function HolidayManagementClient({
               onClick={() => {
                 setGenerateOpen(false);
                 setGenerateResult(null);
+                setGenerateResultIsError(false);
               }}
               disabled={generating}
             >
