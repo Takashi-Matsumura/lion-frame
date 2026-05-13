@@ -1,5 +1,5 @@
 import type { Session } from "next-auth";
-import { prisma } from "@/lib/prisma";
+import { getUserAccessKeyPermissions } from "@/lib/access-keys";
 
 /**
  * ユーザが特定のメニューパスにアクセスする権限があるかチェックする
@@ -7,6 +7,10 @@ import { prisma } from "@/lib/prisma";
  * 以下の条件のいずれかを満たす場合、アクセスを許可：
  * 1. ユーザのロールが指定されたrolesに含まれる
  * 2. ユーザが有効なアクセスキーを持ち、そのアクセスキーがmenuPathへのアクセスを許可している
+ *
+ * 判定基準は `getUserAccessKeyPermissions` に委譲しているため、サイドバー表示と
+ * API ゲートでの判定（モジュール粒度の展開、system-delegation キーの TTL チェック等）が
+ * 同じロジックを通る。
  *
  * @param session - NextAuthのセッション
  * @param menuPath - アクセスしようとしているメニューのパス（例: "/analytics"）
@@ -28,75 +32,15 @@ export async function checkAccess(
     return true;
   }
 
-  // 2. アクセスキーチェック
+  // 2. アクセスキーチェック（モジュール粒度の展開もここで行われる）
   try {
-    const userId = session.user.id;
-
-    const userAccessKeys = await prisma.userAccessKey.findMany({
-      where: {
-        userId,
-      },
-      include: {
-        accessKey: {
-          include: {
-            permissions: {
-              include: {
-                permission: true,
-              },
-            },
-          },
-        },
-      },
-    });
-
-    // 有効なアクセスキーを確認
-    for (const uak of userAccessKeys) {
-      const ak = uak.accessKey;
-
-      // アクセスキーが有効かチェック
-      if (!ak.isActive || new Date(ak.expiresAt) < new Date()) {
-        continue;
-      }
-
-      // 方法1: AccessKey.menuPaths (JSON) からチェック
-      if (ak.menuPaths) {
-        try {
-          const menuPaths = JSON.parse(ak.menuPaths) as string[];
-          if (menuPaths.includes(menuPath)) {
-            return true;
-          }
-        } catch {
-          // JSON パースエラーは無視
-        }
-      }
-
-      // 方法2: AccessKeyPermission からチェック
-      for (const akp of ak.permissions) {
-        // 新しい粒度システム（Phase 2）
-        if (akp.menuPath) {
-          // menuPath が直接設定されている場合
-          if (akp.menuPath === menuPath) {
-            return true;
-          }
-          // モジュールレベルの権限の場合、配下の全メニューにアクセス可能
-          if (akp.granularity === "module" && akp.moduleId) {
-            // TODO: モジュールIDからメニューパスを検証するロジックを追加
-            return true;
-          }
-        }
-        // 後方互換性：旧 permission リレーション経由
-        else if (akp.permission?.menuPath === menuPath) {
-          return true;
-        }
-      }
-    }
+    const permissions = await getUserAccessKeyPermissions(session.user.id);
+    return permissions.menuPaths.includes(menuPath);
   } catch (error) {
     console.error(
       "[checkAccess] Error checking access key permissions:",
       error,
     );
-    // エラーが発生してもロールチェックは済んでいるので、falseを返す
+    return false;
   }
-
-  return false;
 }
