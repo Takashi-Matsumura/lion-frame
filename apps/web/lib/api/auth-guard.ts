@@ -25,13 +25,29 @@ export async function requireAdmin(): Promise<Session> {
   return session;
 }
 
-const ROLE_HIERARCHY: Record<Role, number> = {
+/**
+ * ロール階層の数値マッピング。値が大きいほど権限が強い。
+ * 階層判定（最低ロール以上か）や `expandMinimumRole` などで利用する。
+ */
+export const ROLE_HIERARCHY: Record<Role, number> = {
   GUEST: 0,
   USER: 1,
   MANAGER: 2,
   EXECUTIVE: 3,
   ADMIN: 4,
 };
+
+/**
+ * 指定された最低ロール以上のロール一覧を返す。
+ *
+ * 例: `expandMinimumRole("MANAGER")` → `["MANAGER", "EXECUTIVE", "ADMIN"]`
+ */
+export function expandMinimumRole(minimum: Role): Role[] {
+  const minLevel = ROLE_HIERARCHY[minimum];
+  return (Object.keys(ROLE_HIERARCHY) as Role[]).filter(
+    (role) => ROLE_HIERARCHY[role] >= minLevel,
+  );
+}
 
 /**
  * Require a minimum role level. Throws ApiError if insufficient.

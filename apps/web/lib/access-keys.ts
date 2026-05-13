@@ -1,3 +1,4 @@
+import { getAllModules } from "./modules/registry";
 import { prisma } from "./prisma";
 
 /**
@@ -23,6 +24,15 @@ export async function getUserAccessKeyPermissions(
   };
 
   try {
+    // モジュール粒度の権限が含まれる場合に展開するためのモジュール定義（遅延ロード）
+    let modulesCache: Awaited<ReturnType<typeof getAllModules>> | null = null;
+    const ensureModules = async () => {
+      if (!modulesCache) {
+        modulesCache = await getAllModules();
+      }
+      return modulesCache;
+    };
+
     // Get all active Access Keys registered by this user
     const userAccessKeys = await prisma.userAccessKey.findMany({
       where: {
@@ -72,6 +82,22 @@ export async function getUserAccessKeyPermissions(
 
       // 方法2: Phase 2 - AccessKeyPermission からメニューパス・タブを取得
       for (const permission of accessKey.permissions) {
+        // モジュール粒度: moduleId 配下の有効な全メニューパスを展開
+        if (permission.granularity === "module" && permission.moduleId) {
+          const modules = await ensureModules();
+          const mod = modules.find((m) => m.id === permission.moduleId);
+          if (!mod) continue;
+          for (const menu of mod.menus) {
+            if (menu.enabled === false) continue;
+            result.menuPaths.push(menu.path);
+            for (const child of menu.children ?? []) {
+              if (child.enabled === false) continue;
+              result.menuPaths.push(child.path);
+            }
+          }
+          continue;
+        }
+
         if (permission.menuPath) {
           result.menuPaths.push(permission.menuPath);
 
