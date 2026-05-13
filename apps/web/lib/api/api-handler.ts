@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { checkAccess } from "@/lib/auth/access-checker";
 import { ApiError } from "./api-error";
 import {
+  expandMinimumRole,
   requireAdmin,
   requireAuth,
   requireOneOfRoles,
@@ -16,21 +17,6 @@ type HandlerFn<T = unknown, Ctx = unknown> = (
   context: Ctx,
 ) => Promise<T>;
 
-const ROLE_HIERARCHY: Record<Role, number> = {
-  GUEST: 0,
-  USER: 1,
-  MANAGER: 2,
-  EXECUTIVE: 3,
-  ADMIN: 4,
-};
-
-function expandMinimumRole(minimum: Role): Role[] {
-  const minLevel = ROLE_HIERARCHY[minimum];
-  return (Object.keys(ROLE_HIERARCHY) as Role[]).filter(
-    (role) => ROLE_HIERARCHY[role] >= minLevel,
-  );
-}
-
 interface ApiHandlerOptions {
   /** Require ADMIN role */
   admin?: boolean;
@@ -42,8 +28,21 @@ interface ApiHandlerOptions {
   public?: boolean;
   /**
    * AccessKey 経由でのアクセスを許可するメニューパス。
-   * 設定時は `requiredRole(s)` を満たすか、AccessKey で `menuPath` への
-   * アクセスが許可されていれば通過する。`admin: true` とは併用不可。
+   *
+   * 設定時は `requireAuth()` 後に `checkAccess(session, menuPath, allowedRoles)` を呼び、
+   * 「許可ロールに含まれる」または「AccessKey で当該 menuPath が許可されている」
+   * のいずれかを満たせば通過する。
+   *
+   * 許可ロールの決定順序:
+   * 1. `requiredRoles` が指定されていればそれを使用
+   * 2. `requiredRole`（最低ロール）が指定されていれば階層展開して使用
+   *    （例: `"MANAGER"` → `["MANAGER", "EXECUTIVE", "ADMIN"]`）
+   * 3. いずれも未指定の場合、`checkAccess` のデフォルト `["MANAGER", "ADMIN"]` が適用される
+   *
+   * USER ロール向けの API に `menuPath` を付ける場合は `requiredRoles: ["USER", ...]`
+   * を明示すること。未指定だと USER は AccessKey が無い限り弾かれる。
+   *
+   * `admin: true` とは意味論的に矛盾するため併用不可（ラッパ構築時に Error を throw）。
    */
   menuPath?: string;
   /** HTTP status code for successful response. Default: 200 */
