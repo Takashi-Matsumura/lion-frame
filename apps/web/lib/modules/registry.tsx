@@ -124,6 +124,11 @@ export async function getAllModules(): Promise<AppModule[]> {
         ...menu,
         order: menuOrderOverrides[menu.id] ?? menu.order,
         enabled: menuEnabledOverrides[menu.id] ?? menu.enabled,
+        children: menu.children?.map((child) => ({
+          ...child,
+          order: menuOrderOverrides[child.id] ?? child.order,
+          enabled: menuEnabledOverrides[child.id] ?? child.enabled,
+        })),
       })),
     }));
 }
