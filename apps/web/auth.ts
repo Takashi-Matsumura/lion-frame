@@ -5,7 +5,12 @@ import Credentials from "next-auth/providers/credentials";
 import { authConfig } from "@/auth.config";
 import { prisma } from "@/lib/prisma";
 import { AuditService } from "@/lib/services/audit-service";
-import { checkRateLimit, getClientIp } from "@/lib/services/rate-limiter";
+import {
+  getClientIp,
+  peekRateLimit,
+  recordFailedAttempt,
+  resetRateLimit,
+} from "@/lib/services/rate-limiter";
 import {
   clearChallenge,
   getChallenge,
@@ -31,10 +36,21 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           return null;
         }
 
-        // Rate limit: 10 attempts per 15 minutes per IP
+        // Rate limit: 失敗 10 回 / 15 分 / IP（成功はカウントしない・Issue #58）
         const ip = getClientIp(request);
-        const rateLimit = checkRateLimit(`login:${ip}`, 10, 15 * 60 * 1000);
-        if (!rateLimit.allowed) {
+        const rateLimitKey = `login:${ip}`;
+        const WINDOW_MS = 15 * 60 * 1000;
+        if (!peekRateLimit(rateLimitKey, 10, WINDOW_MS).allowed) {
+          // レート超過も監査ログに残す（原因追跡のため）
+          await AuditService.log({
+            action: "LOGIN_FAILURE",
+            category: "AUTH",
+            details: {
+              email: credentials.email,
+              provider: "credentials",
+              reason: "Rate limit exceeded",
+            },
+          }).catch(() => {});
           throw new Error("Too many login attempts. Please try again later.");
         }
 
@@ -44,6 +60,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           });
 
           if (!user?.password) {
+            recordFailedAttempt(rateLimitKey, WINDOW_MS);
             // ログイン失敗を監査ログに記録
             await AuditService.log({
               action: "LOGIN_FAILURE",
@@ -63,6 +80,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           );
 
           if (!isValid) {
+            recordFailedAttempt(rateLimitKey, WINDOW_MS);
             await AuditService.log({
               action: "LOGIN_FAILURE",
               category: "AUTH",
@@ -81,6 +99,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             user.passwordExpiresAt &&
             new Date() > new Date(user.passwordExpiresAt)
           ) {
+            recordFailedAttempt(rateLimitKey, WINDOW_MS);
             await AuditService.log({
               action: "LOGIN_FAILURE",
               category: "AUTH",
@@ -92,6 +111,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             }).catch(() => {});
             return null;
           }
+
+          // 認証成功: レート制限カウントをリセット
+          resetRateLimit(rateLimitKey);
 
           // 最終サインイン日時を更新
           await prisma.user.update({
@@ -130,14 +152,27 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         assertion: { label: "Assertion", type: "text" },
       },
       async authorize(creds, request) {
+        // Rate limit: 失敗 20 回 / 15 分 / IP（成功はカウントしない・Issue #58）
         const ip = getClientIp(request);
-        const rateLimit = checkRateLimit(`webauthn:${ip}`, 20, 15 * 60 * 1000);
-        if (!rateLimit.allowed) {
+        const rateLimitKey = `webauthn:${ip}`;
+        const WINDOW_MS = 15 * 60 * 1000;
+        if (!peekRateLimit(rateLimitKey, 20, WINDOW_MS).allowed) {
+          await AuditService.log({
+            action: "WEBAUTHN_AUTHENTICATE_FAILURE",
+            category: "AUTH",
+            details: { reason: "Rate limit exceeded" },
+          }).catch(() => {});
           throw new Error("Too many login attempts. Please try again later.");
         }
 
         const raw = creds?.assertion;
         if (typeof raw !== "string" || raw.length === 0) {
+          recordFailedAttempt(rateLimitKey, WINDOW_MS);
+          await AuditService.log({
+            action: "WEBAUTHN_AUTHENTICATE_FAILURE",
+            category: "AUTH",
+            details: { reason: "Missing or empty assertion" },
+          }).catch(() => {});
           return null;
         }
 
@@ -145,11 +180,18 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         try {
           assertion = JSON.parse(raw) as AuthenticationResponseJSON;
         } catch {
+          recordFailedAttempt(rateLimitKey, WINDOW_MS);
+          await AuditService.log({
+            action: "WEBAUTHN_AUTHENTICATE_FAILURE",
+            category: "AUTH",
+            details: { reason: "Malformed assertion JSON" },
+          }).catch(() => {});
           return null;
         }
 
         const ctx = await getChallenge();
         if (!ctx || ctx.kind !== "authentication") {
+          recordFailedAttempt(rateLimitKey, WINDOW_MS);
           await clearChallenge();
           return null;
         }
@@ -158,6 +200,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           assertion.id,
         );
         if (!stored) {
+          recordFailedAttempt(rateLimitKey, WINDOW_MS);
           await clearChallenge();
           await AuditService.log({
             action: "WEBAUTHN_AUTHENTICATE_FAILURE",
@@ -183,6 +226,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           );
           await CredentialService.updateCounter(stored.id, newCounter);
         } catch (error) {
+          recordFailedAttempt(rateLimitKey, WINDOW_MS);
           await clearChallenge();
           await AuditService.log({
             action: "WEBAUTHN_AUTHENTICATE_FAILURE",
@@ -201,9 +245,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           where: { id: stored.userId },
         });
         if (!user) {
+          recordFailedAttempt(rateLimitKey, WINDOW_MS);
           await clearChallenge();
           return null;
         }
+
+        // 認証成功: レート制限カウントをリセット
+        resetRateLimit(rateLimitKey);
 
         await prisma.user.update({
           where: { id: user.id },
