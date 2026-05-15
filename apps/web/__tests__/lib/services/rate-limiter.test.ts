@@ -3,7 +3,7 @@
  *
  * ログイン系レート制限の定石「失敗のみカウントし、成功でリセット」を
  * 実現するための関数群を検証する。
- * - isRateLimited: カウントを増やさず判定のみ（peek）
+ * - peekRateLimit: カウントを増やさず判定のみ（peek）
  * - recordFailedAttempt: 失敗時のみ1件記録
  * - resetRateLimit: 成功時にキーをクリア
  * 既存 checkRateLimit は他ルート互換のため挙動を変えない。
@@ -11,7 +11,7 @@
 
 import {
   checkRateLimit,
-  isRateLimited,
+  peekRateLimit,
   recordFailedAttempt,
   resetRateLimit,
 } from "@/lib/services/rate-limiter";
@@ -23,11 +23,11 @@ describe("rate-limiter: peek/record/reset (Issue #58)", () => {
   // テストごとに一意なキーを使い、モジュールレベル store の干渉を避ける
   const nextKey = () => `test:${Date.now()}:${counter++}`;
 
-  describe("isRateLimited", () => {
+  describe("peekRateLimit", () => {
     it("判定だけではカウントを消費しない（何回呼んでも allowed のまま）", () => {
       const key = nextKey();
       for (let i = 0; i < 100; i++) {
-        expect(isRateLimited(key, 10, WINDOW).allowed).toBe(true);
+        expect(peekRateLimit(key, 10, WINDOW).allowed).toBe(true);
       }
     });
 
@@ -36,7 +36,7 @@ describe("rate-limiter: peek/record/reset (Issue #58)", () => {
       for (let i = 0; i < 10; i++) {
         recordFailedAttempt(key, WINDOW);
       }
-      const r = isRateLimited(key, 10, WINDOW);
+      const r = peekRateLimit(key, 10, WINDOW);
       expect(r.allowed).toBe(false);
       expect(r.remaining).toBe(0);
     });
@@ -45,7 +45,7 @@ describe("rate-limiter: peek/record/reset (Issue #58)", () => {
       const key = nextKey();
       recordFailedAttempt(key, WINDOW);
       recordFailedAttempt(key, WINDOW);
-      const r = isRateLimited(key, 10, WINDOW);
+      const r = peekRateLimit(key, 10, WINDOW);
       expect(r.allowed).toBe(true);
       expect(r.remaining).toBe(8);
     });
@@ -54,12 +54,12 @@ describe("rate-limiter: peek/record/reset (Issue #58)", () => {
   describe("recordFailedAttempt", () => {
     it("失敗を記録するたびにカウントが増える", () => {
       const key = nextKey();
-      expect(isRateLimited(key, 3, WINDOW).remaining).toBe(3);
+      expect(peekRateLimit(key, 3, WINDOW).remaining).toBe(3);
       recordFailedAttempt(key, WINDOW);
-      expect(isRateLimited(key, 3, WINDOW).remaining).toBe(2);
+      expect(peekRateLimit(key, 3, WINDOW).remaining).toBe(2);
       recordFailedAttempt(key, WINDOW);
       recordFailedAttempt(key, WINDOW);
-      expect(isRateLimited(key, 3, WINDOW).allowed).toBe(false);
+      expect(peekRateLimit(key, 3, WINDOW).allowed).toBe(false);
     });
   });
 
@@ -67,30 +67,30 @@ describe("rate-limiter: peek/record/reset (Issue #58)", () => {
     it("成功時にキーをクリアするとカウントが0に戻る", () => {
       const key = nextKey();
       for (let i = 0; i < 9; i++) recordFailedAttempt(key, WINDOW);
-      expect(isRateLimited(key, 10, WINDOW).remaining).toBe(1);
+      expect(peekRateLimit(key, 10, WINDOW).remaining).toBe(1);
       resetRateLimit(key);
-      expect(isRateLimited(key, 10, WINDOW).remaining).toBe(10);
-      expect(isRateLimited(key, 10, WINDOW).allowed).toBe(true);
+      expect(peekRateLimit(key, 10, WINDOW).remaining).toBe(10);
+      expect(peekRateLimit(key, 10, WINDOW).allowed).toBe(true);
     });
   });
 
   describe("成功はカウントしない（Issue #58 の本質）", () => {
-    it("isRateLimited を 1000 回呼んでも失敗0件ならブロックされない", () => {
+    it("peekRateLimit を 1000 回呼んでも失敗0件ならブロックされない", () => {
       const key = nextKey();
       for (let i = 0; i < 1000; i++) {
-        expect(isRateLimited(key, 10, WINDOW).allowed).toBe(true);
+        expect(peekRateLimit(key, 10, WINDOW).allowed).toBe(true);
       }
     });
 
     it("失敗9回→成功(reset)→以降の判定はブロックされない", () => {
       const key = nextKey();
       for (let i = 0; i < 9; i++) {
-        if (!isRateLimited(key, 10, WINDOW).allowed) break;
+        if (!peekRateLimit(key, 10, WINDOW).allowed) break;
         recordFailedAttempt(key, WINDOW);
       }
       resetRateLimit(key);
       for (let i = 0; i < 50; i++) {
-        expect(isRateLimited(key, 10, WINDOW).allowed).toBe(true);
+        expect(peekRateLimit(key, 10, WINDOW).allowed).toBe(true);
       }
     });
   });

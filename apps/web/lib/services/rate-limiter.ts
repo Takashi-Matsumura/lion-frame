@@ -84,13 +84,14 @@ export function checkRateLimit(
  *
  * ログイン系で「成功もカウントしてしまう」問題 (Issue #58) を避けるため、
  * 入口での判定はこの関数で行い、カウントは {@link recordFailedAttempt}
- * （失敗時のみ）で増やす。
+ * （失敗時のみ）で増やす。戻り値は {@link checkRateLimit} と同じ
+ * {@link RateLimitResult}（`.allowed` で判定）。
  *
  * @param key - Unique identifier (e.g., IP address, user ID)
  * @param maxRequests - Maximum number of failed attempts allowed in the window
  * @param windowMs - Time window in milliseconds
  */
-export function isRateLimited(
+export function peekRateLimit(
   key: string,
   maxRequests: number,
   windowMs: number,

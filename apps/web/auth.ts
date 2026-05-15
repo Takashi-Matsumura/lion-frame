@@ -7,7 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { AuditService } from "@/lib/services/audit-service";
 import {
   getClientIp,
-  isRateLimited,
+  peekRateLimit,
   recordFailedAttempt,
   resetRateLimit,
 } from "@/lib/services/rate-limiter";
@@ -39,7 +39,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         // Rate limit: 失敗 10 回 / 15 分 / IP（成功はカウントしない・Issue #58）
         const ip = getClientIp(request);
         const rateLimitKey = `login:${ip}`;
-        if (!isRateLimited(rateLimitKey, 10, 15 * 60 * 1000).allowed) {
+        const WINDOW_MS = 15 * 60 * 1000;
+        if (!peekRateLimit(rateLimitKey, 10, WINDOW_MS).allowed) {
           // レート超過も監査ログに残す（原因追跡のため）
           await AuditService.log({
             action: "LOGIN_FAILURE",
@@ -59,7 +60,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           });
 
           if (!user?.password) {
-            recordFailedAttempt(rateLimitKey, 15 * 60 * 1000);
+            recordFailedAttempt(rateLimitKey, WINDOW_MS);
             // ログイン失敗を監査ログに記録
             await AuditService.log({
               action: "LOGIN_FAILURE",
@@ -79,7 +80,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           );
 
           if (!isValid) {
-            recordFailedAttempt(rateLimitKey, 15 * 60 * 1000);
+            recordFailedAttempt(rateLimitKey, WINDOW_MS);
             await AuditService.log({
               action: "LOGIN_FAILURE",
               category: "AUTH",
@@ -98,7 +99,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             user.passwordExpiresAt &&
             new Date() > new Date(user.passwordExpiresAt)
           ) {
-            recordFailedAttempt(rateLimitKey, 15 * 60 * 1000);
+            recordFailedAttempt(rateLimitKey, WINDOW_MS);
             await AuditService.log({
               action: "LOGIN_FAILURE",
               category: "AUTH",
@@ -155,7 +156,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const ip = getClientIp(request);
         const rateLimitKey = `webauthn:${ip}`;
         const WINDOW_MS = 15 * 60 * 1000;
-        if (!isRateLimited(rateLimitKey, 20, WINDOW_MS).allowed) {
+        if (!peekRateLimit(rateLimitKey, 20, WINDOW_MS).allowed) {
           await AuditService.log({
             action: "WEBAUTHN_AUTHENTICATE_FAILURE",
             category: "AUTH",
@@ -167,6 +168,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const raw = creds?.assertion;
         if (typeof raw !== "string" || raw.length === 0) {
           recordFailedAttempt(rateLimitKey, WINDOW_MS);
+          await AuditService.log({
+            action: "WEBAUTHN_AUTHENTICATE_FAILURE",
+            category: "AUTH",
+            details: { reason: "Missing or empty assertion" },
+          }).catch(() => {});
           return null;
         }
 
@@ -175,6 +181,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           assertion = JSON.parse(raw) as AuthenticationResponseJSON;
         } catch {
           recordFailedAttempt(rateLimitKey, WINDOW_MS);
+          await AuditService.log({
+            action: "WEBAUTHN_AUTHENTICATE_FAILURE",
+            category: "AUTH",
+            details: { reason: "Malformed assertion JSON" },
+          }).catch(() => {});
           return null;
         }
 
